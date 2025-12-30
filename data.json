@@ -1,0 +1,61 @@
+{
+  "slides": [
+    {
+      "type": "video",
+      "src": "media/video/selden_book.mp4",
+      "notes": "Slide 1: Raise your hand if you're familiar with selden v baker?",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/baker_book.mp4",
+      "notes": "Slide 2: A guy named baker copied the book balboa",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/selden_v_baker.mp4",
+      "notes": "Slide 3: it went to the Supreme Court blablabla",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/new_book.mov",
+      "notes": "Slide 4: We did this process blablabla",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/power_clean_seldens_book.mp4",
+      "notes": "Slide 5: Sblablabla",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/robot_kills_oss.mp4",
+      "notes": "Slide 2: blablabla",
+      "loop": true
+    },
+    {
+      "type": "video",
+      "src": "media/video/apple_ii_unscrew.mp4",
+      "notes": "Slide 2: blablabla",
+      "loop": true
+    },
+    {
+      "type": "video",
+      "src": "media/video/npm_globe.mp4",
+      "notes": "Slide 2: blablabla",
+      "loop": true
+    }
+  ],
+  "audio": [
+    {
+      "src": "media/audio/suspicious_up_to_something.mp3",
+      "startSlide": 1,
+      "endSlide": 5,
+      "loop": true
+    }
+  ]
+}
+
