@@ -2,58 +2,160 @@
   "slides": [
     {
       "type": "video",
-      "src": "media/video/selden_book.mp4",
-      "notes": "Slide 1: Raise your hand if you're familiar with selden v baker?",
+      "src": "media/video/title.m4v",
+      "notes": "Slide 1: Who we are",
       "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/baker_book.mp4",
-      "notes": "Slide 2: A guy named baker copied the book balboa",
+      "src": "media/video/leftpad2016.m4v",
+      "notes": "Slide 2: Raise your hand if you've heard of left pad. Leftpad is a very simple javascript package, what you see on the screen is the entirety of left pad.",
       "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/selden_v_baker.mp4",
-      "notes": "Slide 3: it went to the Supreme Court blablabla",
+      "src": "media/video/leftpaddrama.m4v",
+      "notes": "Slide 3: Leftpad made big news in 2016 when the maintainer deleted it. It was used by millions of developers, so this kind of broke the internet... we won't focus on why, but you just need to know he did it on purpose and knew it would break things when he did.",
       "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/new_book.mov",
-      "notes": "Slide 4: We did this process blablabla",
+      "src": "media/video/moreleftpaddrama.m4v",
+      "notes": "Slide 4: There's actually another, lesser known problem with left pad... in 2016, it didn't have a license. So everyone using it, didn't have legal permission to do so",
       "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/power_clean_seldens_book.mp4",
-      "notes": "Slide 5: Sblablabla",
+      "src": "media/video/howdowefixit.m4v",
+      "notes": "Slide 5: So what if we wanted to fix this problem with contemporary solutions? We've got a malicious maintainer that can take down the internet, and we have a license problem",
       "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/robot_kills_oss.mp4",
-      "notes": "Slide 2: blablabla",
-      "loop": true
+      "src": "media/video/fixleftpad.m4v",
+      "notes": "Slide 6: Like all problems in 2026, maybe we can fix it with AI. Let's just ask AI to remake left pad. Done. That was incredibly easy.",
+      "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/apple_ii_unscrew.mp4",
-      "notes": "Slide 2: blablabla",
-      "loop": true
+      "src": "media/video/annoyingailawyer.m4v",
+      "notes": "Slide 2: but there's a small problem... the robot had access to the original code... what if it copied some of that code over? Well we don't want to argue over it line for line...",
+      "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/npm_globe.mp4",
-      "notes": "Slide 2: blablabla",
-      "loop": true
+      "src": "media/video/diditcheat.m4v",
+      "notes": "Slide 2: So how do we know if the robot cheated?",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/cleanroom.m4v",
+      "notes": "Slide 2: We can some this problem by introducing a second robot. The first reviews the code, documentation, and tests, and hands the second a detailed specification and set of instructions on how to build left-pad without letting it actually see the code.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/cleanroomleftpad.m4v",
+      "notes": "Slide 2: So here the strategy is in action. One AI reviewing all the left pad materials, producing a specification that contains no code, and a second AI implementing the specification. This legal strategy is called cleanroom",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/cleanroomwiki.m4v",
+      "notes": "Slide 2: And in principle it's actually been around for a very long time. But why does it work? And why does AI kind of break everything?",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/timetravel.m4v",
+      "notes": "Slide 2: To understand why this legal strategy works, we have to go back to 1879, when a Supreme Court case in the United States solidified how our copyright system would work, for years..",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/seldensbook.m4v",
+      "notes": "Slide 2: In the mid 1800's a man named Selden wrote a book on a new accounting system. The book had a description of how the system worked, and then ledgers where you could implement the system.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/bakersbook.m4v",
+      "notes": "Slide 2: A few years later, a man named Baker, ripped him off. He made a book that used the talked about the same accounting system, and also contained ledgers. But the text was different, and the fonts and tables were all different",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/realbooks.m4v",
+      "notes": "Slide 2: You can download both of these books today, and judge for yourself. But Seldon's widow thought the books were too similar, and decided to sue over it",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/supremecourt.m4v",
+      "notes": "Slide 2: And the Supreme Court found copyright could not protect the ideas in the book, copyright could only protect the literal expression, the exact words, the exact art in the tables.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/lawoftheland.m4v",
+      "notes": "Slide 2: And over 100 years later this case is still referenced in software cases, generally speaking the function of code cannot be copyrighted, but the expression of that functionality, the literal code itself can be copyrighted.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/studying.m4v",
+      "notes": "Slide 2: The thing is though... it probably took Baker months to create his book. And it was probably expensive. He had to study and learn the Selden system, and hand write out his version",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/letterpress.m4v",
+      "notes": "Slide 2: and then he had to send it off to letter press, which probably took hours and hours of skilled labor. What would it look like if we wanted to cleanroom Selden's book... today, as fast as possible?",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/moderncleanroom.m4v",
+      "notes": "Slide 2: We would probably upload Selden's book into an AI tool, and ask it to describe the system of accounting in detail to a second AI tool, including specifications for the accounting ledgers. Then a second AI tool could make our book",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/selfpublish.m4v",
+      "notes": "Slide 2: Which we could then publish using something like Amazon's self book publishing service. We would never need to learn the accounting system to do any of them.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/weactuallydidit.m4v",
+      "notes": "Slide 2: All the same, this is exactly what we did, I'm holding a copy of the book, which cost us about 8 dollars, and 10 minutes of our time to bring into this world. And it's really listed on amazon if you wanted to buy it. We don't expect anyone to buy this book. But would the Supreme Court had made the same decision, if these tools existed in 1870.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/forwardtimetravel.m4v",
+      "notes": "Slide 2: Let's skip ahead in time, to the 1980's",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/franklincomputer.m4v",
+      "notes": "Slide 2: In 1983 Franklin Computer Corp reverse engineers the Apple II, and copied the machine code. The US court system found this machine code represented a form of expression, and in order to not violate copyright, Franklin's code would have to be distinctly different. Copyright protected computer code, even compiled code, forcing Franklin to adopt a cleanroom method. 5 years later they took a cleanroom'd version to market.",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/placeholderapple.m4v",
+      "notes": "Slide 2: Once again for fun, we used modern AI tools to cleanroom the apple II ROM, it took Franklin a team and 5 years. We did it alone in about an hour.",
+      "loop": false
     }
   ],
   "audio": [
     {
       "src": "media/audio/suspicious_up_to_something.mp3",
-      "startSlide": 1,
-      "endSlide": 5,
+      "startSlide": 700,
+      "endSlide": 80,
       "loop": true
     }
   ]
