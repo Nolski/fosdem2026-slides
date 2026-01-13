@@ -265,6 +265,9 @@ if (isPresenter) {
   var audioStartInput = document.getElementById("audio-start");
   var audioEndInput = document.getElementById("audio-end");
   var audioLoopInput = document.getElementById("audio-loop");
+  var audioPreview = document.getElementById("audio-preview");
+  
+  var draggedIndex = null;
 
   // Load data
   fetch('data.json')
@@ -322,11 +325,49 @@ if (isPresenter) {
       var block = document.createElement("div");
       block.className = "slide-block " + slide.type + (i === selectedSlideIndex ? " selected" : "");
       block.dataset.index = i;
+      block.draggable = true;
       
       var icon = slide.type === "video" ? "🎬" : slide.type === "image" ? "🖼️" : "⏳";
       block.innerHTML = '<div class="block-number">' + (i + 1) + '</div><div class="block-icon">' + icon + '</div>';
       
       block.addEventListener("click", function() { selectSlide(i); });
+      
+      // Drag events
+      block.addEventListener("dragstart", function(e) {
+        draggedIndex = i;
+        block.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", i);
+      });
+      
+      block.addEventListener("dragend", function() {
+        block.classList.remove("dragging");
+        document.querySelectorAll(".slide-block").forEach(function(b) {
+          b.classList.remove("drag-over");
+        });
+        draggedIndex = null;
+      });
+      
+      block.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (draggedIndex !== null && draggedIndex !== i) {
+          block.classList.add("drag-over");
+        }
+      });
+      
+      block.addEventListener("dragleave", function() {
+        block.classList.remove("drag-over");
+      });
+      
+      block.addEventListener("drop", function(e) {
+        e.preventDefault();
+        block.classList.remove("drag-over");
+        if (draggedIndex !== null && draggedIndex !== i) {
+          moveSlide(draggedIndex, i);
+        }
+      });
+      
       slidesTimeline.appendChild(block);
     });
   }
@@ -436,8 +477,18 @@ if (isPresenter) {
     audioEndInput.max = slides.length;
     audioLoopInput.checked = !!track.loop;
     
-    previewContainer.innerHTML = '<p class="preview-placeholder">Audio track selected</p>';
+    // Load audio preview
+    audioPreview.src = track.src || "";
+    audioPreview.load();
+    
+    previewContainer.innerHTML = '<p class="preview-placeholder">Audio track selected - use player in editor to preview</p>';
   }
+  
+  // Update audio preview when source changes
+  audioSrcInput.addEventListener("change", function() {
+    audioPreview.src = audioSrcInput.value;
+    audioPreview.load();
+  });
   
   function updateFormVisibility(type) {
     srcGroup.style.display = type === "placeholder" ? "none" : "flex";

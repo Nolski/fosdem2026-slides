@@ -43,7 +43,7 @@
         </div>
         <div id="toolbar-right">
           <div class="toolbar-group reorder-group" id="reorder-controls" style="display: none;">
-            <span class="toolbar-label">Move:</span>
+            <span class="toolbar-label">Reposition Slide:</span>
             <button id="moveFirstBtn" class="toolbar-btn reorder" title="Move to start">⏮</button>
             <button id="moveLeftBtn" class="toolbar-btn reorder" title="Move left">◀</button>
             <button id="moveRightBtn" class="toolbar-btn reorder" title="Move right">▶</button>
@@ -127,13 +127,17 @@
               <label for="audio-src">Source Path</label>
               <input type="text" id="audio-src" placeholder="media/audio/example.mp3">
             </div>
+            <div class="form-group">
+              <label>Preview</label>
+              <audio id="audio-preview" controls></audio>
+            </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="audio-start">Start</label>
+                <label for="audio-start">Start Slide</label>
                 <input type="number" id="audio-start" min="1" value="1">
               </div>
               <div class="form-group">
-                <label for="audio-end">End</label>
+                <label for="audio-end">End Slide</label>
                 <input type="number" id="audio-end" min="1" value="1">
               </div>
             </div>
