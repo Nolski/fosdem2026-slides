@@ -6,15 +6,175 @@
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <!-- Controls available at all times -->
+  <!-- Mode Toggle and Controls -->
   <div id="controls">
-    <button id="startBtn">Start Presentation</button>
-    <button id="presenterBtn">Open Presenter View</button>
+    <div id="mode-toggle">
+      <button id="editModeBtn" class="mode-btn active">Edit Mode</button>
+      <button id="presentModeBtn" class="mode-btn">Present Mode</button>
+    </div>
+    <div id="present-controls" style="display: none;">
+      <button id="startBtn">Start Presentation</button>
+      <button id="presenterBtn">Open Presenter View</button>
+    </div>
+    <div id="edit-controls">
+      <button id="exportBtn">📥 Export JSON</button>
+      <button id="importBtn">📤 Import JSON</button>
+      <input type="file" id="importInput" accept=".json" style="display: none;">
+    </div>
   </div>
+
+  <!-- Edit Mode Container -->
+  <div id="edit-mode">
+    <!-- Top Section: Timeline -->
+    <div id="timeline-section">
+      <!-- Toolbar -->
+      <div id="timeline-toolbar">
+        <div id="toolbar-left">
+          <span id="slide-count-display">0 slides</span>
+        </div>
+        <div id="toolbar-center">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Add:</span>
+            <button id="addVideoBtn" class="toolbar-btn video" title="Add Video Slide">🎬 Video</button>
+            <button id="addImageBtn" class="toolbar-btn image" title="Add Image Slide">🖼️ Image</button>
+            <button id="addPlaceholderBtn" class="toolbar-btn placeholder" title="Add Placeholder">⏳ Placeholder</button>
+            <button id="addAudioBtn" class="toolbar-btn audio" title="Add Audio Track">🔊 Audio</button>
+          </div>
+        </div>
+        <div id="toolbar-right">
+          <div class="toolbar-group" id="nav-controls">
+            <button id="navFirstBtn" class="toolbar-btn nav" title="First slide">⏮</button>
+            <button id="navPrevBtn" class="toolbar-btn nav" title="Previous slide">◀</button>
+            <button id="navNextBtn" class="toolbar-btn nav" title="Next slide">▶</button>
+            <button id="navLastBtn" class="toolbar-btn nav" title="Last slide">⏭</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Timeline Area -->
+      <div id="timeline-scroll-area">
+        <!-- Slides Row -->
+        <div id="slides-row">
+          <div class="timeline-row-label">Slides</div>
+          <div id="slides-timeline"></div>
+        </div>
+        
+        <!-- Audio Row -->
+        <div id="audio-row">
+          <div class="timeline-row-label">Audio</div>
+          <div id="audio-timeline-wrapper">
+            <div id="audio-timeline"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bottom Section: Editor + Preview -->
+    <div id="workspace-section">
+      <!-- Editor Panel -->
+      <div id="editor-panel">
+        <div id="slide-editor">
+          <div id="editor-header">
+            <h2>Slide Editor</h2>
+            <span id="slide-position-badge"></span>
+          </div>
+          <div id="editor-placeholder">
+            <p>Select a slide to edit</p>
+          </div>
+          <form id="slide-form" style="display: none;">
+            <div class="form-group">
+              <label for="slide-type">Type</label>
+              <select id="slide-type">
+                <option value="video">Video</option>
+                <option value="image">Image</option>
+                <option value="placeholder">Placeholder</option>
+              </select>
+            </div>
+            <div class="form-group" id="src-group">
+              <label for="slide-src">Source Path</label>
+              <input type="text" id="slide-src" placeholder="media/video/example.m4v">
+            </div>
+            <div class="form-group" id="placeholder-group" style="display: none;">
+              <label for="placeholder-title">Title</label>
+              <input type="text" id="placeholder-title" placeholder="Coming Soon...">
+              <label for="placeholder-text" style="margin-top: 8px;">Body Text</label>
+              <textarea id="placeholder-text" rows="3" placeholder="Additional text for the slide..."></textarea>
+              <label for="placeholder-color" style="margin-top: 8px;">Background Color</label>
+              <input type="color" id="placeholder-color" value="#333333">
+            </div>
+            <div class="form-group" id="zoompan-group" style="display: none;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="slide-zoompan"> Slow zoom effect (Ken Burns)
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="slide-notes">Speaker Notes</label>
+              <textarea id="slide-notes" rows="4" placeholder="Speaker notes..."></textarea>
+            </div>
+            <div class="form-group" id="loop-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="slide-loop"> Loop media
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="save-btn">Save</button>
+              <button type="button" id="deleteSlideBtn" class="delete-btn">Delete</button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Audio Editor -->
+        <div id="audio-editor" style="display: none;">
+          <div id="editor-header">
+            <h2>Audio Track</h2>
+          </div>
+          <form id="audio-form">
+            <div class="form-group">
+              <label for="audio-src">Source Path</label>
+              <input type="text" id="audio-src" placeholder="media/audio/example.mp3">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="audio-start">Start Slide</label>
+                <input type="number" id="audio-start" min="1" value="1">
+              </div>
+              <div class="form-group">
+                <label for="audio-end">End Slide</label>
+                <input type="number" id="audio-end" min="1" value="1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="audio-loop"> Loop
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="save-btn">Save</button>
+              <button type="button" id="deleteAudioBtn" class="delete-btn">Delete</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Preview Panel (Large) -->
+      <div id="preview-panel">
+        <div id="preview-header">
+          <h2>Preview</h2>
+        </div>
+        <div id="preview-container">
+          <p class="preview-placeholder">Select a slide to preview</p>
+        </div>
+        <!-- Audio Preview (shown when audio track selected) -->
+        <div id="audio-preview-container" style="display: none;">
+          <audio id="audio-preview" controls></audio>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Main presentation container -->
   <div id="presentation"></div>
 
   <script src="app.js"></script>
 </body>
 </html>
-
