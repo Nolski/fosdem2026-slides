@@ -243,8 +243,8 @@ if (isPresenter) {
   var canChangeSlide = true;
   var isEditMode = true;
 
-  // Slide block width for timeline calculations
-  var BLOCK_WIDTH = 54; // 50px + 4px gap
+  // Slide block width for timeline calculations (70px + 8px gap)
+  var BLOCK_WIDTH = 78;
 
   // DOM Elements
   var editModeBtn = document.getElementById("editModeBtn");
@@ -265,6 +265,7 @@ if (isPresenter) {
   var audioForm = document.getElementById("audio-form");
   var editorPlaceholder = document.getElementById("editor-placeholder");
   var previewContainer = document.getElementById("preview-container");
+  var slidePositionBadge = document.getElementById("slide-position-badge");
   
   var startBtnElem = document.getElementById("startBtn");
   var presenterBtnElem = document.getElementById("presenterBtn");
@@ -280,7 +281,6 @@ if (isPresenter) {
   var deleteAudioBtn = document.getElementById("deleteAudioBtn");
   
   // Slide form elements
-  var slideNumberInput = document.getElementById("slide-number");
   var slideTypeSelect = document.getElementById("slide-type");
   var slideSrcInput = document.getElementById("slide-src");
   var slideNotesInput = document.getElementById("slide-notes");
@@ -328,7 +328,7 @@ if (isPresenter) {
     presentControls.style.display = "none";
     editControls.style.display = "flex";
     document.body.classList.remove("present-mode");
-    editModeContainer.style.display = "flex";
+    editModeContainer.style.display = "grid";
     presentationContainer.classList.remove("active");
     window.presentationStarted = false;
     paused = false;
@@ -388,14 +388,15 @@ if (isPresenter) {
       block.dataset.index = index;
       
       var typeIcon = slide.type === "video" ? "🎬" : 
-                     slide.type === "image" ? "🖼" : "⏳";
+                     slide.type === "image" ? "🖼️" : "⏳";
       
       block.innerHTML = `
         <div class="block-number">${index + 1}</div>
-        <div class="block-type">${typeIcon}</div>
+        <div class="block-icon">${typeIcon}</div>
+        <div class="block-type">${slide.type}</div>
         <div class="block-actions">
-          <button class="block-move-btn move-left" data-index="${index}" ${index === 0 ? 'disabled' : ''}>◀</button>
-          <button class="block-move-btn move-right" data-index="${index}" ${index === slides.length - 1 ? 'disabled' : ''}>▶</button>
+          <button class="block-move-btn move-left" data-index="${index}" ${index === 0 ? 'disabled' : ''} title="Move left">◀</button>
+          <button class="block-move-btn move-right" data-index="${index}" ${index === slides.length - 1 ? 'disabled' : ''} title="Move right">▶</button>
         </div>
       `;
       
@@ -439,15 +440,15 @@ if (isPresenter) {
       // Calculate position and width based on slide positions
       var startSlide = Math.max(0, track.startSlide);
       var endSlide = Math.min(slides.length - 1, track.endSlide);
-      var left = startSlide * BLOCK_WIDTH + 5; // 5px padding
-      var width = (endSlide - startSlide + 1) * BLOCK_WIDTH - 4; // subtract gap
+      var left = startSlide * BLOCK_WIDTH + 4;
+      var width = (endSlide - startSlide + 1) * BLOCK_WIDTH - 8;
       
       audioBlock.style.left = left + "px";
-      audioBlock.style.width = Math.max(50, width) + "px";
+      audioBlock.style.width = Math.max(60, width) + "px";
       
       // Extract filename for display
       var filename = track.src.split('/').pop();
-      audioBlock.innerHTML = `<span class="audio-label">🔊 ${filename}</span>`;
+      audioBlock.innerHTML = `<span class="audio-icon">🔊</span><span class="audio-label">${filename}</span>`;
       
       audioBlock.addEventListener("click", function() {
         selectAudioTrack(index);
@@ -457,7 +458,10 @@ if (isPresenter) {
     });
     
     // Set minimum width of audio timeline to match slides
-    audioTimeline.style.minWidth = (slides.length * BLOCK_WIDTH + 10) + "px";
+    var wrapper = document.getElementById("audio-timeline-wrapper");
+    if (wrapper) {
+      wrapper.style.minWidth = (slides.length * BLOCK_WIDTH) + "px";
+    }
   }
   
   function renderTimelineRuler() {
@@ -485,6 +489,11 @@ if (isPresenter) {
     }
     
     renderTimelines();
+    
+    // Keep selection visible
+    if (selectedSlideIndex >= 0) {
+      updateSlidePositionBadge();
+    }
   }
 
   // ============================================
@@ -509,9 +518,11 @@ if (isPresenter) {
     editorPlaceholder.style.display = "none";
     slideForm.style.display = "flex";
     
+    // Update position badge
+    updateSlidePositionBadge();
+    
     // Populate form
     var slide = slides[index];
-    slideNumberInput.value = (index + 1);
     slideTypeSelect.value = slide.type;
     slideSrcInput.value = slide.src || "";
     
@@ -526,6 +537,15 @@ if (isPresenter) {
     
     updateFormVisibility(slide.type);
     updatePreview(slide);
+  }
+  
+  function updateSlidePositionBadge() {
+    if (selectedSlideIndex >= 0) {
+      slidePositionBadge.textContent = "Slide " + (selectedSlideIndex + 1) + " of " + slides.length;
+      slidePositionBadge.style.display = "inline-block";
+    } else {
+      slidePositionBadge.style.display = "none";
+    }
   }
   
   function selectAudioTrack(index) {
@@ -543,6 +563,7 @@ if (isPresenter) {
     // Show audio editor, hide slide editor
     slideEditor.style.display = "none";
     audioEditor.style.display = "block";
+    slidePositionBadge.style.display = "none";
     
     // Populate audio form
     var track = audioTracks[index];
@@ -628,6 +649,9 @@ if (isPresenter) {
     renderTimelines();
     updatePreview(slide);
     
+    // Re-select to update UI
+    selectSlide(selectedSlideIndex);
+    
     // Flash save confirmation
     var saveBtn = slideForm.querySelector(".save-btn");
     var originalText = saveBtn.innerText;
@@ -691,10 +715,12 @@ if (isPresenter) {
     selectSlide(insertIndex);
     
     // Scroll to new slide
-    var newBlock = slidesTimeline.querySelector(`[data-index="${insertIndex}"]`);
-    if (newBlock) {
-      newBlock.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
-    }
+    setTimeout(function() {
+      var newBlock = slidesTimeline.querySelector('[data-index="' + insertIndex + '"]');
+      if (newBlock) {
+        newBlock.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }, 50);
   }
   
   function addAudioTrack() {
@@ -724,8 +750,9 @@ if (isPresenter) {
       // Adjust selection
       if (slides.length === 0) {
         selectedSlideIndex = -1;
-        editorPlaceholder.style.display = "flex";
+        editorPlaceholder.style.display = "block";
         slideForm.style.display = "none";
+        slidePositionBadge.style.display = "none";
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide to preview</p>';
       } else if (selectedSlideIndex >= slides.length) {
         selectedSlideIndex = slides.length - 1;
@@ -745,10 +772,10 @@ if (isPresenter) {
       audioTracks.splice(selectedAudioIndex, 1);
       selectedAudioIndex = -1;
       
-      // Hide audio editor
+      // Hide audio editor, show slide editor placeholder
       audioEditor.style.display = "none";
       slideEditor.style.display = "block";
-      editorPlaceholder.style.display = "flex";
+      editorPlaceholder.style.display = "block";
       slideForm.style.display = "none";
       
       renderAudioTimeline();
@@ -800,10 +827,11 @@ if (isPresenter) {
         
         selectedSlideIndex = -1;
         selectedAudioIndex = -1;
-        editorPlaceholder.style.display = "flex";
+        editorPlaceholder.style.display = "block";
         slideForm.style.display = "none";
         audioEditor.style.display = "none";
         slideEditor.style.display = "block";
+        slidePositionBadge.style.display = "none";
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide to preview</p>';
         
         renderTimelines();
@@ -997,16 +1025,5 @@ if (isPresenter) {
       // Exit present mode
       switchToEditMode();
     }
-  });
-  
-  // Sync scroll between timelines
-  slidesTimeline.addEventListener("scroll", function() {
-    audioTimeline.scrollLeft = slidesTimeline.scrollLeft;
-    timelineRuler.scrollLeft = slidesTimeline.scrollLeft;
-  });
-  
-  audioTimeline.addEventListener("scroll", function() {
-    slidesTimeline.scrollLeft = audioTimeline.scrollLeft;
-    timelineRuler.scrollLeft = audioTimeline.scrollLeft;
   });
 }
