@@ -268,13 +268,27 @@ body {
 }
 
 .slide-block.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
+  opacity: 0.4;
+  transform: scale(0.9);
 }
 
-.slide-block.drag-over {
-  border-color: #4caf50;
-  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.4);
+/* Drop zone indicators between slides */
+.drop-indicator {
+  width: 4px;
+  height: 50px;
+  background: #4caf50;
+  border-radius: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  margin: 0 -2px;
+  position: relative;
+  z-index: 10;
+}
+
+.drop-indicator.visible {
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
 }
 
 .slide-block.video:not(.selected) { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); }
@@ -473,16 +487,17 @@ body {
   cursor: pointer;
 }
 
-/* Audio preview player */
-#audio-preview {
-  width: 100%;
-  height: 36px;
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.3);
+/* Audio preview in main preview area */
+#audio-preview-container {
+  padding: 20px;
+  background: rgba(39, 174, 96, 0.1);
+  border-top: 1px solid rgba(39, 174, 96, 0.3);
 }
 
-#audio-preview::-webkit-media-controls-panel {
-  background: rgba(39, 174, 96, 0.2);
+#audio-preview {
+  width: 100%;
+  height: 50px;
+  border-radius: 8px;
 }
 
 .form-actions {

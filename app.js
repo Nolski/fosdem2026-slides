@@ -266,8 +266,16 @@ if (isPresenter) {
   var audioEndInput = document.getElementById("audio-end");
   var audioLoopInput = document.getElementById("audio-loop");
   var audioPreview = document.getElementById("audio-preview");
+  var audioPreviewContainer = document.getElementById("audio-preview-container");
   
   var draggedIndex = null;
+  
+  function hideAudioPreview() {
+    if (audioPreviewContainer) {
+      audioPreviewContainer.style.display = "none";
+      audioPreview.pause();
+    }
+  }
 
   // Load data
   fetch('data.json')
@@ -321,6 +329,10 @@ if (isPresenter) {
   
   function renderSlidesTimeline() {
     slidesTimeline.innerHTML = "";
+    
+    // Add initial drop indicator
+    slidesTimeline.appendChild(createDropIndicator(0));
+    
     slides.forEach(function(slide, i) {
       var block = document.createElement("div");
       block.className = "slide-block " + slide.type + (i === selectedSlideIndex ? " selected" : "");
@@ -332,43 +344,68 @@ if (isPresenter) {
       
       block.addEventListener("click", function() { selectSlide(i); });
       
-      // Drag events
+      // Drag events on slide blocks
       block.addEventListener("dragstart", function(e) {
         draggedIndex = i;
-        block.classList.add("dragging");
+        setTimeout(function() { block.classList.add("dragging"); }, 0);
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", i);
       });
       
       block.addEventListener("dragend", function() {
         block.classList.remove("dragging");
-        document.querySelectorAll(".slide-block").forEach(function(b) {
-          b.classList.remove("drag-over");
-        });
+        clearAllDropIndicators();
         draggedIndex = null;
       });
       
-      block.addEventListener("dragover", function(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        if (draggedIndex !== null && draggedIndex !== i) {
-          block.classList.add("drag-over");
-        }
-      });
-      
-      block.addEventListener("dragleave", function() {
-        block.classList.remove("drag-over");
-      });
-      
-      block.addEventListener("drop", function(e) {
-        e.preventDefault();
-        block.classList.remove("drag-over");
-        if (draggedIndex !== null && draggedIndex !== i) {
-          moveSlide(draggedIndex, i);
-        }
-      });
-      
       slidesTimeline.appendChild(block);
+      
+      // Add drop indicator after each slide
+      slidesTimeline.appendChild(createDropIndicator(i + 1));
+    });
+  }
+  
+  function createDropIndicator(insertIndex) {
+    var indicator = document.createElement("div");
+    indicator.className = "drop-indicator";
+    indicator.dataset.insertIndex = insertIndex;
+    
+    indicator.addEventListener("dragover", function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (draggedIndex !== null) {
+        // Don't show indicator right before or after the dragged item
+        if (insertIndex !== draggedIndex && insertIndex !== draggedIndex + 1) {
+          indicator.classList.add("visible");
+        }
+      }
+    });
+    
+    indicator.addEventListener("dragleave", function() {
+      indicator.classList.remove("visible");
+    });
+    
+    indicator.addEventListener("drop", function(e) {
+      e.preventDefault();
+      indicator.classList.remove("visible");
+      if (draggedIndex !== null) {
+        var targetIndex = insertIndex;
+        // Adjust target if dragging from before the drop point
+        if (draggedIndex < insertIndex) {
+          targetIndex = insertIndex - 1;
+        }
+        if (draggedIndex !== targetIndex) {
+          moveSlide(draggedIndex, targetIndex);
+        }
+      }
+    });
+    
+    return indicator;
+  }
+  
+  function clearAllDropIndicators() {
+    document.querySelectorAll(".drop-indicator").forEach(function(ind) {
+      ind.classList.remove("visible");
     });
   }
   
@@ -455,6 +492,7 @@ if (isPresenter) {
     updateFormVisibility(slide.type);
     updatePreview(slide);
     updateReorderButtons();
+    hideAudioPreview();
   }
   
   function selectAudioTrack(index) {
@@ -477,11 +515,11 @@ if (isPresenter) {
     audioEndInput.max = slides.length;
     audioLoopInput.checked = !!track.loop;
     
-    // Load audio preview
+    // Show audio preview in main preview area
+    previewContainer.innerHTML = '<p class="preview-placeholder">🔊 Audio Track</p>';
     audioPreview.src = track.src || "";
     audioPreview.load();
-    
-    previewContainer.innerHTML = '<p class="preview-placeholder">Audio track selected - use player in editor to preview</p>';
+    audioPreviewContainer.style.display = "block";
   }
   
   // Update audio preview when source changes
