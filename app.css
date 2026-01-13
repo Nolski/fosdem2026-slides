@@ -12,20 +12,13 @@ html, body {
   box-sizing: inherit;
 }
 
-/* Main Presentation View (default) */
-body:not(.presenterView) {
+body {
   background-color: #1a1a2e;
   color: white;
 }
 
-/* Presenter View styling */
-body.presenterView {
-  background-color: #f9f9f9;
-  color: #333;
-}
-
 /* ============================================
-   Controls (top header)
+   Top Controls Bar
    ============================================ */
 #controls {
   position: fixed;
@@ -39,87 +32,316 @@ body.presenterView {
   align-items: center;
   gap: 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  height: 54px;
+  height: 50px;
 }
 
 #mode-toggle {
   display: flex;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 4px;
+  border-radius: 6px;
+  padding: 3px;
 }
 
 .mode-btn {
-  padding: 8px 18px;
+  padding: 7px 16px;
   font-size: 0.85rem;
   cursor: pointer;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
-  border-radius: 6px;
+  border-radius: 4px;
   transition: all 0.2s ease;
   font-weight: 500;
 }
 
 .mode-btn:hover {
   color: white;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .mode-btn.active {
   background: #e94560;
   color: white;
-  box-shadow: 0 2px 8px rgba(233, 69, 96, 0.4);
 }
 
 #present-controls, #edit-controls {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
 }
 
 #controls button:not(.mode-btn) {
-  padding: 8px 14px;
-  font-size: 0.85rem;
+  padding: 7px 12px;
+  font-size: 0.8rem;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  border-radius: 6px;
+  border-radius: 5px;
   transition: all 0.2s ease;
 }
 
 #controls button:not(.mode-btn):hover {
   background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* ============================================
-   Edit Mode Layout - Two Column
+   Edit Mode - Vertical Stack Layout
    ============================================ */
 #edit-mode {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 0;
-  padding-top: 54px;
+  display: flex;
+  flex-direction: column;
+  padding-top: 50px;
   height: 100vh;
   overflow: hidden;
 }
 
 #edit-mode h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #e94560;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 /* ============================================
-   Left Panel - Editor
+   Timeline Section (Top)
    ============================================ */
-#editor-panel {
+#timeline-section {
+  flex-shrink: 0;
   background: rgba(0, 0, 0, 0.2);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Toolbar */
+#timeline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#toolbar-left, #toolbar-center, #toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#toolbar-left {
+  min-width: 100px;
+}
+
+#toolbar-center {
+  flex: 1;
+  justify-content: center;
+}
+
+#toolbar-right {
+  min-width: 200px;
+  justify-content: flex-end;
+}
+
+#slide-count-display {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.toolbar-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 5px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toolbar-btn.video:hover { background: #e94560; border-color: #e94560; }
+.toolbar-btn.image:hover { background: #3498db; border-color: #3498db; }
+.toolbar-btn.placeholder:hover { background: #9b59b6; border-color: #9b59b6; }
+.toolbar-btn.audio:hover { background: #27ae60; border-color: #27ae60; }
+
+.toolbar-btn.reorder {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.toolbar-btn.reorder:hover {
+  background: #e94560;
+  border-color: #e94560;
+}
+
+.toolbar-btn.reorder:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.reorder:disabled:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Timeline Scroll Area */
+#timeline-scroll-area {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 16px;
+}
+
+#slides-row, #audio-row {
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+}
+
+#slides-row {
+  margin-bottom: 10px;
+}
+
+.timeline-row-label {
+  width: 60px;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Slides Timeline */
+#slides-timeline {
+  display: flex;
+  gap: 6px;
+}
+
+.slide-block {
+  width: 60px;
+  height: 50px;
+  background: linear-gradient(135deg, #0f3460 0%, #1a4a7a 100%);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.slide-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.slide-block.selected {
+  border-color: #e94560;
+  box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.3);
+}
+
+.slide-block.video { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); }
+.slide-block.image { background: linear-gradient(135deg, #2980b9 0%, #3498db 100%); }
+.slide-block.placeholder { background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); }
+
+.slide-block .block-number {
+  font-size: 1.1rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.slide-block .block-icon {
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+/* Audio Timeline */
+#audio-timeline-wrapper {
+  flex: 1;
+  position: relative;
+  min-height: 30px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+}
+
+#audio-timeline {
+  position: relative;
+  height: 30px;
+}
+
+.audio-track {
+  height: 26px;
+  background: linear-gradient(90deg, #1e8449, #27ae60);
+  border-radius: 4px;
+  position: absolute;
+  top: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  color: white;
+  transition: all 0.15s ease;
+  border: 2px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.audio-track:hover {
+  filter: brightness(1.1);
+}
+
+.audio-track.selected {
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.audio-track .audio-icon {
+  margin-right: 5px;
+}
+
+.audio-track .audio-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================
+   Workspace Section (Bottom) - Editor + Preview
+   ============================================ */
+#workspace-section {
+  flex: 1;
+  display: flex;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Editor Panel */
+#editor-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: #1a1a2e;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -127,57 +349,51 @@ body.presenterView {
 
 #slide-editor,
 #audio-editor {
-  padding: 16px;
+  flex: 1;
+  padding: 14px;
   overflow-y: auto;
-  flex-shrink: 0;
 }
 
 #editor-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #slide-position-badge {
-  font-size: 0.75rem;
-  background: rgba(233, 69, 96, 0.3);
+  font-size: 0.7rem;
+  background: rgba(233, 69, 96, 0.2);
   color: #e94560;
-  padding: 4px 10px;
-  border-radius: 12px;
+  padding: 3px 8px;
+  border-radius: 10px;
 }
 
 #editor-placeholder {
   text-align: center;
-  padding: 30px 20px;
-  color: rgba(255, 255, 255, 0.4);
-}
-
-#editor-placeholder p {
-  margin: 0 0 8px 0;
-}
-
-#editor-placeholder .hint {
-  font-size: 0.8rem;
-  opacity: 0.7;
+  padding: 30px 15px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
 }
 
 #slide-form,
 #audio-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .form-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .form-row .form-group {
@@ -185,8 +401,8 @@ body.presenterView {
 }
 
 .form-group label {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
 }
 
@@ -195,13 +411,13 @@ body.presenterView {
 .form-group input[type="color"],
 .form-group select,
 .form-group textarea {
-  padding: 10px 12px;
-  font-size: 0.85rem;
+  padding: 8px 10px;
+  font-size: 0.8rem;
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: 5px;
+  transition: all 0.15s ease;
 }
 
 .form-group input:focus,
@@ -209,12 +425,11 @@ body.presenterView {
 .form-group textarea:focus {
   outline: none;
   border-color: #e94560;
-  box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.15);
 }
 
 .form-group input[type="color"] {
-  padding: 4px;
-  height: 38px;
+  padding: 3px;
+  height: 32px;
   cursor: pointer;
 }
 
@@ -230,50 +445,49 @@ body.presenterView {
   flex-direction: row !important;
   align-items: center;
   cursor: pointer;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
   cursor: pointer;
 }
 
 .form-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .save-btn {
   flex: 1;
-  padding: 10px;
-  font-size: 0.85rem;
+  padding: 9px;
+  font-size: 0.8rem;
   background: #e94560;
   border: none;
   color: white;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .save-btn:hover {
   background: #d63d56;
-  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
 }
 
 .delete-btn {
-  padding: 10px 16px;
-  font-size: 0.85rem;
+  padding: 9px 14px;
+  font-size: 0.8rem;
   background: transparent;
-  border: 1px solid rgba(231, 76, 60, 0.5);
+  border: 1px solid rgba(231, 76, 60, 0.4);
   color: #e74c3c;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .delete-btn:hover {
@@ -282,34 +496,37 @@ body.presenterView {
   border-color: #e74c3c;
 }
 
-/* Preview */
-#slide-preview {
+/* Preview Panel (Large) */
+#preview-panel {
   flex: 1;
-  padding: 16px;
+  background: #0d0d1a;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 0;
 }
 
-#slide-preview h2 {
-  margin-bottom: 12px;
+#preview-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+#preview-header h2 {
+  margin: 0;
 }
 
 #preview-container {
   flex: 1;
-  background: #000;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  min-height: 120px;
+  padding: 20px;
+  min-height: 0;
 }
 
 #preview-container .preview-placeholder {
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
 }
 
 #preview-container video,
@@ -317,333 +534,31 @@ body.presenterView {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  border-radius: 4px;
 }
 
 #preview-container .placeholder-preview {
   width: 100%;
   height: 100%;
+  max-width: 600px;
+  max-height: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: white;
   text-align: center;
-  padding: 20px;
+  border-radius: 8px;
 }
 
 #preview-container .placeholder-preview h3 {
-  margin: 0 0 8px 0;
-  font-size: 1rem;
+  margin: 0 0 10px 0;
+  font-size: 1.5rem;
 }
 
 #preview-container .placeholder-preview p {
   margin: 0;
   opacity: 0.5;
-  font-size: 0.8rem;
-}
-
-/* ============================================
-   Right Panel - Timeline
-   ============================================ */
-#timeline-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-/* Toolbar */
-#timeline-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-}
-
-#toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-#slide-count-display {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-#toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.toolbar-label {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 0 4px;
-}
-
-.toolbar-btn {
-  padding: 8px 14px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  background: #0f3460;
-  border: 1px solid rgba(233, 69, 96, 0.5);
-  color: white;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.toolbar-btn:hover {
-  background: #e94560;
-  border-color: #e94560;
-}
-
-.toolbar-btn.placeholder {
-  background: #533483;
-  border-color: rgba(155, 89, 182, 0.5);
-}
-
-.toolbar-btn.placeholder:hover {
-  background: #9b59b6;
-  border-color: #9b59b6;
-}
-
-.toolbar-btn.audio {
-  background: #1e6e3e;
-  border-color: rgba(46, 204, 113, 0.5);
-}
-
-.toolbar-btn.audio:hover {
-  background: #27ae60;
-  border-color: #27ae60;
-}
-
-/* Timeline Area */
-#timeline-area {
-  flex: 1;
-  overflow: auto;
-  padding: 20px;
-}
-
-/* Timeline Rows */
-#timeline-header-row,
-#slides-row,
-#audio-row {
-  display: flex;
-  align-items: stretch;
-  min-height: 40px;
-}
-
-#timeline-header-row {
-  margin-bottom: 8px;
-}
-
-#slides-row {
-  margin-bottom: 16px;
-}
-
-#audio-row {
-  min-height: 60px;
-}
-
-.timeline-row-label {
-  width: 70px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding-right: 12px;
-}
-
-/* Timeline Ruler */
-#timeline-ruler {
-  display: flex;
-  gap: 8px;
-  padding-left: 4px;
-}
-
-.ruler-mark {
-  width: 70px;
-  flex-shrink: 0;
-  text-align: center;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Slides Timeline */
-#slides-timeline {
-  display: flex;
-  gap: 8px;
-  padding: 4px;
-}
-
-.slide-block {
-  width: 70px;
-  height: 80px;
-  background: linear-gradient(135deg, #0f3460 0%, #1a4a7a 100%);
-  border: 2px solid transparent;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.slide-block:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
-
-.slide-block.selected {
-  border-color: #e94560;
-  box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.3);
-}
-
-.slide-block.placeholder {
-  background: linear-gradient(135deg, #533483 0%, #6b44a8 100%);
-}
-
-.slide-block .block-number {
-  font-size: 1.4rem;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.slide-block .block-type {
-  font-size: 0.65rem;
-  opacity: 0.6;
-  text-transform: uppercase;
-  margin-top: 4px;
-}
-
-.slide-block .block-icon {
-  font-size: 1.1rem;
-  margin-top: 2px;
-}
-
-.slide-block .block-actions {
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  left: -10px;
-  display: none;
-  justify-content: center;
-  gap: 4px;
-}
-
-.slide-block:hover .block-actions {
-  display: flex;
-}
-
-.block-move-btn {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  font-size: 0.65rem;
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  color: #333;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transition: all 0.15s ease;
-}
-
-.block-move-btn:hover:not(:disabled) {
-  background: #e94560;
-  color: white;
-  transform: scale(1.1);
-}
-
-.block-move-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* Audio Timeline */
-#audio-timeline-wrapper {
-  flex: 1;
-  position: relative;
-  min-height: 50px;
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  padding: 8px 4px;
-}
-
-#audio-timeline {
-  position: relative;
-  height: 100%;
-  min-height: 34px;
-}
-
-.audio-track {
-  height: 34px;
-  background: linear-gradient(90deg, #1e8449, #27ae60);
-  border-radius: 6px;
-  position: absolute;
-  top: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  font-size: 0.8rem;
-  color: white;
-  transition: all 0.2s ease;
-  border: 2px solid transparent;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
-}
-
-.audio-track:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
-}
-
-.audio-track.selected {
-  border-color: white;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 4px 12px rgba(39, 174, 96, 0.4);
-}
-
-.audio-track .audio-icon {
-  margin-right: 6px;
-}
-
-.audio-track .audio-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ============================================
@@ -667,7 +582,6 @@ body.presenterView {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  display: block;
 }
 
 #presentation .placeholder-slide {
@@ -691,7 +605,6 @@ body.presenterView {
   opacity: 0.6;
 }
 
-/* Hide edit mode when in present mode */
 body.present-mode #edit-mode {
   display: none;
 }
@@ -705,10 +618,9 @@ body.present-mode #controls {
 }
 
 /* ============================================
-   Presenter View Specific Styles
+   Presenter View
    ============================================ */
 #presenter-info {
-  font-family: Arial, sans-serif;
   padding: 10px;
 }
 
@@ -728,21 +640,20 @@ body.present-mode #controls {
 }
 
 /* ============================================
-   Scrollbar Styles
+   Scrollbars
    ============================================ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -750,21 +661,15 @@ body.present-mode #controls {
 }
 
 /* ============================================
-   Responsive adjustments
+   Responsive
    ============================================ */
-@media (max-width: 900px) {
-  #edit-mode {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+@media (max-width: 700px) {
+  #workspace-section {
+    flex-direction: column;
   }
   
   #editor-panel {
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
     max-height: 40vh;
-  }
-  
-  #toolbar-right {
-    flex-wrap: wrap;
   }
 }

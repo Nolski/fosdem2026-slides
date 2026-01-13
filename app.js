@@ -87,7 +87,6 @@ if (isPresenter) {
     });
   }
 
-  // Helper function to render slide preview
   function renderSlidePreview(slide, container, isCurrentSlide) {
     container.innerHTML = "";
     
@@ -113,31 +112,16 @@ if (isPresenter) {
         presenterVideo = video;
         document.getElementById("video-controls").style.display = "block";
         video.addEventListener("timeupdate", function() {
-          var currentTime = video.currentTime;
-          var duration = video.duration;
-          if (duration) {
-            seekSlider.value = (currentTime / duration) * 100;
+          if (video.duration) {
+            seekSlider.value = (video.currentTime / video.duration) * 100;
           }
         });
       }
       container.appendChild(video);
     } else if (slide.type === "placeholder") {
       var placeholderDiv = document.createElement("div");
-      placeholderDiv.style.cssText = `
-        background: ${slide.backgroundColor || '#333333'};
-        padding: 20px;
-        text-align: center;
-        color: white;
-        min-height: 100px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      `;
-      placeholderDiv.innerHTML = `
-        <h3 style="margin: 0 0 10px 0;">${slide.title || 'Placeholder'}</h3>
-        <p style="margin: 0; opacity: 0.6; font-size: 0.9rem;">Slide content coming soon</p>
-      `;
+      placeholderDiv.style.cssText = "background:" + (slide.backgroundColor || '#333') + ";padding:20px;text-align:center;color:white;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;";
+      placeholderDiv.innerHTML = '<h3 style="margin:0 0 10px 0;">' + (slide.title || 'Placeholder') + '</h3><p style="margin:0;opacity:0.6;">Coming soon</p>';
       container.appendChild(placeholderDiv);
       if (isCurrentSlide) {
         document.getElementById("video-controls").style.display = "none";
@@ -150,27 +134,21 @@ if (isPresenter) {
     if (event.data.type === "update") {
       var currentIndex = event.data.currentSlideIndex;
       var slides = event.data.slides;
-
       var curSlide = slides[currentIndex];
-      var currentPreview = document.getElementById("current-preview");
-      renderSlidePreview(curSlide, currentPreview, true);
       
-      // Format notes with auto-numbering (remove manual "Slide X:" prefix)
-      var notes = curSlide.notes || "";
-      notes = notes.replace(/^Slide\s*\d+\s*:\s*/i, "");
-      document.getElementById("current-notes").innerText = `[Slide ${currentIndex + 1}] ${notes}`;
+      renderSlidePreview(curSlide, document.getElementById("current-preview"), true);
+      
+      var notes = (curSlide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
+      document.getElementById("current-notes").innerText = "[Slide " + (currentIndex + 1) + "] " + notes;
 
-      var nextIndex = currentIndex + 1;
       var nextPreview = document.getElementById("next-preview");
-      nextPreview.innerHTML = "";
-      if (nextIndex < slides.length) {
-        var nextSlide = slides[nextIndex];
+      if (currentIndex + 1 < slides.length) {
+        var nextSlide = slides[currentIndex + 1];
         renderSlidePreview(nextSlide, nextPreview, false);
-        var nextNotes = nextSlide.notes || "";
-        nextNotes = nextNotes.replace(/^Slide\s*\d+\s*:\s*/i, "");
-        document.getElementById("next-notes").innerText = `[Slide ${nextIndex + 1}] ${nextNotes}`;
+        var nextNotes = (nextSlide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
+        document.getElementById("next-notes").innerText = "[Slide " + (currentIndex + 2) + "] " + nextNotes;
       } else {
-        nextPreview.innerHTML = "<em>No upcoming slide</em>";
+        nextPreview.innerHTML = "<em>End of presentation</em>";
         document.getElementById("next-notes").innerText = "";
       }
 
@@ -184,33 +162,27 @@ if (isPresenter) {
         }
       }
     }
-  }, false);
+  });
 
   document.addEventListener("keydown", function(e) {
     e.preventDefault();
-    if (e.key === "ArrowRight") {
-      if (window.opener && !window.opener.closed) {
-        window.opener.advanceSlide();
-      }
-    } else if (e.key === "ArrowLeft") {
-      if (window.opener && !window.opener.closed) {
-        window.opener.previousSlide();
-      }
+    if (e.key === "ArrowRight" && window.opener && !window.opener.closed) {
+      window.opener.advanceSlide();
+    } else if (e.key === "ArrowLeft" && window.opener && !window.opener.closed) {
+      window.opener.previousSlide();
     }
   });
 
-  // BLEEP BUTTON WITH WEB AUDIO API
-  const bleepBtn = document.getElementById("bleepBtn");
-  let audioCtx = null;
-  let oscillator = null;
+  // Bleep button
+  var bleepBtn = document.getElementById("bleepBtn");
+  var audioCtx = null;
+  var oscillator = null;
 
-  bleepBtn.addEventListener("mousedown", () => {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+  bleepBtn.addEventListener("mousedown", function() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     oscillator = audioCtx.createOscillator();
     oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime); // 1kHz
+    oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
     oscillator.connect(audioCtx.destination);
     oscillator.start();
   });
@@ -222,14 +194,12 @@ if (isPresenter) {
       oscillator = null;
     }
   }
-
   bleepBtn.addEventListener("mouseup", stopBleep);
   bleepBtn.addEventListener("mouseleave", stopBleep);
 
 } else {
-  // ---------- MAIN VIEW CODE (EDIT + PRESENT) ----------
+  // ---------- MAIN VIEW CODE ----------
   
-  // State
   var slides = [];
   var audioTracks = [];
   var currentSlideIndex = 0;
@@ -241,12 +211,10 @@ if (isPresenter) {
   window.currentMedia = null;
   var activeAudioElements = {};
   var canChangeSlide = true;
-  var isEditMode = true;
 
-  // Slide block width for timeline calculations (70px + 8px gap)
-  var BLOCK_WIDTH = 78;
+  var BLOCK_WIDTH = 66; // 60px + 6px gap
 
-  // DOM Elements
+  // DOM elements
   var editModeBtn = document.getElementById("editModeBtn");
   var presentModeBtn = document.getElementById("presentModeBtn");
   var presentControls = document.getElementById("present-controls");
@@ -256,7 +224,6 @@ if (isPresenter) {
   
   var slidesTimeline = document.getElementById("slides-timeline");
   var audioTimeline = document.getElementById("audio-timeline");
-  var timelineRuler = document.getElementById("timeline-ruler");
   var slideCountDisplay = document.getElementById("slide-count-display");
   
   var slideEditor = document.getElementById("slide-editor");
@@ -267,8 +234,12 @@ if (isPresenter) {
   var previewContainer = document.getElementById("preview-container");
   var slidePositionBadge = document.getElementById("slide-position-badge");
   
-  var startBtnElem = document.getElementById("startBtn");
-  var presenterBtnElem = document.getElementById("presenterBtn");
+  var reorderControls = document.getElementById("reorder-controls");
+  var moveFirstBtn = document.getElementById("moveFirstBtn");
+  var moveLeftBtn = document.getElementById("moveLeftBtn");
+  var moveRightBtn = document.getElementById("moveRightBtn");
+  var moveLastBtn = document.getElementById("moveLastBtn");
+  
   var exportBtn = document.getElementById("exportBtn");
   var importBtn = document.getElementById("importBtn");
   var importInput = document.getElementById("importInput");
@@ -280,7 +251,6 @@ if (isPresenter) {
   var deleteSlideBtn = document.getElementById("deleteSlideBtn");
   var deleteAudioBtn = document.getElementById("deleteAudioBtn");
   
-  // Slide form elements
   var slideTypeSelect = document.getElementById("slide-type");
   var slideSrcInput = document.getElementById("slide-src");
   var slideNotesInput = document.getElementById("slide-notes");
@@ -291,7 +261,6 @@ if (isPresenter) {
   var placeholderGroup = document.getElementById("placeholder-group");
   var loopGroup = document.getElementById("loop-group");
   
-  // Audio form elements
   var audioSrcInput = document.getElementById("audio-src");
   var audioStartInput = document.getElementById("audio-start");
   var audioEndInput = document.getElementById("audio-end");
@@ -299,331 +268,207 @@ if (isPresenter) {
 
   // Load data
   fetch('data.json')
-    .then(function(response) {
-      return response.json();
-    })
+    .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.slides) {
-        slides = data.slides;
-        audioTracks = data.audio || [];
-      } else {
-        slides = data;
-      }
+      slides = data.slides || data;
+      audioTracks = data.audio || [];
       renderTimelines();
     })
-    .catch(function(error) {
-      console.error("Error loading slide data:", error);
+    .catch(function(e) {
+      console.error("Error loading data:", e);
       slides = [];
       renderTimelines();
     });
 
-  // ============================================
-  // MODE SWITCHING
-  // ============================================
-  
+  // Mode switching
   function switchToEditMode() {
-    isEditMode = true;
     editModeBtn.classList.add("active");
     presentModeBtn.classList.remove("active");
     presentControls.style.display = "none";
     editControls.style.display = "flex";
     document.body.classList.remove("present-mode");
-    editModeContainer.style.display = "grid";
+    editModeContainer.style.display = "flex";
     presentationContainer.classList.remove("active");
     window.presentationStarted = false;
     paused = false;
-    
-    // Stop any playing media
-    if (window.currentMedia) {
-      window.currentMedia.pause();
-      window.currentMedia = null;
-    }
-    
-    // Stop all audio
-    for (let key in activeAudioElements) {
-      activeAudioElements[key].pause();
-      delete activeAudioElements[key];
-    }
+    if (window.currentMedia) { window.currentMedia.pause(); window.currentMedia = null; }
+    for (var k in activeAudioElements) { activeAudioElements[k].pause(); delete activeAudioElements[k]; }
   }
   
   function switchToPresentMode() {
-    isEditMode = false;
     editModeBtn.classList.remove("active");
     presentModeBtn.classList.add("active");
     presentControls.style.display = "flex";
     editControls.style.display = "none";
     editModeContainer.style.display = "none";
     presentationContainer.classList.add("active");
-    
-    // Start from selected slide if one is selected, otherwise from beginning
-    if (selectedSlideIndex >= 0) {
-      currentSlideIndex = selectedSlideIndex;
-    } else {
-      currentSlideIndex = 0;
-    }
+    currentSlideIndex = selectedSlideIndex >= 0 ? selectedSlideIndex : 0;
   }
   
   editModeBtn.addEventListener("click", switchToEditMode);
   presentModeBtn.addEventListener("click", switchToPresentMode);
 
-  // ============================================
-  // TIMELINE RENDERING
-  // ============================================
-  
+  // Timeline rendering
   function renderTimelines() {
     renderSlidesTimeline();
     renderAudioTimeline();
-    renderTimelineRuler();
     slideCountDisplay.textContent = slides.length + " slide" + (slides.length !== 1 ? "s" : "");
+    updateReorderButtons();
   }
   
   function renderSlidesTimeline() {
     slidesTimeline.innerHTML = "";
-    
-    slides.forEach(function(slide, index) {
+    slides.forEach(function(slide, i) {
       var block = document.createElement("div");
-      block.className = "slide-block" + 
-        (slide.type === "placeholder" ? " placeholder" : "") + 
-        (index === selectedSlideIndex ? " selected" : "");
-      block.dataset.index = index;
+      block.className = "slide-block " + slide.type + (i === selectedSlideIndex ? " selected" : "");
+      block.dataset.index = i;
       
-      var typeIcon = slide.type === "video" ? "🎬" : 
-                     slide.type === "image" ? "🖼️" : "⏳";
+      var icon = slide.type === "video" ? "🎬" : slide.type === "image" ? "🖼️" : "⏳";
+      block.innerHTML = '<div class="block-number">' + (i + 1) + '</div><div class="block-icon">' + icon + '</div>';
       
-      block.innerHTML = `
-        <div class="block-number">${index + 1}</div>
-        <div class="block-icon">${typeIcon}</div>
-        <div class="block-type">${slide.type}</div>
-        <div class="block-actions">
-          <button class="block-move-btn move-left" data-index="${index}" ${index === 0 ? 'disabled' : ''} title="Move left">◀</button>
-          <button class="block-move-btn move-right" data-index="${index}" ${index === slides.length - 1 ? 'disabled' : ''} title="Move right">▶</button>
-        </div>
-      `;
-      
-      block.addEventListener("click", function(e) {
-        if (!e.target.classList.contains("block-move-btn")) {
-          selectSlide(index);
-        }
-      });
-      
+      block.addEventListener("click", function() { selectSlide(i); });
       slidesTimeline.appendChild(block);
-    });
-    
-    // Add move button listeners
-    document.querySelectorAll(".move-left").forEach(function(btn) {
-      btn.addEventListener("click", function(e) {
-        e.stopPropagation();
-        var idx = parseInt(this.dataset.index);
-        moveSlide(idx, idx - 1);
-      });
-    });
-    
-    document.querySelectorAll(".move-right").forEach(function(btn) {
-      btn.addEventListener("click", function(e) {
-        e.stopPropagation();
-        var idx = parseInt(this.dataset.index);
-        moveSlide(idx, idx + 1);
-      });
     });
   }
   
   function renderAudioTimeline() {
     audioTimeline.innerHTML = "";
+    if (!slides.length) return;
     
-    if (slides.length === 0) return;
-    
-    audioTracks.forEach(function(track, index) {
-      var audioBlock = document.createElement("div");
-      audioBlock.className = "audio-track" + (index === selectedAudioIndex ? " selected" : "");
-      audioBlock.dataset.index = index;
+    audioTracks.forEach(function(track, i) {
+      var el = document.createElement("div");
+      el.className = "audio-track" + (i === selectedAudioIndex ? " selected" : "");
+      el.dataset.index = i;
       
-      // Calculate position and width based on slide positions
-      var startSlide = Math.max(0, track.startSlide);
-      var endSlide = Math.min(slides.length - 1, track.endSlide);
-      var left = startSlide * BLOCK_WIDTH + 4;
-      var width = (endSlide - startSlide + 1) * BLOCK_WIDTH - 8;
+      var start = Math.max(0, track.startSlide);
+      var end = Math.min(slides.length - 1, track.endSlide);
+      el.style.left = (start * BLOCK_WIDTH + 4) + "px";
+      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 8) + "px";
       
-      audioBlock.style.left = left + "px";
-      audioBlock.style.width = Math.max(60, width) + "px";
-      
-      // Extract filename for display
       var filename = track.src.split('/').pop();
-      audioBlock.innerHTML = `<span class="audio-icon">🔊</span><span class="audio-label">${filename}</span>`;
-      
-      audioBlock.addEventListener("click", function() {
-        selectAudioTrack(index);
-      });
-      
-      audioTimeline.appendChild(audioBlock);
+      el.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>';
+      el.addEventListener("click", function() { selectAudioTrack(i); });
+      audioTimeline.appendChild(el);
     });
     
-    // Set minimum width of audio timeline to match slides
     var wrapper = document.getElementById("audio-timeline-wrapper");
-    if (wrapper) {
-      wrapper.style.minWidth = (slides.length * BLOCK_WIDTH) + "px";
-    }
+    if (wrapper) wrapper.style.minWidth = (slides.length * BLOCK_WIDTH) + "px";
   }
   
-  function renderTimelineRuler() {
-    timelineRuler.innerHTML = "";
-    
-    slides.forEach(function(slide, index) {
-      var mark = document.createElement("div");
-      mark.className = "ruler-mark";
-      mark.textContent = index + 1;
-      timelineRuler.appendChild(mark);
-    });
+  // Reorder controls
+  function updateReorderButtons() {
+    if (selectedSlideIndex < 0) {
+      reorderControls.style.display = "none";
+      return;
+    }
+    reorderControls.style.display = "flex";
+    moveFirstBtn.disabled = selectedSlideIndex === 0;
+    moveLeftBtn.disabled = selectedSlideIndex === 0;
+    moveRightBtn.disabled = selectedSlideIndex === slides.length - 1;
+    moveLastBtn.disabled = selectedSlideIndex === slides.length - 1;
   }
   
-  function moveSlide(fromIndex, toIndex) {
-    if (toIndex < 0 || toIndex >= slides.length) return;
-    
-    var slide = slides.splice(fromIndex, 1)[0];
-    slides.splice(toIndex, 0, slide);
-    
-    // Update selection
-    if (selectedSlideIndex === fromIndex) {
-      selectedSlideIndex = toIndex;
-    } else if (selectedSlideIndex === toIndex) {
-      selectedSlideIndex = fromIndex;
-    }
-    
+  function moveSlide(from, to) {
+    if (to < 0 || to >= slides.length || from === to) return;
+    var slide = slides.splice(from, 1)[0];
+    slides.splice(to, 0, slide);
+    selectedSlideIndex = to;
     renderTimelines();
-    
-    // Keep selection visible
-    if (selectedSlideIndex >= 0) {
-      updateSlidePositionBadge();
-    }
+    scrollToSlide(to);
+  }
+  
+  moveFirstBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, 0); });
+  moveLeftBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, selectedSlideIndex - 1); });
+  moveRightBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, selectedSlideIndex + 1); });
+  moveLastBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, slides.length - 1); });
+  
+  function scrollToSlide(index) {
+    var block = slidesTimeline.querySelector('[data-index="' + index + '"]');
+    if (block) block.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }
 
-  // ============================================
-  // SLIDE SELECTION AND EDITING
-  // ============================================
-  
+  // Selection
   function selectSlide(index) {
     selectedSlideIndex = index;
-    selectedAudioIndex = -1; // Deselect audio
+    selectedAudioIndex = -1;
     
-    // Update timeline selection
-    document.querySelectorAll(".slide-block").forEach(function(block, i) {
-      block.classList.toggle("selected", i === index);
-    });
-    document.querySelectorAll(".audio-track").forEach(function(track) {
-      track.classList.remove("selected");
-    });
+    document.querySelectorAll(".slide-block").forEach(function(b, i) { b.classList.toggle("selected", i === index); });
+    document.querySelectorAll(".audio-track").forEach(function(t) { t.classList.remove("selected"); });
     
-    // Show slide editor, hide audio editor
     slideEditor.style.display = "block";
     audioEditor.style.display = "none";
     editorPlaceholder.style.display = "none";
     slideForm.style.display = "flex";
     
-    // Update position badge
-    updateSlidePositionBadge();
+    slidePositionBadge.textContent = "Slide " + (index + 1) + " of " + slides.length;
+    slidePositionBadge.style.display = "inline-block";
     
-    // Populate form
     var slide = slides[index];
     slideTypeSelect.value = slide.type;
     slideSrcInput.value = slide.src || "";
-    
-    // Strip "Slide X:" prefix from notes for editing
-    var notes = slide.notes || "";
-    notes = notes.replace(/^Slide\s*\d+\s*:\s*/i, "");
-    slideNotesInput.value = notes;
-    
+    slideNotesInput.value = (slide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
     slideLoopInput.checked = !!slide.loop;
     placeholderTitleInput.value = slide.title || "";
     placeholderColorInput.value = slide.backgroundColor || "#333333";
     
     updateFormVisibility(slide.type);
     updatePreview(slide);
-  }
-  
-  function updateSlidePositionBadge() {
-    if (selectedSlideIndex >= 0) {
-      slidePositionBadge.textContent = "Slide " + (selectedSlideIndex + 1) + " of " + slides.length;
-      slidePositionBadge.style.display = "inline-block";
-    } else {
-      slidePositionBadge.style.display = "none";
-    }
+    updateReorderButtons();
   }
   
   function selectAudioTrack(index) {
     selectedAudioIndex = index;
-    selectedSlideIndex = -1; // Deselect slide
+    selectedSlideIndex = -1;
     
-    // Update timeline selection
-    document.querySelectorAll(".slide-block").forEach(function(block) {
-      block.classList.remove("selected");
-    });
-    document.querySelectorAll(".audio-track").forEach(function(track, i) {
-      track.classList.toggle("selected", i === index);
-    });
+    document.querySelectorAll(".slide-block").forEach(function(b) { b.classList.remove("selected"); });
+    document.querySelectorAll(".audio-track").forEach(function(t, i) { t.classList.toggle("selected", i === index); });
     
-    // Show audio editor, hide slide editor
     slideEditor.style.display = "none";
     audioEditor.style.display = "block";
+    reorderControls.style.display = "none";
     slidePositionBadge.style.display = "none";
     
-    // Populate audio form
     var track = audioTracks[index];
     audioSrcInput.value = track.src || "";
-    audioStartInput.value = track.startSlide + 1; // Display as 1-indexed
+    audioStartInput.value = track.startSlide + 1;
     audioEndInput.value = track.endSlide + 1;
     audioStartInput.max = slides.length;
     audioEndInput.max = slides.length;
     audioLoopInput.checked = !!track.loop;
     
-    // Clear slide preview
     previewContainer.innerHTML = '<p class="preview-placeholder">Audio track selected</p>';
   }
   
   function updateFormVisibility(type) {
-    if (type === "placeholder") {
-      srcGroup.style.display = "none";
-      placeholderGroup.style.display = "flex";
-      loopGroup.style.display = "none";
-    } else {
-      srcGroup.style.display = "flex";
-      placeholderGroup.style.display = "none";
-      loopGroup.style.display = "flex";
-    }
+    srcGroup.style.display = type === "placeholder" ? "none" : "flex";
+    placeholderGroup.style.display = type === "placeholder" ? "flex" : "none";
+    loopGroup.style.display = type === "placeholder" ? "none" : "flex";
   }
   
-  slideTypeSelect.addEventListener("change", function() {
-    updateFormVisibility(this.value);
-  });
+  slideTypeSelect.addEventListener("change", function() { updateFormVisibility(this.value); });
   
   function updatePreview(slide) {
     previewContainer.innerHTML = "";
-    
     if (slide.type === "video") {
-      var video = document.createElement("video");
-      video.src = slide.src;
-      video.controls = true;
-      video.muted = true;
-      video.style.maxWidth = "100%";
-      video.style.maxHeight = "100%";
-      previewContainer.appendChild(video);
+      var v = document.createElement("video");
+      v.src = slide.src;
+      v.controls = true;
+      v.muted = true;
+      previewContainer.appendChild(v);
     } else if (slide.type === "image") {
       var img = document.createElement("img");
       img.src = slide.src;
-      img.style.maxWidth = "100%";
-      img.style.maxHeight = "100%";
       previewContainer.appendChild(img);
-    } else if (slide.type === "placeholder") {
+    } else {
       var div = document.createElement("div");
       div.className = "placeholder-preview";
-      div.style.backgroundColor = slide.backgroundColor || "#333333";
-      div.innerHTML = `
-        <h3>${slide.title || 'Placeholder'}</h3>
-        <p>Slide content coming soon</p>
-      `;
+      div.style.backgroundColor = slide.backgroundColor || "#333";
+      div.innerHTML = '<h3>' + (slide.title || 'Placeholder') + '</h3><p>Coming soon</p>';
       previewContainer.appendChild(div);
     }
   }
   
-  // Save slide changes
+  // Save slide
   slideForm.addEventListener("submit", function(e) {
     e.preventDefault();
     if (selectedSlideIndex < 0) return;
@@ -634,197 +479,121 @@ if (isPresenter) {
     if (slide.type === "placeholder") {
       slide.title = placeholderTitleInput.value;
       slide.backgroundColor = placeholderColorInput.value;
-      delete slide.src;
-      delete slide.loop;
+      delete slide.src; delete slide.loop;
     } else {
       slide.src = slideSrcInput.value;
       slide.loop = slideLoopInput.checked;
-      delete slide.title;
-      delete slide.backgroundColor;
+      delete slide.title; delete slide.backgroundColor;
     }
-    
-    // Store notes without "Slide X:" prefix - auto-numbering handles this
     slide.notes = slideNotesInput.value;
     
     renderTimelines();
     updatePreview(slide);
-    
-    // Re-select to update UI
     selectSlide(selectedSlideIndex);
     
-    // Flash save confirmation
-    var saveBtn = slideForm.querySelector(".save-btn");
-    var originalText = saveBtn.innerText;
-    saveBtn.innerText = "✓ Saved!";
-    saveBtn.style.background = "#27ae60";
-    setTimeout(function() {
-      saveBtn.innerText = originalText;
-      saveBtn.style.background = "";
-    }, 1500);
+    var btn = slideForm.querySelector(".save-btn");
+    btn.innerText = "✓ Saved";
+    btn.style.background = "#27ae60";
+    setTimeout(function() { btn.innerText = "Save"; btn.style.background = ""; }, 1200);
   });
   
-  // Save audio track changes
+  // Save audio
   audioForm.addEventListener("submit", function(e) {
     e.preventDefault();
     if (selectedAudioIndex < 0) return;
     
     var track = audioTracks[selectedAudioIndex];
     track.src = audioSrcInput.value;
-    track.startSlide = Math.max(0, parseInt(audioStartInput.value) - 1); // Convert to 0-indexed
+    track.startSlide = Math.max(0, parseInt(audioStartInput.value) - 1);
     track.endSlide = Math.max(track.startSlide, parseInt(audioEndInput.value) - 1);
     track.loop = audioLoopInput.checked;
     
     renderAudioTimeline();
     
-    // Flash save confirmation
-    var saveBtn = audioForm.querySelector(".save-btn");
-    var originalText = saveBtn.innerText;
-    saveBtn.innerText = "✓ Saved!";
-    saveBtn.style.background = "#27ae60";
-    setTimeout(function() {
-      saveBtn.innerText = originalText;
-      saveBtn.style.background = "";
-    }, 1500);
+    var btn = audioForm.querySelector(".save-btn");
+    btn.innerText = "✓ Saved";
+    btn.style.background = "#27ae60";
+    setTimeout(function() { btn.innerText = "Save"; btn.style.background = ""; }, 1200);
   });
 
-  // ============================================
-  // ADD / DELETE SLIDES
-  // ============================================
-  
+  // Add slides
   function addSlide(type) {
-    var newSlide = {
-      type: type,
-      notes: ""
-    };
+    var slide = { type: type, notes: "" };
+    if (type === "video") { slide.src = "media/video/"; slide.loop = false; }
+    else if (type === "image") { slide.src = "media/"; }
+    else { slide.title = "Coming Soon"; slide.backgroundColor = "#333333"; }
     
-    if (type === "video") {
-      newSlide.src = "media/video/";
-      newSlide.loop = false;
-    } else if (type === "image") {
-      newSlide.src = "media/";
-    } else if (type === "placeholder") {
-      newSlide.title = "Coming Soon";
-      newSlide.backgroundColor = "#333333";
-    }
-    
-    // Insert after selected slide, or at end
-    var insertIndex = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
-    slides.splice(insertIndex, 0, newSlide);
-    
+    var idx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
+    slides.splice(idx, 0, slide);
     renderTimelines();
-    selectSlide(insertIndex);
-    
-    // Scroll to new slide
-    setTimeout(function() {
-      var newBlock = slidesTimeline.querySelector('[data-index="' + insertIndex + '"]');
-      if (newBlock) {
-        newBlock.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-      }
-    }, 50);
-  }
-  
-  function addAudioTrack() {
-    var newTrack = {
-      src: "media/audio/",
-      startSlide: selectedSlideIndex >= 0 ? selectedSlideIndex : 0,
-      endSlide: selectedSlideIndex >= 0 ? Math.min(selectedSlideIndex + 5, slides.length - 1) : Math.min(5, slides.length - 1),
-      loop: false
-    };
-    
-    audioTracks.push(newTrack);
-    renderAudioTimeline();
-    selectAudioTrack(audioTracks.length - 1);
+    selectSlide(idx);
+    setTimeout(function() { scrollToSlide(idx); }, 50);
   }
   
   addVideoBtn.addEventListener("click", function() { addSlide("video"); });
   addImageBtn.addEventListener("click", function() { addSlide("image"); });
   addPlaceholderBtn.addEventListener("click", function() { addSlide("placeholder"); });
-  addAudioBtn.addEventListener("click", addAudioTrack);
   
+  addAudioBtn.addEventListener("click", function() {
+    var start = selectedSlideIndex >= 0 ? selectedSlideIndex : 0;
+    audioTracks.push({
+      src: "media/audio/",
+      startSlide: start,
+      endSlide: Math.min(start + 5, slides.length - 1),
+      loop: false
+    });
+    renderAudioTimeline();
+    selectAudioTrack(audioTracks.length - 1);
+  });
+  
+  // Delete
   deleteSlideBtn.addEventListener("click", function() {
-    if (selectedSlideIndex < 0) return;
-    
-    if (confirm("Are you sure you want to delete this slide?")) {
-      slides.splice(selectedSlideIndex, 1);
-      
-      // Adjust selection
-      if (slides.length === 0) {
-        selectedSlideIndex = -1;
-        editorPlaceholder.style.display = "block";
-        slideForm.style.display = "none";
-        slidePositionBadge.style.display = "none";
-        previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide to preview</p>';
-      } else if (selectedSlideIndex >= slides.length) {
-        selectedSlideIndex = slides.length - 1;
-        selectSlide(selectedSlideIndex);
-      } else {
-        selectSlide(selectedSlideIndex);
-      }
-      
-      renderTimelines();
+    if (selectedSlideIndex < 0 || !confirm("Delete this slide?")) return;
+    slides.splice(selectedSlideIndex, 1);
+    if (!slides.length) {
+      selectedSlideIndex = -1;
+      editorPlaceholder.style.display = "block";
+      slideForm.style.display = "none";
+      slidePositionBadge.style.display = "none";
+      previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide to preview</p>';
+    } else {
+      selectedSlideIndex = Math.min(selectedSlideIndex, slides.length - 1);
+      selectSlide(selectedSlideIndex);
     }
+    renderTimelines();
   });
   
   deleteAudioBtn.addEventListener("click", function() {
-    if (selectedAudioIndex < 0) return;
-    
-    if (confirm("Are you sure you want to delete this audio track?")) {
-      audioTracks.splice(selectedAudioIndex, 1);
-      selectedAudioIndex = -1;
-      
-      // Hide audio editor, show slide editor placeholder
-      audioEditor.style.display = "none";
-      slideEditor.style.display = "block";
-      editorPlaceholder.style.display = "block";
-      slideForm.style.display = "none";
-      
-      renderAudioTimeline();
-    }
+    if (selectedAudioIndex < 0 || !confirm("Delete this audio track?")) return;
+    audioTracks.splice(selectedAudioIndex, 1);
+    selectedAudioIndex = -1;
+    audioEditor.style.display = "none";
+    slideEditor.style.display = "block";
+    editorPlaceholder.style.display = "block";
+    slideForm.style.display = "none";
+    renderAudioTimeline();
   });
 
-  // ============================================
-  // IMPORT / EXPORT
-  // ============================================
-  
+  // Import/Export
   exportBtn.addEventListener("click", function() {
-    var exportData = {
-      slides: slides,
-      audio: audioTracks
-    };
-    
-    var dataStr = JSON.stringify(exportData, null, 2);
-    var blob = new Blob([dataStr], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    
+    var data = JSON.stringify({ slides: slides, audio: audioTracks }, null, 2);
     var a = document.createElement("a");
-    a.href = url;
+    a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
     a.download = "data.json";
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   });
   
-  importBtn.addEventListener("click", function() {
-    importInput.click();
-  });
+  importBtn.addEventListener("click", function() { importInput.click(); });
   
   importInput.addEventListener("change", function(e) {
     var file = e.target.files[0];
     if (!file) return;
-    
     var reader = new FileReader();
-    reader.onload = function(event) {
+    reader.onload = function(ev) {
       try {
-        var data = JSON.parse(event.target.result);
-        if (data.slides) {
-          slides = data.slides;
-          audioTracks = data.audio || [];
-        } else if (Array.isArray(data)) {
-          slides = data;
-          audioTracks = [];
-        }
-        
+        var data = JSON.parse(ev.target.result);
+        slides = data.slides || data;
+        audioTracks = data.audio || [];
         selectedSlideIndex = -1;
         selectedAudioIndex = -1;
         editorPlaceholder.style.display = "block";
@@ -832,45 +601,28 @@ if (isPresenter) {
         audioEditor.style.display = "none";
         slideEditor.style.display = "block";
         slidePositionBadge.style.display = "none";
-        previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide to preview</p>';
-        
+        reorderControls.style.display = "none";
+        previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide</p>';
         renderTimelines();
-        alert("Slides imported successfully!");
-      } catch (err) {
-        alert("Error parsing JSON file: " + err.message);
-      }
+        alert("Imported!");
+      } catch (err) { alert("Error: " + err.message); }
     };
     reader.readAsText(file);
-    
-    // Reset input
     importInput.value = "";
   });
 
-  // ============================================
-  // PRESENTATION MODE
-  // ============================================
-  
+  // Presentation
   window.addEventListener("message", function(e) {
-    if (e.data.type === "togglePause") {
-      togglePause();
-    }
+    if (e.data.type === "togglePause") togglePause();
   });
 
   function togglePause() {
     if (window.currentMedia && window.currentMedia.tagName === "VIDEO") {
-      if (!paused) {
-        window.currentMedia.pause();
-      } else {
-        window.currentMedia.play();
-      }
+      paused ? window.currentMedia.play() : window.currentMedia.pause();
     }
     paused = !paused;
-    for (let key in activeAudioElements) {
-      if (paused) {
-        activeAudioElements[key].pause();
-      } else {
-        activeAudioElements[key].play().catch(e => console.error("Audio play error:", e));
-      }
+    for (var k in activeAudioElements) {
+      paused ? activeAudioElements[k].pause() : activeAudioElements[k].play().catch(function(){});
     }
     updatePresenterView();
   }
@@ -901,61 +653,36 @@ if (isPresenter) {
       var video = document.createElement("video");
       video.src = slide.src;
       video.autoplay = true;
-      video.controls = false;
-      if (slide.loop) {
-        video.loop = true;
-      }
+      if (slide.loop) video.loop = true;
       container.appendChild(video);
       window.currentMedia = video;
-      video.addEventListener("loadeddata", function () {
-        video.play().catch(function (error) {
-          console.error("Video play failed:", error);
-        });
-      });
-    } else if (slide.type === "placeholder") {
-      var placeholderDiv = document.createElement("div");
-      placeholderDiv.className = "placeholder-slide";
-      placeholderDiv.style.backgroundColor = slide.backgroundColor || "#333333";
-      placeholderDiv.innerHTML = `
-        <h1>${slide.title || 'Placeholder'}</h1>
-        <p>Slide content coming soon</p>
-      `;
-      container.appendChild(placeholderDiv);
+      video.addEventListener("loadeddata", function() { video.play().catch(function(){}); });
+    } else {
+      var div = document.createElement("div");
+      div.className = "placeholder-slide";
+      div.style.backgroundColor = slide.backgroundColor || "#333";
+      div.innerHTML = '<h1>' + (slide.title || 'Placeholder') + '</h1><p>Coming soon</p>';
+      container.appendChild(div);
       window.currentMedia = null;
     }
-    
     updatePresenterView();
     updateAudio();
   }
 
   function updateAudio() {
-    for (let i = 0; i < audioTracks.length; i++) {
-      let track = audioTracks[i];
+    for (var i = 0; i < audioTracks.length; i++) {
+      var track = audioTracks[i];
       if (currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide) {
         if (!activeAudioElements[i]) {
-          let audioEl = new Audio(track.src);
-          audioEl.loop = !!track.loop;
-          activeAudioElements[i] = audioEl;
-          if (!paused) {
-            audioEl.play().catch(e => console.error("Audio play error:", e));
-          }
-        } else {
-          let audioEl = activeAudioElements[i];
-          if (audioEl.ended) {
-            audioEl.currentTime = 0;
-            if (!paused) {
-              audioEl.play().catch(e => console.error("Audio play error:", e));
-            }
-          } else if (!paused && audioEl.paused) {
-            audioEl.play().catch(e => console.error("Audio play error:", e));
-          }
+          var el = new Audio(track.src);
+          el.loop = !!track.loop;
+          activeAudioElements[i] = el;
+          if (!paused) el.play().catch(function(){});
         }
-      } else {
-        if (activeAudioElements[i]) {
-          activeAudioElements[i].pause();
-          activeAudioElements[i].currentTime = 0;
-          delete activeAudioElements[i];
-        }
+      } else if (activeAudioElements[i]) {
+        activeAudioElements[i].pause();
+        activeAudioElements[i].currentTime = 0;
+        delete activeAudioElements[i];
       }
     }
   }
@@ -963,67 +690,39 @@ if (isPresenter) {
   function advanceSlide() {
     if (!window.presentationStarted || !canChangeSlide) return;
     canChangeSlide = false;
-    if (currentSlideIndex < slides.length - 1) {
-      currentSlideIndex++;
-      loadSlide(currentSlideIndex);
-    }
-    setTimeout(function () {
-      canChangeSlide = true;
-    }, 500);
+    if (currentSlideIndex < slides.length - 1) { currentSlideIndex++; loadSlide(currentSlideIndex); }
+    setTimeout(function() { canChangeSlide = true; }, 500);
   }
   window.advanceSlide = advanceSlide;
 
   function previousSlide() {
     if (!window.presentationStarted || !canChangeSlide) return;
     canChangeSlide = false;
-    if (currentSlideIndex > 0) {
-      currentSlideIndex--;
-      loadSlide(currentSlideIndex);
-    }
-    setTimeout(function () {
-      canChangeSlide = true;
-    }, 500);
+    if (currentSlideIndex > 0) { currentSlideIndex--; loadSlide(currentSlideIndex); }
+    setTimeout(function() { canChangeSlide = true; }, 500);
   }
   window.previousSlide = previousSlide;
 
   function updatePresenterView() {
     if (presenterWindow && !presenterWindow.closed) {
-      presenterWindow.postMessage({
-        type: "update",
-        currentSlideIndex: currentSlideIndex,
-        slides: slides,
-        paused: paused
-      }, "*");
+      presenterWindow.postMessage({ type: "update", currentSlideIndex: currentSlideIndex, slides: slides, paused: paused }, "*");
     }
   }
 
-  if (startBtnElem) {
-    startBtnElem.addEventListener("click", function() {
-      startPresentation();
-    });
-  }
+  document.getElementById("startBtn").addEventListener("click", startPresentation);
+  
+  document.getElementById("presenterBtn").addEventListener("click", function() {
+    if (!presenterWindow || presenterWindow.closed) {
+      presenterWindow = window.open(window.location.href + "?presenter", "PresenterView", "width=800,height=600");
+    } else {
+      presenterWindow.focus();
+    }
+  });
 
-  if (presenterBtnElem) {
-    presenterBtnElem.addEventListener("click", function () {
-      if (!presenterWindow || presenterWindow.closed) {
-        presenterWindow = window.open(window.location.href + "?presenter", "PresenterView", "width=800,height=600");
-      } else {
-        presenterWindow.focus();
-      }
-    });
-  }
-
-  document.addEventListener("keydown", function (e) {
-    // Only handle keys in present mode when presentation has started
+  document.addEventListener("keydown", function(e) {
     if (!window.presentationStarted) return;
-    
-    if (e.key === "ArrowRight") {
-      advanceSlide();
-    } else if (e.key === "ArrowLeft") {
-      previousSlide();
-    } else if (e.key === "Escape") {
-      // Exit present mode
-      switchToEditMode();
-    }
+    if (e.key === "ArrowRight") advanceSlide();
+    else if (e.key === "ArrowLeft") previousSlide();
+    else if (e.key === "Escape") switchToEditMode();
   });
 }

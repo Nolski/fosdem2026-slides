@@ -25,123 +25,35 @@
 
   <!-- Edit Mode Container -->
   <div id="edit-mode">
-    <!-- Left Panel: Editor -->
-    <div id="editor-panel">
-      <div id="slide-editor">
-        <div id="editor-header">
-          <h2>Slide Editor</h2>
-          <span id="slide-position-badge"></span>
-        </div>
-        <div id="editor-placeholder">
-          <p>Select a slide to edit</p>
-          <p class="hint">Or add a new slide using the toolbar above the timeline</p>
-        </div>
-        <form id="slide-form" style="display: none;">
-          <div class="form-group">
-            <label for="slide-type">Type</label>
-            <select id="slide-type">
-              <option value="video">Video</option>
-              <option value="image">Image</option>
-              <option value="placeholder">Placeholder</option>
-            </select>
-          </div>
-          <div class="form-group" id="src-group">
-            <label for="slide-src">Source Path</label>
-            <input type="text" id="slide-src" placeholder="media/video/example.m4v">
-          </div>
-          <div class="form-group" id="placeholder-group" style="display: none;">
-            <label for="placeholder-title">Placeholder Title</label>
-            <input type="text" id="placeholder-title" placeholder="Coming Soon...">
-            <label for="placeholder-color" style="margin-top: 8px;">Background Color</label>
-            <input type="color" id="placeholder-color" value="#333333">
-          </div>
-          <div class="form-group">
-            <label for="slide-notes">Speaker Notes</label>
-            <textarea id="slide-notes" rows="5" placeholder="Enter your speaker notes here..."></textarea>
-          </div>
-          <div class="form-group" id="loop-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="slide-loop"> Loop media
-            </label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="save-btn">Save Changes</button>
-            <button type="button" id="deleteSlideBtn" class="delete-btn">Delete</button>
-          </div>
-        </form>
-      </div>
-      
-      <!-- Audio Editor (shown when audio track selected) -->
-      <div id="audio-editor" style="display: none;">
-        <div id="editor-header">
-          <h2>Audio Track Editor</h2>
-        </div>
-        <form id="audio-form">
-          <div class="form-group">
-            <label for="audio-src">Audio Source Path</label>
-            <input type="text" id="audio-src" placeholder="media/audio/example.mp3">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="audio-start">Start Slide</label>
-              <input type="number" id="audio-start" min="1" value="1">
-            </div>
-            <div class="form-group">
-              <label for="audio-end">End Slide</label>
-              <input type="number" id="audio-end" min="1" value="1">
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="audio-loop"> Loop audio
-            </label>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="save-btn">Save Audio Track</button>
-            <button type="button" id="deleteAudioBtn" class="delete-btn">Delete</button>
-          </div>
-        </form>
-      </div>
-      
-      <!-- Preview -->
-      <div id="slide-preview">
-        <h2>Preview</h2>
-        <div id="preview-container">
-          <p class="preview-placeholder">Select a slide to preview</p>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Right Panel: Timeline -->
-    <div id="timeline-panel">
+    <!-- Top Section: Timeline -->
+    <div id="timeline-section">
       <!-- Toolbar -->
       <div id="timeline-toolbar">
         <div id="toolbar-left">
           <span id="slide-count-display">0 slides</span>
         </div>
-        <div id="toolbar-right">
+        <div id="toolbar-center">
           <div class="toolbar-group">
-            <span class="toolbar-label">Add Slide:</span>
-            <button id="addVideoBtn" class="toolbar-btn" title="Add Video Slide">🎬 Video</button>
-            <button id="addImageBtn" class="toolbar-btn" title="Add Image Slide">🖼️ Image</button>
-            <button id="addPlaceholderBtn" class="toolbar-btn placeholder" title="Add Placeholder Slide">⏳ Placeholder</button>
+            <span class="toolbar-label">Add:</span>
+            <button id="addVideoBtn" class="toolbar-btn video" title="Add Video Slide">🎬 Video</button>
+            <button id="addImageBtn" class="toolbar-btn image" title="Add Image Slide">🖼️ Image</button>
+            <button id="addPlaceholderBtn" class="toolbar-btn placeholder" title="Add Placeholder">⏳ Placeholder</button>
+            <button id="addAudioBtn" class="toolbar-btn audio" title="Add Audio Track">🔊 Audio</button>
           </div>
-          <div class="toolbar-divider"></div>
-          <div class="toolbar-group">
-            <span class="toolbar-label">Add Audio:</span>
-            <button id="addAudioBtn" class="toolbar-btn audio" title="Add Audio Track">🔊 Track</button>
+        </div>
+        <div id="toolbar-right">
+          <div class="toolbar-group reorder-group" id="reorder-controls" style="display: none;">
+            <span class="toolbar-label">Move:</span>
+            <button id="moveFirstBtn" class="toolbar-btn reorder" title="Move to start">⏮</button>
+            <button id="moveLeftBtn" class="toolbar-btn reorder" title="Move left">◀</button>
+            <button id="moveRightBtn" class="toolbar-btn reorder" title="Move right">▶</button>
+            <button id="moveLastBtn" class="toolbar-btn reorder" title="Move to end">⏭</button>
           </div>
         </div>
       </div>
       
       <!-- Timeline Area -->
-      <div id="timeline-area">
-        <!-- Slide Numbers Header -->
-        <div id="timeline-header-row">
-          <div class="timeline-row-label"></div>
-          <div id="timeline-ruler"></div>
-        </div>
-        
+      <div id="timeline-scroll-area">
         <!-- Slides Row -->
         <div id="slides-row">
           <div class="timeline-row-label">Slides</div>
@@ -154,6 +66,97 @@
           <div id="audio-timeline-wrapper">
             <div id="audio-timeline"></div>
           </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bottom Section: Editor + Preview -->
+    <div id="workspace-section">
+      <!-- Editor Panel -->
+      <div id="editor-panel">
+        <div id="slide-editor">
+          <div id="editor-header">
+            <h2>Slide Editor</h2>
+            <span id="slide-position-badge"></span>
+          </div>
+          <div id="editor-placeholder">
+            <p>Select a slide to edit</p>
+          </div>
+          <form id="slide-form" style="display: none;">
+            <div class="form-group">
+              <label for="slide-type">Type</label>
+              <select id="slide-type">
+                <option value="video">Video</option>
+                <option value="image">Image</option>
+                <option value="placeholder">Placeholder</option>
+              </select>
+            </div>
+            <div class="form-group" id="src-group">
+              <label for="slide-src">Source Path</label>
+              <input type="text" id="slide-src" placeholder="media/video/example.m4v">
+            </div>
+            <div class="form-group" id="placeholder-group" style="display: none;">
+              <label for="placeholder-title">Title</label>
+              <input type="text" id="placeholder-title" placeholder="Coming Soon...">
+              <label for="placeholder-color" style="margin-top: 8px;">Color</label>
+              <input type="color" id="placeholder-color" value="#333333">
+            </div>
+            <div class="form-group">
+              <label for="slide-notes">Speaker Notes</label>
+              <textarea id="slide-notes" rows="4" placeholder="Speaker notes..."></textarea>
+            </div>
+            <div class="form-group" id="loop-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="slide-loop"> Loop media
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="save-btn">Save</button>
+              <button type="button" id="deleteSlideBtn" class="delete-btn">Delete</button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Audio Editor -->
+        <div id="audio-editor" style="display: none;">
+          <div id="editor-header">
+            <h2>Audio Track</h2>
+          </div>
+          <form id="audio-form">
+            <div class="form-group">
+              <label for="audio-src">Source Path</label>
+              <input type="text" id="audio-src" placeholder="media/audio/example.mp3">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="audio-start">Start</label>
+                <input type="number" id="audio-start" min="1" value="1">
+              </div>
+              <div class="form-group">
+                <label for="audio-end">End</label>
+                <input type="number" id="audio-end" min="1" value="1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="audio-loop"> Loop
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="save-btn">Save</button>
+              <button type="button" id="deleteAudioBtn" class="delete-btn">Delete</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Preview Panel (Large) -->
+      <div id="preview-panel">
+        <div id="preview-header">
+          <h2>Preview</h2>
+        </div>
+        <div id="preview-container">
+          <p class="preview-placeholder">Select a slide to preview</p>
         </div>
       </div>
     </div>
