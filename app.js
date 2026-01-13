@@ -121,7 +121,8 @@ if (isPresenter) {
     } else if (slide.type === "placeholder") {
       var placeholderDiv = document.createElement("div");
       placeholderDiv.style.cssText = "background:" + (slide.backgroundColor || '#333') + ";padding:20px;text-align:center;color:white;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;";
-      placeholderDiv.innerHTML = '<h3 style="margin:0 0 10px 0;">' + (slide.title || 'Placeholder') + '</h3><p style="margin:0;opacity:0.6;">Coming soon</p>';
+      var bodyText = slide.text ? '<p style="margin:10px 0 0 0;opacity:0.8;">' + slide.text + '</p>' : '';
+      placeholderDiv.innerHTML = '<h3 style="margin:0;">' + (slide.title || 'Placeholder') + '</h3>' + bodyText;
       container.appendChild(placeholderDiv);
       if (isCurrentSlide) {
         document.getElementById("video-controls").style.display = "none";
@@ -212,7 +213,7 @@ if (isPresenter) {
   var activeAudioElements = {};
   var canChangeSlide = true;
 
-  var BLOCK_WIDTH = 66; // 60px + 6px gap
+  var BLOCK_WIDTH = 76; // 70px + 6px gap
 
   // DOM elements
   var editModeBtn = document.getElementById("editModeBtn");
@@ -255,11 +256,14 @@ if (isPresenter) {
   var slideSrcInput = document.getElementById("slide-src");
   var slideNotesInput = document.getElementById("slide-notes");
   var slideLoopInput = document.getElementById("slide-loop");
+  var slideZoompanInput = document.getElementById("slide-zoompan");
   var placeholderTitleInput = document.getElementById("placeholder-title");
+  var placeholderTextInput = document.getElementById("placeholder-text");
   var placeholderColorInput = document.getElementById("placeholder-color");
   var srcGroup = document.getElementById("src-group");
   var placeholderGroup = document.getElementById("placeholder-group");
   var loopGroup = document.getElementById("loop-group");
+  var zoompanGroup = document.getElementById("zoompan-group");
   
   var audioSrcInput = document.getElementById("audio-src");
   var audioStartInput = document.getElementById("audio-start");
@@ -335,12 +339,24 @@ if (isPresenter) {
     
     slides.forEach(function(slide, i) {
       var block = document.createElement("div");
-      block.className = "slide-block " + slide.type + (i === selectedSlideIndex ? " selected" : "");
+      block.className = "slide-block" + (i === selectedSlideIndex ? " selected" : "");
       block.dataset.index = i;
       block.draggable = true;
       
+      // Set thumbnail background
+      if (slide.type === "video" && slide.src) {
+        // For video, we'll capture a frame using a hidden video element
+        generateVideoThumbnail(slide.src, function(dataUrl) {
+          if (dataUrl) block.style.backgroundImage = "url(" + dataUrl + ")";
+        });
+      } else if (slide.type === "image" && slide.src) {
+        block.style.backgroundImage = "url(" + slide.src + ")";
+      } else if (slide.type === "placeholder") {
+        block.style.background = slide.backgroundColor || "#333";
+      }
+      
       var icon = slide.type === "video" ? "🎬" : slide.type === "image" ? "🖼️" : "⏳";
-      block.innerHTML = '<div class="block-number">' + (i + 1) + '</div><div class="block-icon">' + icon + '</div>';
+      block.innerHTML = '<div class="block-overlay"><div class="block-number">' + (i + 1) + '</div><div class="block-icon">' + icon + '</div></div>';
       
       block.addEventListener("click", function() { selectSlide(i); });
       
@@ -362,6 +378,35 @@ if (isPresenter) {
       
       // Add drop indicator after each slide
       slidesTimeline.appendChild(createDropIndicator(i + 1));
+    });
+  }
+  
+  // Generate thumbnail from video's first frame
+  function generateVideoThumbnail(src, callback) {
+    var video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.src = src;
+    
+    video.addEventListener("loadeddata", function() {
+      video.currentTime = 0.1; // Seek to 0.1s to avoid blank frames
+    });
+    
+    video.addEventListener("seeked", function() {
+      try {
+        var canvas = document.createElement("canvas");
+        canvas.width = 70;
+        canvas.height = 55;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        callback(canvas.toDataURL("image/jpeg", 0.5));
+      } catch (e) {
+        callback(null);
+      }
+    });
+    
+    video.addEventListener("error", function() {
+      callback(null);
     });
   }
   
@@ -481,7 +526,9 @@ if (isPresenter) {
     slideSrcInput.value = slide.src || "";
     slideNotesInput.value = (slide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
     slideLoopInput.checked = !!slide.loop;
+    slideZoompanInput.checked = !!slide.zoompan;
     placeholderTitleInput.value = slide.title || "";
+    placeholderTextInput.value = slide.text || "";
     placeholderColorInput.value = slide.backgroundColor || "#333333";
     
     updateFormVisibility(slide.type);
@@ -527,6 +574,7 @@ if (isPresenter) {
     srcGroup.style.display = type === "placeholder" ? "none" : "flex";
     placeholderGroup.style.display = type === "placeholder" ? "flex" : "none";
     loopGroup.style.display = type === "placeholder" ? "none" : "flex";
+    zoompanGroup.style.display = type === "image" ? "flex" : "none";
   }
   
   slideTypeSelect.addEventListener("change", function() { updateFormVisibility(this.value); });
@@ -542,12 +590,14 @@ if (isPresenter) {
     } else if (slide.type === "image") {
       var img = document.createElement("img");
       img.src = slide.src;
+      if (slide.zoompan) img.className = "zoompan";
       previewContainer.appendChild(img);
     } else {
       var div = document.createElement("div");
       div.className = "placeholder-preview";
       div.style.backgroundColor = slide.backgroundColor || "#333";
-      div.innerHTML = '<h3>' + (slide.title || 'Placeholder') + '</h3><p>Coming soon</p>';
+      var bodyText = slide.text ? '<p>' + slide.text + '</p>' : '';
+      div.innerHTML = '<h3>' + (slide.title || 'Placeholder') + '</h3>' + bodyText;
       previewContainer.appendChild(div);
     }
   }
@@ -562,12 +612,17 @@ if (isPresenter) {
     
     if (slide.type === "placeholder") {
       slide.title = placeholderTitleInput.value;
+      slide.text = placeholderTextInput.value;
       slide.backgroundColor = placeholderColorInput.value;
-      delete slide.src; delete slide.loop;
+      delete slide.src; delete slide.loop; delete slide.zoompan;
+    } else if (slide.type === "image") {
+      slide.src = slideSrcInput.value;
+      slide.zoompan = slideZoompanInput.checked;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop;
     } else {
       slide.src = slideSrcInput.value;
       slide.loop = slideLoopInput.checked;
-      delete slide.title; delete slide.backgroundColor;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.zoompan;
     }
     slide.notes = slideNotesInput.value;
     
@@ -730,6 +785,7 @@ if (isPresenter) {
     if (slide.type === "image") {
       var img = document.createElement("img");
       img.src = slide.src;
+      if (slide.zoompan) img.className = "zoompan";
       container.appendChild(img);
       window.currentMedia = null;
     } else if (slide.type === "video") {
@@ -744,7 +800,8 @@ if (isPresenter) {
       var div = document.createElement("div");
       div.className = "placeholder-slide";
       div.style.backgroundColor = slide.backgroundColor || "#333";
-      div.innerHTML = '<h1>' + (slide.title || 'Placeholder') + '</h1><p>Coming soon</p>';
+      var bodyText = slide.text ? '<p>' + slide.text + '</p>' : '';
+      div.innerHTML = '<h1>' + (slide.title || 'Placeholder') + '</h1>' + bodyText;
       container.appendChild(div);
       window.currentMedia = null;
     }

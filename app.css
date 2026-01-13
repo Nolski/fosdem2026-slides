@@ -237,8 +237,8 @@ body {
 }
 
 .slide-block {
-  width: 60px;
-  height: 50px;
+  width: 70px;
+  height: 55px;
   background: linear-gradient(135deg, #0f3460 0%, #1a4a7a 100%);
   border: 2px solid transparent;
   border-radius: 6px;
@@ -251,6 +251,27 @@ body {
   flex-shrink: 0;
   position: relative;
   user-select: none;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.slide-block .block-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.slide-block:hover .block-overlay {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .slide-block:active {
@@ -263,10 +284,13 @@ body {
 }
 
 .slide-block.selected {
-  background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%) !important;
-  border-color: #90caf9;
+  border-color: #42a5f5;
   box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.4), 0 4px 15px rgba(66, 165, 245, 0.3);
   transform: translateY(-2px);
+}
+
+.slide-block.selected .block-overlay {
+  background: rgba(66, 165, 245, 0.3);
 }
 
 .slide-block.dragging {
@@ -277,7 +301,7 @@ body {
 /* Drop zone indicators between slides */
 .drop-indicator {
   width: 4px;
-  height: 50px;
+  height: 55px;
   background: #4caf50;
   border-radius: 2px;
   flex-shrink: 0;
@@ -293,19 +317,20 @@ body {
   box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
 }
 
-.slide-block.video:not(.selected) { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%); }
-.slide-block.image:not(.selected) { background: linear-gradient(135deg, #2980b9 0%, #3498db 100%); }
-.slide-block.placeholder:not(.selected) { background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); }
-
 .slide-block .block-number {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: bold;
   line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  position: relative;
+  z-index: 1;
 }
 
 .slide-block .block-icon {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   margin-top: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Audio Timeline */
@@ -628,6 +653,20 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+#presentation img.zoompan {
+  animation: kenburns 15s ease-in-out infinite alternate;
+  object-fit: cover;
+}
+
+@keyframes kenburns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.2) translate(-2%, -2%);
+  }
 }
 
 #presentation .placeholder-slide {
