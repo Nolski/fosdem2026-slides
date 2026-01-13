@@ -182,24 +182,26 @@ body {
 .toolbar-btn.placeholder:hover { background: #9b59b6; border-color: #9b59b6; }
 .toolbar-btn.audio:hover { background: #27ae60; border-color: #27ae60; }
 
-.toolbar-btn.reorder {
-  padding: 6px 10px;
-  font-size: 0.8rem;
+.toolbar-btn.nav {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  background: rgba(66, 165, 245, 0.2);
+  border-color: rgba(66, 165, 245, 0.4);
 }
 
-.toolbar-btn.reorder:hover {
-  background: #e94560;
-  border-color: #e94560;
+.toolbar-btn.nav:hover {
+  background: #42a5f5;
+  border-color: #42a5f5;
 }
 
-.toolbar-btn.reorder:disabled {
+.toolbar-btn.nav:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.toolbar-btn.reorder:disabled:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+.toolbar-btn.nav:disabled:hover {
+  background: rgba(66, 165, 245, 0.2);
+  border-color: rgba(66, 165, 245, 0.4);
 }
 
 /* Timeline Scroll Area */

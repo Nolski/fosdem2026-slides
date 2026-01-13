@@ -234,11 +234,11 @@ if (isPresenter) {
   var previewContainer = document.getElementById("preview-container");
   var slidePositionBadge = document.getElementById("slide-position-badge");
   
-  var reorderControls = document.getElementById("reorder-controls");
-  var moveFirstBtn = document.getElementById("moveFirstBtn");
-  var moveLeftBtn = document.getElementById("moveLeftBtn");
-  var moveRightBtn = document.getElementById("moveRightBtn");
-  var moveLastBtn = document.getElementById("moveLastBtn");
+  var navControls = document.getElementById("nav-controls");
+  var navFirstBtn = document.getElementById("navFirstBtn");
+  var navPrevBtn = document.getElementById("navPrevBtn");
+  var navNextBtn = document.getElementById("navNextBtn");
+  var navLastBtn = document.getElementById("navLastBtn");
   
   var exportBtn = document.getElementById("exportBtn");
   var importBtn = document.getElementById("importBtn");
@@ -324,7 +324,7 @@ if (isPresenter) {
     renderSlidesTimeline();
     renderAudioTimeline();
     slideCountDisplay.textContent = slides.length + " slide" + (slides.length !== 1 ? "s" : "");
-    updateReorderButtons();
+    updateNavButtons();
   }
   
   function renderSlidesTimeline() {
@@ -433,17 +433,12 @@ if (isPresenter) {
     if (wrapper) wrapper.style.minWidth = (slides.length * BLOCK_WIDTH) + "px";
   }
   
-  // Reorder controls
-  function updateReorderButtons() {
-    if (selectedSlideIndex < 0) {
-      reorderControls.style.display = "none";
-      return;
-    }
-    reorderControls.style.display = "flex";
-    moveFirstBtn.disabled = selectedSlideIndex === 0;
-    moveLeftBtn.disabled = selectedSlideIndex === 0;
-    moveRightBtn.disabled = selectedSlideIndex === slides.length - 1;
-    moveLastBtn.disabled = selectedSlideIndex === slides.length - 1;
+  // Navigation controls
+  function updateNavButtons() {
+    navFirstBtn.disabled = slides.length === 0 || selectedSlideIndex === 0;
+    navPrevBtn.disabled = slides.length === 0 || selectedSlideIndex <= 0;
+    navNextBtn.disabled = slides.length === 0 || selectedSlideIndex >= slides.length - 1;
+    navLastBtn.disabled = slides.length === 0 || selectedSlideIndex === slides.length - 1;
   }
   
   function moveSlide(from, to) {
@@ -455,10 +450,10 @@ if (isPresenter) {
     scrollToSlide(to);
   }
   
-  moveFirstBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, 0); });
-  moveLeftBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, selectedSlideIndex - 1); });
-  moveRightBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, selectedSlideIndex + 1); });
-  moveLastBtn.addEventListener("click", function() { moveSlide(selectedSlideIndex, slides.length - 1); });
+  navFirstBtn.addEventListener("click", function() { if (slides.length) selectSlide(0); });
+  navPrevBtn.addEventListener("click", function() { if (selectedSlideIndex > 0) selectSlide(selectedSlideIndex - 1); });
+  navNextBtn.addEventListener("click", function() { if (selectedSlideIndex < slides.length - 1) selectSlide(selectedSlideIndex + 1); });
+  navLastBtn.addEventListener("click", function() { if (slides.length) selectSlide(slides.length - 1); });
   
   function scrollToSlide(index) {
     var block = slidesTimeline.querySelector('[data-index="' + index + '"]');
@@ -491,7 +486,7 @@ if (isPresenter) {
     
     updateFormVisibility(slide.type);
     updatePreview(slide);
-    updateReorderButtons();
+    updateNavButtons();
     hideAudioPreview();
   }
   
@@ -504,8 +499,8 @@ if (isPresenter) {
     
     slideEditor.style.display = "none";
     audioEditor.style.display = "block";
-    reorderControls.style.display = "none";
     slidePositionBadge.style.display = "none";
+    updateNavButtons();
     
     var track = audioTracks[index];
     audioSrcInput.value = track.src || "";
@@ -690,7 +685,6 @@ if (isPresenter) {
         audioEditor.style.display = "none";
         slideEditor.style.display = "block";
         slidePositionBadge.style.display = "none";
-        reorderControls.style.display = "none";
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide</p>';
         renderTimelines();
         alert("Imported!");
