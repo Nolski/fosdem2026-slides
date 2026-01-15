@@ -865,4 +865,377 @@ if (isPresenter) {
     else if (e.key === "ArrowLeft") previousSlide();
     else if (e.key === "Escape") switchToEditMode();
   });
+
+  // ============================================
+  // AI VIDEO GENERATION FEATURE
+  // ============================================
+  
+  var VEO_API_KEY_STORAGE = "veo_api_key";
+  var generateVideoBtn = document.getElementById("generateVideoBtn");
+  
+  // Modal Elements
+  var apiKeyDialog = document.getElementById("api-key-dialog");
+  var apiKeyInput = document.getElementById("api-key-input");
+  var apiKeySaveBtn = document.getElementById("api-key-save");
+  var apiKeyCancelBtn = document.getElementById("api-key-cancel");
+  
+  var videoGenModal = document.getElementById("video-gen-modal");
+  var videoGenCloseBtn = document.getElementById("video-gen-close");
+  var vgIdleState = document.getElementById("vg-idle-state");
+  var vgLoadingState = document.getElementById("vg-loading-state");
+  var vgPreviewState = document.getElementById("vg-preview-state");
+  var vgErrorState = document.getElementById("vg-error-state");
+  var vgLoadingStatus = document.getElementById("vg-loading-status");
+  var vgErrorMessage = document.getElementById("vg-error-message");
+  var vgPreviewVideo = document.getElementById("vg-preview-video");
+  
+  var vgPrompt = document.getElementById("vg-prompt");
+  var vgModel = document.getElementById("vg-model");
+  var vgAspect = document.getElementById("vg-aspect");
+  var vgResolution = document.getElementById("vg-resolution");
+  var vgGenerateBtn = document.getElementById("vg-generate-btn");
+  var vgRegenerateBtn = document.getElementById("vg-regenerate-btn");
+  var vgConfirmBtn = document.getElementById("vg-confirm-btn");
+  var vgTryAgainBtn = document.getElementById("vg-try-again-btn");
+  
+  var addToDeckModal = document.getElementById("add-to-deck-modal");
+  var addDeckFilename = document.getElementById("add-deck-filename");
+  var addDeckDoneBtn = document.getElementById("add-deck-done-btn");
+  
+  var currentVideoBlob = null;
+  var currentVideoUrl = null;
+  var pendingGenerateCallback = null;
+  
+  // API Key Management
+  function getApiKey() {
+    return localStorage.getItem(VEO_API_KEY_STORAGE);
+  }
+  
+  function setApiKey(key) {
+    localStorage.setItem(VEO_API_KEY_STORAGE, key);
+  }
+  
+  function hasApiKey() {
+    var key = getApiKey();
+    return key && key.length > 0;
+  }
+  
+  function showApiKeyDialog(callback) {
+    pendingGenerateCallback = callback;
+    apiKeyInput.value = getApiKey() || "";
+    apiKeyDialog.style.display = "flex";
+    apiKeyInput.focus();
+  }
+  
+  function hideApiKeyDialog() {
+    apiKeyDialog.style.display = "none";
+    pendingGenerateCallback = null;
+  }
+  
+  apiKeySaveBtn.addEventListener("click", function() {
+    var key = apiKeyInput.value.trim();
+    if (key) {
+      setApiKey(key);
+      hideApiKeyDialog();
+      if (pendingGenerateCallback) {
+        pendingGenerateCallback();
+      }
+    } else {
+      alert("Please enter a valid API key.");
+    }
+  });
+  
+  apiKeyCancelBtn.addEventListener("click", hideApiKeyDialog);
+  
+  apiKeyInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      apiKeySaveBtn.click();
+    }
+  });
+  
+  // Video Generation Modal
+  function showVideoGenModal() {
+    setVideoGenState("idle");
+    vgPrompt.value = "";
+    videoGenModal.style.display = "flex";
+    vgPrompt.focus();
+  }
+  
+  function hideVideoGenModal() {
+    videoGenModal.style.display = "none";
+    if (currentVideoUrl) {
+      URL.revokeObjectURL(currentVideoUrl);
+      currentVideoUrl = null;
+    }
+    currentVideoBlob = null;
+  }
+  
+  function setVideoGenState(state) {
+    vgIdleState.style.display = state === "idle" ? "block" : "none";
+    vgLoadingState.style.display = state === "loading" ? "block" : "none";
+    vgPreviewState.style.display = state === "preview" ? "block" : "none";
+    vgErrorState.style.display = state === "error" ? "block" : "none";
+  }
+  
+  videoGenCloseBtn.addEventListener("click", hideVideoGenModal);
+  
+  videoGenModal.addEventListener("click", function(e) {
+    if (e.target === videoGenModal) {
+      hideVideoGenModal();
+    }
+  });
+  
+  // Generate Video Button Click
+  generateVideoBtn.addEventListener("click", function() {
+    if (!hasApiKey()) {
+      showApiKeyDialog(showVideoGenModal);
+    } else {
+      showVideoGenModal();
+    }
+  });
+  
+  // Video Generation Service
+  async function generateAIVideo(params) {
+    var apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error("No API key configured");
+    }
+    
+    var config = {
+      numberOfVideos: 1,
+      resolution: params.resolution,
+      aspectRatio: params.aspectRatio
+    };
+    
+    var payload = {
+      model: params.model,
+      prompt: params.prompt,
+      config: config
+    };
+    
+    console.log("Starting video generation with params:", payload);
+    
+    // Generate video operation
+    var generateResponse = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":generateVideos?key=" + apiKey,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt: params.prompt,
+          config: config
+        })
+      }
+    );
+    
+    if (!generateResponse.ok) {
+      var errorData = await generateResponse.json().catch(function() { return {}; });
+      var errorMsg = errorData.error?.message || generateResponse.statusText;
+      
+      if (errorMsg.includes("Requested entity was not found") || 
+          errorMsg.includes("API_KEY_INVALID") ||
+          errorMsg.includes("API key not valid") ||
+          generateResponse.status === 403) {
+        throw new Error("API key is invalid or lacks permissions. Please check your API key and ensure billing is enabled.");
+      }
+      throw new Error(errorMsg);
+    }
+    
+    var operation = await generateResponse.json();
+    console.log("Video generation operation started:", operation);
+    
+    // Poll for completion
+    var operationName = operation.name;
+    var maxAttempts = 120; // 20 minutes max
+    var attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      await new Promise(function(resolve) { setTimeout(resolve, 10000); }); // Wait 10 seconds
+      attempts++;
+      
+      vgLoadingStatus.textContent = "Generating... (attempt " + attempts + ")";
+      
+      var statusResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/" + operationName + "?key=" + apiKey
+      );
+      
+      if (!statusResponse.ok) {
+        throw new Error("Failed to check generation status: " + statusResponse.statusText);
+      }
+      
+      var statusData = await statusResponse.json();
+      console.log("Generation status:", statusData);
+      
+      if (statusData.done) {
+        if (statusData.error) {
+          throw new Error(statusData.error.message || "Generation failed");
+        }
+        
+        var videos = statusData.response?.generatedVideos;
+        if (!videos || videos.length === 0) {
+          throw new Error("No videos were generated.");
+        }
+        
+        var firstVideo = videos[0];
+        if (!firstVideo?.video?.uri) {
+          throw new Error("Generated video is missing a URI.");
+        }
+        
+        // Fetch the video
+        var videoUri = decodeURIComponent(firstVideo.video.uri);
+        console.log("Fetching video from:", videoUri);
+        
+        var videoResponse = await fetch(videoUri + "&key=" + apiKey);
+        if (!videoResponse.ok) {
+          throw new Error("Failed to download video: " + videoResponse.statusText);
+        }
+        
+        var videoBlob = await videoResponse.blob();
+        var objectUrl = URL.createObjectURL(videoBlob);
+        
+        return {
+          blob: videoBlob,
+          objectUrl: objectUrl
+        };
+      }
+    }
+    
+    throw new Error("Video generation timed out. Please try again.");
+  }
+  
+  // Generate Button Handler
+  vgGenerateBtn.addEventListener("click", function() {
+    var prompt = vgPrompt.value.trim();
+    if (!prompt) {
+      alert("Please enter a prompt describing the video you want to generate.");
+      vgPrompt.focus();
+      return;
+    }
+    
+    if (!hasApiKey()) {
+      showApiKeyDialog(function() {
+        vgGenerateBtn.click();
+      });
+      return;
+    }
+    
+    startVideoGeneration({
+      prompt: prompt,
+      model: vgModel.value,
+      aspectRatio: vgAspect.value,
+      resolution: vgResolution.value
+    });
+  });
+  
+  async function startVideoGeneration(params) {
+    setVideoGenState("loading");
+    vgLoadingStatus.textContent = "Submitting generation request...";
+    
+    try {
+      var result = await generateAIVideo(params);
+      currentVideoBlob = result.blob;
+      currentVideoUrl = result.objectUrl;
+      
+      vgPreviewVideo.src = currentVideoUrl;
+      setVideoGenState("preview");
+    } catch (error) {
+      console.error("Video generation failed:", error);
+      
+      var errorMessage = error.message || "An unknown error occurred.";
+      if (errorMessage.includes("API key") || errorMessage.includes("permission")) {
+        // Clear the API key and prompt for a new one
+        showApiKeyDialog(function() {
+          startVideoGeneration(params);
+        });
+        return;
+      }
+      
+      vgErrorMessage.textContent = errorMessage;
+      setVideoGenState("error");
+    }
+  }
+  
+  // Regenerate Button
+  vgRegenerateBtn.addEventListener("click", function() {
+    var prompt = vgPrompt.value.trim();
+    if (prompt) {
+      startVideoGeneration({
+        prompt: prompt,
+        model: vgModel.value,
+        aspectRatio: vgAspect.value,
+        resolution: vgResolution.value
+      });
+    }
+  });
+  
+  // Try Again Button
+  vgTryAgainBtn.addEventListener("click", function() {
+    setVideoGenState("idle");
+  });
+  
+  // Confirm and Add to Deck
+  vgConfirmBtn.addEventListener("click", function() {
+    if (!currentVideoBlob) {
+      alert("No video available to add.");
+      return;
+    }
+    
+    // Generate filename
+    var timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    var filename = "ai-video-" + timestamp + ".mp4";
+    
+    // Download the video
+    var downloadLink = document.createElement("a");
+    downloadLink.href = currentVideoUrl;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    
+    // Show the add to deck instructions
+    addDeckFilename.value = "media/video/" + filename;
+    hideVideoGenModal();
+    addToDeckModal.style.display = "flex";
+    
+    // Create a new video slide (placeholder with instructions)
+    var newSlide = {
+      type: "video",
+      src: "media/video/" + filename,
+      notes: "AI Generated video. Prompt: " + vgPrompt.value.trim(),
+      loop: false
+    };
+    
+    var idx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
+    slides.splice(idx, 0, newSlide);
+    renderTimelines();
+    selectSlide(idx);
+    setTimeout(function() { scrollToSlide(idx); }, 50);
+  });
+  
+  // Done Button on Add to Deck Modal
+  addDeckDoneBtn.addEventListener("click", function() {
+    addToDeckModal.style.display = "none";
+  });
+  
+  addToDeckModal.addEventListener("click", function(e) {
+    if (e.target === addToDeckModal) {
+      addToDeckModal.style.display = "none";
+    }
+  });
+  
+  // Close modals with Escape key
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      if (apiKeyDialog.style.display === "flex") {
+        hideApiKeyDialog();
+      } else if (videoGenModal.style.display === "flex") {
+        hideVideoGenModal();
+      } else if (addToDeckModal.style.display === "flex") {
+        addToDeckModal.style.display = "none";
+      }
+    }
+  });
 }
