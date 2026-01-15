@@ -74,10 +74,24 @@
       "loop": false
     },
     {
+      "type": "placeholder",
+      "notes": "",
+      "title": "What's the p. nchline of the cleanroom of leftpad?",
+      "backgroundColor": "#333333",
+      "text": ""
+    },
+    {
       "type": "video",
       "notes": "And in principle it's actually been around for a very long time. But why does it work? And why does AI kind of break everything?",
       "src": "media/video/13.m4v",
       "loop": false
+    },
+    {
+      "type": "placeholder",
+      "notes": "",
+      "title": "Go back to the monks transcribing stuff",
+      "backgroundColor": "#333333",
+      "text": ""
     },
     {
       "type": "video",
@@ -119,12 +133,6 @@
       "type": "video",
       "notes": "Here's a copy of the statute of Anne, the actual name of the law is \"An act for the encouragment of learning\"\n\nTHey really thought this was gonna promote more authors and books and stuff...\n\nWe actually have a little bit of footage of the original signing. You wouldn't have thought a video from back then survived but...",
       "src": "media/video/20.m4v",
-      "loop": false
-    },
-    {
-      "type": "video",
-      "notes": "",
-      "src": "media/video/samanne.mp4",
       "loop": false
     },
     {
@@ -198,6 +206,12 @@
       "type": "video",
       "notes": "Which is exactly what we did do, and it took us about 10 minutes and 8 dollars to fully recreate what baker did using modern AI tools. I'm holding up a copy of our cleanroom'd book",
       "src": "media/video/32.m4v",
+      "loop": false
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/samanne.mp4",
       "loop": false
     },
     {
@@ -340,7 +354,7 @@
     {
       "src": "media/audio/suspicious_up_to_something.mp3",
       "startSlide": 0,
-      "endSlide": 4,
+      "endSlide": 0,
       "loop": true
     }
   ]
