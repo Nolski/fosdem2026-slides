@@ -1075,42 +1075,52 @@ if (isPresenter) {
         }
         
         // Handle different response formats
-        // Format 1: SDK-style with generatedVideos
-        var videos = statusData.response?.generatedVideos;
-        // Format 2: Predict-style with predictions
-        var predictions = statusData.response?.predictions;
-        
         var videoUri = null;
+        var response = statusData.response;
         
-        if (videos && videos.length > 0) {
-          // SDK-style response
-          var firstVideo = videos[0];
-          if (firstVideo?.video?.uri) {
-            videoUri = firstVideo.video.uri;
+        // Format 1: predictLongRunning response with generateVideoResponse
+        if (response?.generateVideoResponse?.generatedSamples) {
+          var samples = response.generateVideoResponse.generatedSamples;
+          if (samples.length > 0 && samples[0].video?.uri) {
+            videoUri = samples[0].video.uri;
+            console.log("Found video URI in generateVideoResponse.generatedSamples");
           }
-        } else if (predictions && predictions.length > 0) {
-          // Predict-style response - look for video URI in various locations
-          var firstPrediction = predictions[0];
-          console.log("Prediction data:", firstPrediction);
-          
-          // The video might be in different properties depending on the model
-          videoUri = firstPrediction.videoUri || 
-                     firstPrediction.video?.uri || 
-                     firstPrediction.uri ||
-                     (firstPrediction.video && typeof firstPrediction.video === 'string' ? firstPrediction.video : null);
-          
-          // Some models return base64 encoded video
-          if (!videoUri && firstPrediction.bytesBase64Encoded) {
-            console.log("Found base64 encoded video");
-            var byteString = atob(firstPrediction.bytesBase64Encoded);
-            var ab = new ArrayBuffer(byteString.length);
-            var ia = new Uint8Array(ab);
-            for (var i = 0; i < byteString.length; i++) {
-              ia[i] = byteString.charCodeAt(i);
+        }
+        
+        // Format 2: SDK-style with generatedVideos
+        if (!videoUri && response?.generatedVideos) {
+          var videos = response.generatedVideos;
+          if (videos.length > 0 && videos[0].video?.uri) {
+            videoUri = videos[0].video.uri;
+            console.log("Found video URI in generatedVideos");
+          }
+        }
+        
+        // Format 3: Predict-style with predictions
+        if (!videoUri && response?.predictions) {
+          var predictions = response.predictions;
+          if (predictions.length > 0) {
+            var firstPrediction = predictions[0];
+            videoUri = firstPrediction.videoUri || 
+                       firstPrediction.video?.uri || 
+                       firstPrediction.uri;
+            if (videoUri) {
+              console.log("Found video URI in predictions");
             }
-            var videoBlob = new Blob([ab], { type: 'video/mp4' });
-            var objectUrl = URL.createObjectURL(videoBlob);
-            return { blob: videoBlob, objectUrl: objectUrl };
+            
+            // Some models return base64 encoded video
+            if (!videoUri && firstPrediction.bytesBase64Encoded) {
+              console.log("Found base64 encoded video");
+              var byteString = atob(firstPrediction.bytesBase64Encoded);
+              var ab = new ArrayBuffer(byteString.length);
+              var ia = new Uint8Array(ab);
+              for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+              }
+              var videoBlob = new Blob([ab], { type: 'video/mp4' });
+              var objectUrl = URL.createObjectURL(videoBlob);
+              return { blob: videoBlob, objectUrl: objectUrl };
+            }
           }
         }
         
