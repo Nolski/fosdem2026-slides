@@ -1019,29 +1019,68 @@ if (isPresenter) {
     
     console.log("Starting video generation with params:", requestBody);
     
-    // The endpoint format for Google GenAI video generation
-    // Try the SDK-style endpoint: models:generateVideos with model in body
-    var generateResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models:generateVideos?key=" + apiKey,
+    // Try multiple endpoint formats since the API documentation varies
+    var endpoints = [
+      // Format 1: SDK-style collection endpoint with model in body
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestBody)
+        url: "https://generativelanguage.googleapis.com/v1beta/models:generateVideos?key=" + apiKey,
+        body: requestBody
+      },
+      // Format 2: Model in path (original approach)
+      {
+        url: "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":generateVideos?key=" + apiKey,
+        body: { prompt: params.prompt, config: requestBody.config }
+      },
+      // Format 3: Singular generateVideo action
+      {
+        url: "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":generateVideo?key=" + apiKey,
+        body: { prompt: params.prompt, config: requestBody.config }
       }
-    );
+    ];
     
-    if (!generateResponse.ok) {
-      var errorData = await generateResponse.json().catch(function() { return {}; });
-      var errorMsg = errorData.error?.message || generateResponse.statusText;
-      console.error("Generation request failed:", generateResponse.status, errorMsg, errorData);
+    var generateResponse = null;
+    var lastError = null;
+    
+    for (var i = 0; i < endpoints.length; i++) {
+      var endpoint = endpoints[i];
+      console.log("Trying endpoint " + (i + 1) + ":", endpoint.url);
+      
+      try {
+        generateResponse = await fetch(endpoint.url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(endpoint.body)
+        });
+        
+        if (generateResponse.ok) {
+          console.log("Endpoint " + (i + 1) + " succeeded!");
+          break;
+        }
+        
+        var errorData = await generateResponse.json().catch(function() { return {}; });
+        lastError = errorData.error?.message || generateResponse.statusText;
+        console.log("Endpoint " + (i + 1) + " failed with status " + generateResponse.status + ":", lastError);
+        
+        // If it's not a 404, this might be the right endpoint but with a different error
+        if (generateResponse.status !== 404) {
+          break;
+        }
+      } catch (fetchError) {
+        lastError = fetchError.message;
+        console.log("Endpoint " + (i + 1) + " fetch error:", lastError);
+      }
+    }
+    
+    if (!generateResponse || !generateResponse.ok) {
+      var errorMsg = lastError || "All API endpoints failed";
+      console.error("Generation request failed:", errorMsg);
       
       if (errorMsg.includes("Requested entity was not found") || 
           errorMsg.includes("API_KEY_INVALID") ||
           errorMsg.includes("API key not valid") ||
-          generateResponse.status === 403 ||
-          generateResponse.status === 404) {
+          (generateResponse && generateResponse.status === 403)) {
         throw new Error("API key is invalid, lacks permissions, or the model is not available. Please check your API key and ensure billing is enabled for Veo.");
       }
       throw new Error(errorMsg);
