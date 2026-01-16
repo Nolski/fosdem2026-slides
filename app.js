@@ -1002,86 +1002,44 @@ if (isPresenter) {
       throw new Error("No API key configured");
     }
     
-    // Build the request body matching the Google GenAI SDK format
+    // Build request body for predictLongRunning (the correct endpoint for video generation)
+    // Based on the Veo API structure used by the Google GenAI SDK
     var requestBody = {
-      model: "models/" + params.model,
-      config: {
-        numberOfVideos: 1,
-        resolution: params.resolution,
-        aspectRatio: params.aspectRatio
+      instances: [{
+        prompt: params.prompt
+      }],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: params.aspectRatio,
+        resolution: params.resolution
       }
     };
     
-    // Only add prompt if provided
-    if (params.prompt) {
-      requestBody.prompt = params.prompt;
-    }
-    
     console.log("Starting video generation with params:", requestBody);
     
-    // Try multiple endpoint formats since the API documentation varies
-    var endpoints = [
-      // Format 1: SDK-style collection endpoint with model in body
-      {
-        url: "https://generativelanguage.googleapis.com/v1beta/models:generateVideos?key=" + apiKey,
-        body: requestBody
+    // Use predictLongRunning endpoint which is the correct one for video generation
+    var generateUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":predictLongRunning?key=" + apiKey;
+    console.log("Calling endpoint:", generateUrl);
+    
+    var generateResponse = await fetch(generateUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
       },
-      // Format 2: Model in path (original approach)
-      {
-        url: "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":generateVideos?key=" + apiKey,
-        body: { prompt: params.prompt, config: requestBody.config }
-      },
-      // Format 3: Singular generateVideo action
-      {
-        url: "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":generateVideo?key=" + apiKey,
-        body: { prompt: params.prompt, config: requestBody.config }
-      }
-    ];
+      body: JSON.stringify(requestBody)
+    });
     
-    var generateResponse = null;
-    var lastError = null;
-    
-    for (var i = 0; i < endpoints.length; i++) {
-      var endpoint = endpoints[i];
-      console.log("Trying endpoint " + (i + 1) + ":", endpoint.url);
-      
-      try {
-        generateResponse = await fetch(endpoint.url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(endpoint.body)
-        });
-        
-        if (generateResponse.ok) {
-          console.log("Endpoint " + (i + 1) + " succeeded!");
-          break;
-        }
-        
-        var errorData = await generateResponse.json().catch(function() { return {}; });
-        lastError = errorData.error?.message || generateResponse.statusText;
-        console.log("Endpoint " + (i + 1) + " failed with status " + generateResponse.status + ":", lastError);
-        
-        // If it's not a 404, this might be the right endpoint but with a different error
-        if (generateResponse.status !== 404) {
-          break;
-        }
-      } catch (fetchError) {
-        lastError = fetchError.message;
-        console.log("Endpoint " + (i + 1) + " fetch error:", lastError);
-      }
-    }
-    
-    if (!generateResponse || !generateResponse.ok) {
-      var errorMsg = lastError || "All API endpoints failed";
-      console.error("Generation request failed:", errorMsg);
+    if (!generateResponse.ok) {
+      var errorData = await generateResponse.json().catch(function() { return {}; });
+      var errorMsg = errorData.error?.message || generateResponse.statusText;
+      console.error("Generation request failed:", generateResponse.status, errorMsg, errorData);
       
       if (errorMsg.includes("Requested entity was not found") || 
           errorMsg.includes("API_KEY_INVALID") ||
           errorMsg.includes("API key not valid") ||
-          (generateResponse && generateResponse.status === 403)) {
-        throw new Error("API key is invalid, lacks permissions, or the model is not available. Please check your API key and ensure billing is enabled for Veo.");
+          generateResponse.status === 403 ||
+          generateResponse.status === 404) {
+        throw new Error("API key is invalid, lacks permissions, or the Veo model is not available. Please check your API key and ensure billing is enabled. Error: " + errorMsg);
       }
       throw new Error(errorMsg);
     }
@@ -1116,21 +1074,62 @@ if (isPresenter) {
           throw new Error(statusData.error.message || "Generation failed");
         }
         
+        // Handle different response formats
+        // Format 1: SDK-style with generatedVideos
         var videos = statusData.response?.generatedVideos;
-        if (!videos || videos.length === 0) {
-          throw new Error("No videos were generated.");
+        // Format 2: Predict-style with predictions
+        var predictions = statusData.response?.predictions;
+        
+        var videoUri = null;
+        
+        if (videos && videos.length > 0) {
+          // SDK-style response
+          var firstVideo = videos[0];
+          if (firstVideo?.video?.uri) {
+            videoUri = firstVideo.video.uri;
+          }
+        } else if (predictions && predictions.length > 0) {
+          // Predict-style response - look for video URI in various locations
+          var firstPrediction = predictions[0];
+          console.log("Prediction data:", firstPrediction);
+          
+          // The video might be in different properties depending on the model
+          videoUri = firstPrediction.videoUri || 
+                     firstPrediction.video?.uri || 
+                     firstPrediction.uri ||
+                     (firstPrediction.video && typeof firstPrediction.video === 'string' ? firstPrediction.video : null);
+          
+          // Some models return base64 encoded video
+          if (!videoUri && firstPrediction.bytesBase64Encoded) {
+            console.log("Found base64 encoded video");
+            var byteString = atob(firstPrediction.bytesBase64Encoded);
+            var ab = new ArrayBuffer(byteString.length);
+            var ia = new Uint8Array(ab);
+            for (var i = 0; i < byteString.length; i++) {
+              ia[i] = byteString.charCodeAt(i);
+            }
+            var videoBlob = new Blob([ab], { type: 'video/mp4' });
+            var objectUrl = URL.createObjectURL(videoBlob);
+            return { blob: videoBlob, objectUrl: objectUrl };
+          }
         }
         
-        var firstVideo = videos[0];
-        if (!firstVideo?.video?.uri) {
-          throw new Error("Generated video is missing a URI.");
+        if (!videoUri) {
+          console.error("Could not find video URI in response:", statusData);
+          throw new Error("Generated video is missing a URI. Response format may have changed.");
         }
         
         // Fetch the video
-        var videoUri = decodeURIComponent(firstVideo.video.uri);
+        videoUri = decodeURIComponent(videoUri);
         console.log("Fetching video from:", videoUri);
         
-        var videoResponse = await fetch(videoUri + "&key=" + apiKey);
+        // Add API key if URL is from Google
+        var fetchUrl = videoUri;
+        if (videoUri.includes("googleapis.com") && !videoUri.includes("key=")) {
+          fetchUrl = videoUri + (videoUri.includes("?") ? "&" : "?") + "key=" + apiKey;
+        }
+        
+        var videoResponse = await fetch(fetchUrl);
         if (!videoResponse.ok) {
           throw new Error("Failed to download video: " + videoResponse.statusText);
         }
