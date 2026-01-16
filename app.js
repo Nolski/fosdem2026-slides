@@ -1002,44 +1002,47 @@ if (isPresenter) {
       throw new Error("No API key configured");
     }
     
-    var config = {
-      numberOfVideos: 1,
-      resolution: params.resolution,
-      aspectRatio: params.aspectRatio
+    // Build the request body matching the Google GenAI SDK format
+    var requestBody = {
+      model: "models/" + params.model,
+      config: {
+        numberOfVideos: 1,
+        resolution: params.resolution,
+        aspectRatio: params.aspectRatio
+      }
     };
     
-    var payload = {
-      model: params.model,
-      prompt: params.prompt,
-      config: config
-    };
+    // Only add prompt if provided
+    if (params.prompt) {
+      requestBody.prompt = params.prompt;
+    }
     
-    console.log("Starting video generation with params:", payload);
+    console.log("Starting video generation with params:", requestBody);
     
-    // Generate video operation
+    // The endpoint format for Google GenAI video generation
+    // Try the SDK-style endpoint: models:generateVideos with model in body
     var generateResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/" + params.model + ":generateVideos?key=" + apiKey,
+      "https://generativelanguage.googleapis.com/v1beta/models:generateVideos?key=" + apiKey,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          prompt: params.prompt,
-          config: config
-        })
+        body: JSON.stringify(requestBody)
       }
     );
     
     if (!generateResponse.ok) {
       var errorData = await generateResponse.json().catch(function() { return {}; });
       var errorMsg = errorData.error?.message || generateResponse.statusText;
+      console.error("Generation request failed:", generateResponse.status, errorMsg, errorData);
       
       if (errorMsg.includes("Requested entity was not found") || 
           errorMsg.includes("API_KEY_INVALID") ||
           errorMsg.includes("API key not valid") ||
-          generateResponse.status === 403) {
-        throw new Error("API key is invalid or lacks permissions. Please check your API key and ensure billing is enabled.");
+          generateResponse.status === 403 ||
+          generateResponse.status === 404) {
+        throw new Error("API key is invalid, lacks permissions, or the model is not available. Please check your API key and ensure billing is enabled for Veo.");
       }
       throw new Error(errorMsg);
     }
