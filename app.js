@@ -902,9 +902,13 @@ if (isPresenter) {
   var addDeckFilename = document.getElementById("add-deck-filename");
   var addDeckDoneBtn = document.getElementById("add-deck-done-btn");
   
+  var convertToVideoBtn = document.getElementById("convertToVideoBtn");
+  
   var currentVideoBlob = null;
   var currentVideoUrl = null;
   var pendingGenerateCallback = null;
+  var convertingPlaceholderIndex = -1; // Track which placeholder we're converting
+  var convertingPlaceholderNotes = ""; // Store the notes from the placeholder
   
   // API Key Management
   function getApiKey() {
@@ -955,23 +959,40 @@ if (isPresenter) {
   });
   
   // Video Generation Modal
-  function showVideoGenModal() {
+  function showVideoGenModal(initialPrompt) {
     setVideoGenState("idle");
-    vgPrompt.value = "";
+    vgPrompt.value = initialPrompt || "";
     videoGenModal.style.display = "flex";
     vgPrompt.focus();
   }
   
   function hideVideoGenModal() {
+    // Stop video playback
+    if (vgPreviewVideo) {
+      vgPreviewVideo.pause();
+      vgPreviewVideo.currentTime = 0;
+      vgPreviewVideo.src = "";
+    }
+    
     videoGenModal.style.display = "none";
     if (currentVideoUrl) {
       URL.revokeObjectURL(currentVideoUrl);
       currentVideoUrl = null;
     }
     currentVideoBlob = null;
+    
+    // Reset placeholder conversion state
+    convertingPlaceholderIndex = -1;
+    convertingPlaceholderNotes = "";
   }
   
   function setVideoGenState(state) {
+    // Stop video playback when leaving preview state
+    if (state !== "preview" && vgPreviewVideo) {
+      vgPreviewVideo.pause();
+      vgPreviewVideo.currentTime = 0;
+    }
+    
     vgIdleState.style.display = state === "idle" ? "block" : "none";
     vgLoadingState.style.display = state === "loading" ? "block" : "none";
     vgPreviewState.style.display = state === "preview" ? "block" : "none";
@@ -988,10 +1009,38 @@ if (isPresenter) {
   
   // Generate Video Button Click
   generateVideoBtn.addEventListener("click", function() {
+    // Reset placeholder conversion state for new video
+    convertingPlaceholderIndex = -1;
+    convertingPlaceholderNotes = "";
+    
     if (!hasApiKey()) {
-      showApiKeyDialog(showVideoGenModal);
+      showApiKeyDialog(function() { showVideoGenModal(); });
     } else {
       showVideoGenModal();
+    }
+  });
+  
+  // Convert Placeholder to Video Button Click
+  convertToVideoBtn.addEventListener("click", function() {
+    if (selectedSlideIndex < 0) return;
+    
+    var slide = slides[selectedSlideIndex];
+    if (slide.type !== "placeholder") return;
+    
+    // Store the placeholder info for later
+    convertingPlaceholderIndex = selectedSlideIndex;
+    convertingPlaceholderNotes = slide.notes || "";
+    
+    // Build a suggested prompt from the placeholder content
+    var promptParts = [];
+    if (slide.title) promptParts.push(slide.title);
+    if (slide.text) promptParts.push(slide.text);
+    var suggestedPrompt = promptParts.join(". ");
+    
+    if (!hasApiKey()) {
+      showApiKeyDialog(function() { showVideoGenModal(suggestedPrompt); });
+    } else {
+      showVideoGenModal(suggestedPrompt);
     }
   });
   
@@ -1056,7 +1105,7 @@ if (isPresenter) {
       await new Promise(function(resolve) { setTimeout(resolve, 10000); }); // Wait 10 seconds
       attempts++;
       
-      vgLoadingStatus.textContent = "Generating... (attempt " + attempts + ")";
+      vgLoadingStatus.textContent = "Generating...";
       
       var statusResponse = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/" + operationName + "?key=" + apiKey
@@ -1248,22 +1297,37 @@ if (isPresenter) {
     
     // Show the add to deck instructions
     addDeckFilename.value = "media/video/" + filename;
-    hideVideoGenModal();
-    addToDeckModal.style.display = "flex";
     
-    // Create a new video slide (placeholder with instructions)
+    // Check if we're converting a placeholder or adding a new slide
+    var isConvertingPlaceholder = convertingPlaceholderIndex >= 0;
+    var notesToUse = isConvertingPlaceholder ? convertingPlaceholderNotes : ("AI Generated video. Prompt: " + vgPrompt.value.trim());
+    
+    // Create the video slide
     var newSlide = {
       type: "video",
       src: "media/video/" + filename,
-      notes: "AI Generated video. Prompt: " + vgPrompt.value.trim(),
+      notes: notesToUse,
       loop: false
     };
     
-    var idx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
-    slides.splice(idx, 0, newSlide);
+    var targetIdx;
+    if (isConvertingPlaceholder) {
+      // Replace the placeholder slide
+      targetIdx = convertingPlaceholderIndex;
+      slides[targetIdx] = newSlide;
+    } else {
+      // Add a new slide after the current selection
+      targetIdx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
+      slides.splice(targetIdx, 0, newSlide);
+    }
+    
+    // Close modal and show instructions
+    hideVideoGenModal();
+    addToDeckModal.style.display = "flex";
+    
     renderTimelines();
-    selectSlide(idx);
-    setTimeout(function() { scrollToSlide(idx); }, 50);
+    selectSlide(targetIdx);
+    setTimeout(function() { scrollToSlide(targetIdx); }, 50);
   });
   
   // Done Button on Add to Deck Modal

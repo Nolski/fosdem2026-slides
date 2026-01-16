@@ -774,6 +774,35 @@ body.present-mode #controls {
   box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
 }
 
+/* Convert Placeholder to Video Button */
+.convert-video-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.convert-video-btn:hover {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.convert-video-btn .btn-icon {
+  font-size: 1.1rem;
+}
+
 /* ============================================
    Modal Overlay & Base Styles
    ============================================ */
