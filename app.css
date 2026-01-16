@@ -758,3 +758,443 @@ body.present-mode #controls {
     max-height: 40vh;
   }
 }
+
+/* ============================================
+   AI Video Generation Button
+   ============================================ */
+.toolbar-btn.ai-video {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border-color: rgba(139, 92, 246, 0.5);
+  font-weight: 500;
+}
+
+.toolbar-btn.ai-video:hover {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-color: #7c3aed;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+}
+
+/* Convert Placeholder to Video Button */
+.convert-video-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.convert-video-btn:hover {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.convert-video-btn .btn-icon {
+  font-size: 1.1rem;
+}
+
+/* ============================================
+   Modal Overlay & Base Styles
+   ============================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: linear-gradient(145deg, #1e1e2e, #252538);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  max-width: 560px;
+  width: 100%;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-content h2 {
+  font-size: 1.4rem;
+  color: white;
+  margin: 0 0 12px 0;
+}
+
+.modal-content p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+
+.modal-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.modal-close-btn:hover {
+  color: white;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-btn.primary {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  border: none;
+  color: white;
+}
+
+.modal-btn.primary:hover {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.modal-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.modal-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-btn.cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.modal-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+/* ============================================
+   API Key Dialog
+   ============================================ */
+.api-key-modal {
+  padding: 32px;
+  text-align: center;
+}
+
+.api-key-links {
+  font-size: 0.8rem;
+  margin-bottom: 20px;
+}
+
+.api-key-links a {
+  color: #8b5cf6;
+  text-decoration: none;
+}
+
+.api-key-links a:hover {
+  text-decoration: underline;
+}
+
+#api-key-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  margin-bottom: 8px;
+  transition: all 0.15s ease;
+}
+
+#api-key-input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+/* ============================================
+   Video Generation Modal
+   ============================================ */
+.video-gen-modal {
+  max-width: 640px;
+}
+
+.vg-state {
+  padding: 24px;
+}
+
+.vg-form-group {
+  margin-bottom: 16px;
+}
+
+.vg-form-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.vg-form-group textarea,
+.vg-form-group input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: white;
+  resize: vertical;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.vg-form-group textarea:focus,
+.vg-form-group input[type="text"]:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.vg-form-group input[readonly] {
+  background: rgba(0, 0, 0, 0.2);
+  cursor: text;
+}
+
+.vg-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vg-option-group label {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vg-option-group select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vg-option-group select:focus {
+  outline: none;
+  border-color: #8b5cf6;
+}
+
+.vg-option-group select option {
+  background: #1e1e2e;
+}
+
+/* Loading State */
+.vg-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.vg-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(139, 92, 246, 0.2);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  margin: 0 auto 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.vg-loading h3 {
+  color: white;
+  font-size: 1.2rem;
+  margin: 0 0 8px 0;
+}
+
+.vg-loading p {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Preview State */
+.vg-preview-container {
+  background: black;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  margin-bottom: 16px;
+}
+
+.vg-preview-container video {
+  width: 100%;
+  max-height: 350px;
+  display: block;
+}
+
+.vg-preview-info {
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+}
+
+/* Error State */
+.vg-error {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.vg-error-icon {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+}
+
+.vg-error h3 {
+  color: #f87171;
+  font-size: 1.3rem;
+  margin: 0 0 12px 0;
+}
+
+.vg-error p {
+  color: rgba(248, 113, 113, 0.8);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ============================================
+   Add to Deck Modal
+   ============================================ */
+.add-deck-modal {
+  padding: 32px;
+  text-align: center;
+}
+
+.add-deck-instructions {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  margin-top: 16px;
+}
+
+.add-deck-steps {
+  text-align: left;
+  margin: 12px 0 20px;
+  padding-left: 24px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.add-deck-steps li {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.add-deck-steps code {
+  background: rgba(139, 92, 246, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #a78bfa;
+}
+
+/* ============================================
+   Responsive for Video Gen Modal
+   ============================================ */
+@media (max-width: 600px) {
+  .vg-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    margin: 10px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+}

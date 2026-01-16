@@ -39,6 +39,7 @@
             <button id="addImageBtn" class="toolbar-btn image" title="Add Image Slide">🖼️ Image</button>
             <button id="addPlaceholderBtn" class="toolbar-btn placeholder" title="Add Placeholder">⏳ Placeholder</button>
             <button id="addAudioBtn" class="toolbar-btn audio" title="Add Audio Track">🔊 Audio</button>
+            <button id="generateVideoBtn" class="toolbar-btn ai-video" title="Generate AI Video">✨ AI Video</button>
           </div>
         </div>
         <div id="toolbar-right">
@@ -101,6 +102,9 @@
               <textarea id="placeholder-text" rows="3" placeholder="Additional text for the slide..."></textarea>
               <label for="placeholder-color" style="margin-top: 8px;">Background Color</label>
               <input type="color" id="placeholder-color" value="#333333">
+              <button type="button" id="convertToVideoBtn" class="convert-video-btn">
+                <span class="btn-icon">✨</span> Generate AI Video for this Slide
+              </button>
             </div>
             <div class="form-group" id="zoompan-group" style="display: none;">
               <label class="checkbox-label">
@@ -174,6 +178,131 @@
 
   <!-- Main presentation container -->
   <div id="presentation"></div>
+
+  <!-- API Key Dialog -->
+  <div id="api-key-dialog" class="modal-overlay" style="display: none;">
+    <div class="modal-content api-key-modal">
+      <div class="modal-icon">🔑</div>
+      <h2>Veo API Key Required</h2>
+      <p>To generate videos with Veo, please enter your Google AI API key with billing enabled.</p>
+      <p class="api-key-links">
+        <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer">How to enable billing</a> | 
+        <a href="https://ai.google.dev/gemini-api/docs/pricing#veo-3" target="_blank" rel="noopener noreferrer">Veo pricing</a>
+      </p>
+      <input type="password" id="api-key-input" placeholder="Enter your API key..." autocomplete="off">
+      <div class="modal-actions">
+        <button id="api-key-cancel" class="modal-btn cancel">Cancel</button>
+        <button id="api-key-save" class="modal-btn primary">Save & Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Generation Modal -->
+  <div id="video-gen-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content video-gen-modal">
+      <div class="modal-header">
+        <h2>🎬 Generate AI Video</h2>
+        <button id="video-gen-close" class="modal-close-btn">&times;</button>
+      </div>
+      
+      <!-- Idle State: Prompt Form -->
+      <div id="vg-idle-state" class="vg-state">
+        <div class="vg-form-group">
+          <label for="vg-prompt">Video Prompt</label>
+          <textarea id="vg-prompt" rows="3" placeholder="Describe the video you want to generate..."></textarea>
+        </div>
+        
+        <div class="vg-options">
+          <div class="vg-option-group">
+            <label for="vg-model">Model</label>
+            <select id="vg-model">
+              <option value="veo-3.1-fast-generate-preview">Fast (Veo 3.1)</option>
+              <option value="veo-3.1-generate-preview">High Quality (Veo 3.1)</option>
+            </select>
+          </div>
+          <div class="vg-option-group">
+            <label for="vg-aspect">Aspect Ratio</label>
+            <select id="vg-aspect">
+              <option value="16:9">Landscape (16:9)</option>
+              <option value="9:16">Portrait (9:16)</option>
+            </select>
+          </div>
+          <div class="vg-option-group">
+            <label for="vg-resolution">Resolution</label>
+            <select id="vg-resolution">
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+              <option value="4k">4K</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button id="vg-generate-btn" class="modal-btn primary">
+            <span class="btn-icon">✨</span> Generate Video
+          </button>
+        </div>
+      </div>
+      
+      <!-- Loading State -->
+      <div id="vg-loading-state" class="vg-state" style="display: none;">
+        <div class="vg-loading">
+          <div class="vg-spinner"></div>
+          <h3>Generating your video...</h3>
+          <p id="vg-loading-status">This may take a few minutes. Please wait.</p>
+        </div>
+      </div>
+      
+      <!-- Preview State -->
+      <div id="vg-preview-state" class="vg-state" style="display: none;">
+        <div class="vg-preview-container">
+          <video id="vg-preview-video" controls autoplay loop></video>
+        </div>
+        <p class="vg-preview-info">Preview your generated video. Click "Add to Deck" to download and add it to your presentation.</p>
+        <div class="modal-actions">
+          <button id="vg-regenerate-btn" class="modal-btn secondary">
+            <span class="btn-icon">🔄</span> Regenerate
+          </button>
+          <button id="vg-confirm-btn" class="modal-btn primary">
+            <span class="btn-icon">✅</span> Add to Deck
+          </button>
+        </div>
+      </div>
+      
+      <!-- Error State -->
+      <div id="vg-error-state" class="vg-state" style="display: none;">
+        <div class="vg-error">
+          <div class="vg-error-icon">❌</div>
+          <h3>Generation Failed</h3>
+          <p id="vg-error-message">An error occurred while generating the video.</p>
+        </div>
+        <div class="modal-actions">
+          <button id="vg-try-again-btn" class="modal-btn primary">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Deck Confirmation Modal -->
+  <div id="add-to-deck-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content add-deck-modal">
+      <div class="modal-icon">📁</div>
+      <h2>Video Downloaded!</h2>
+      <p>Your video has been downloaded to your Downloads folder.</p>
+      <p class="add-deck-instructions">To add it to your presentation:</p>
+      <ol class="add-deck-steps">
+        <li>Move the downloaded video to <code>media/video/</code> folder</li>
+        <li>Update the slide's source path to match the filename</li>
+      </ol>
+      <div class="vg-form-group">
+        <label for="add-deck-filename">Suggested filename:</label>
+        <input type="text" id="add-deck-filename" readonly>
+      </div>
+      <div class="modal-actions">
+        <button id="add-deck-done-btn" class="modal-btn primary">Done</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
