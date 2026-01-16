@@ -348,6 +348,31 @@
       "title": "segway to dave the nazi",
       "backgroundColor": "#333333",
       "text": ""
+    },
+    {
+      "type": "video",
+      "src": "media/video/59.mp4",
+      "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... They hired Dave to try and skirt copyright law.",
+      "loop": false
+    },
+    {
+      "type": "placeholder",
+      "notes": "Dave... Also has some interesting views....",
+      "title": "Compromising images of his twitter posts",
+      "backgroundColor": "#333333",
+      "text": ""
+    },
+    {
+      "type": "image",
+      "notes": "By this point, the rules of the PC industry were clear—and unforgiving.\n\nIBM’s BIOS wasn’t just technical glue; it was a legal tripwire. Courts were beginning to accept that even behaviorally identical firmware could count as a copyrighted derivative if engineers had been exposed to the original code. Several clone makers had already been sued, settled, or quietly disappeared—not because their machines failed, but because their software was too similar.\n\nCompatibility had become dangerous.\n\nEveryone needed IBM compatibility to integrate with their popular software, but knew that reimplementing was a surefire way to get worked over by their lawyers.  Phoenix had some new ideas about how to skirt the rules though.\n\nInstead of asking how to copy IBM’s BIOS, they asked how to never see it at all—and still rebuild its behavior. They split knowledge, roles, and responsibility so aggressively that no single engineer ever crossed the legal boundary IBM was defending. Specifications flowed in one direction. Code flowed in another.\n\nThis wasn't smart engineering but rather legal gymnastics and it placed Phoenix—and one particular engineer—directly at the center of a legal and technical experiment that would define what “cleanroom” software engineering actually meant. ",
+      "src": "media/img/phoenix-news.png",
+      "zoompan": true
+    },
+    {
+      "type": "image",
+      "notes": "Dave the Nazi.",
+      "src": "media/img/davethenazi.png",
+      "zoompan": true
     }
   ],
   "audio": [
