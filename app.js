@@ -1386,9 +1386,15 @@ if (isPresenter) {
   var veTextEnabled = document.getElementById("ve-text-enabled");
   var veTextOptions = document.getElementById("ve-text-options");
   var veTextInput = document.getElementById("ve-text-input");
-  var veFontFamily = document.getElementById("ve-font-family");
   var veFontSize = document.getElementById("ve-font-size");
   var veFontColor = document.getElementById("ve-font-color");
+  var veTextX = document.getElementById("ve-text-x");
+  var veTextY = document.getElementById("ve-text-y");
+  var veTextXValue = document.getElementById("ve-text-x-value");
+  var veTextYValue = document.getElementById("ve-text-y-value");
+  var veTextOverlay = document.getElementById("ve-text-overlay");
+  var veTextOverlayContent = document.getElementById("ve-text-overlay-content");
+  var veDragHint = document.getElementById("ve-drag-hint");
   var veApplyBtn = document.getElementById("ve-apply-btn");
   var veCancelBtn = document.getElementById("ve-cancel-btn");
   var veDoneBtn = document.getElementById("ve-done-btn");
@@ -1398,9 +1404,11 @@ if (isPresenter) {
   
   var ffmpeg = null;
   var ffmpegLoaded = false;
+  var fontLoaded = false;
   var currentEditVideoSrc = null;
   var currentEditVideoBlob = null;
-  var selectedTextPosition = "middle-center";
+  var textPositionX = 50; // percentage
+  var textPositionY = 50; // percentage
   
   // FFmpeg loading - uses local files
   async function loadFFmpeg() {
@@ -1432,8 +1440,6 @@ if (isPresenter) {
       // Use absolute URLs for local files
       var baseURL = new URL("lib/ffmpeg/", window.location.href).href;
       
-      // Don't pass classWorkerURL - let FFmpeg find it automatically from the same directory
-      // The worker (814.ffmpeg.js) is in the same directory and will be found automatically
       await ffmpeg.load({
         coreURL: baseURL + "ffmpeg-core.js",
         wasmURL: baseURL + "ffmpeg-core.wasm"
@@ -1441,6 +1447,22 @@ if (isPresenter) {
       
       ffmpegLoaded = true;
       console.log("FFmpeg loaded successfully");
+      
+      // Load font file into FFmpeg's virtual filesystem
+      if (!fontLoaded) {
+        veFFmpegStatus.textContent = "Loading fonts...";
+        try {
+          var fontResponse = await fetch("lib/fonts/Roboto-Bold.ttf");
+          var fontData = await fontResponse.arrayBuffer();
+          await ffmpeg.writeFile("/fonts/Roboto-Bold.ttf", new Uint8Array(fontData));
+          fontLoaded = true;
+          console.log("Font loaded successfully");
+        } catch (fontError) {
+          console.warn("Failed to load font:", fontError);
+          // Continue without font - text overlay won't work
+        }
+      }
+      
       return ffmpeg;
     } catch (error) {
       console.error("Failed to load FFmpeg:", error);
@@ -1459,12 +1481,18 @@ if (isPresenter) {
     veVolumeValue.textContent = "100%";
     veTextEnabled.checked = false;
     veTextOptions.style.display = "none";
+    veTextOverlay.style.display = "none";
+    veDragHint.style.display = "none";
     veTextInput.value = "";
-    veFontFamily.value = "Arial";
     veFontSize.value = "48";
     veFontColor.value = "#ffffff";
-    selectedTextPosition = "middle-center";
-    updatePositionButtons();
+    textPositionX = 50;
+    textPositionY = 50;
+    veTextX.value = 50;
+    veTextY.value = 50;
+    veTextXValue.textContent = "50%";
+    veTextYValue.textContent = "50%";
+    updateTextOverlayPreview();
     
     // Load video preview
     vePreviewVideo.src = videoSrc;
@@ -1494,19 +1522,23 @@ if (isPresenter) {
     veErrorState.style.display = state === "error" ? "block" : "none";
   }
   
-  function updatePositionButtons() {
-    document.querySelectorAll(".ve-pos-btn").forEach(function(btn) {
-      btn.classList.toggle("active", btn.dataset.pos === selectedTextPosition);
-    });
+  // Update text overlay preview
+  function updateTextOverlayPreview() {
+    var text = veTextInput.value || "Sample Text";
+    var fontSize = parseInt(veFontSize.value);
+    var color = veFontColor.value;
+    
+    // Scale font size for preview (video preview is smaller than actual video)
+    var previewFontSize = Math.max(12, Math.round(fontSize * 0.4));
+    
+    veTextOverlayContent.textContent = text;
+    veTextOverlayContent.style.fontSize = previewFontSize + "px";
+    veTextOverlayContent.style.color = color;
+    
+    // Position the overlay
+    veTextOverlay.style.left = textPositionX + "%";
+    veTextOverlay.style.top = textPositionY + "%";
   }
-  
-  // Position button clicks
-  document.querySelectorAll(".ve-pos-btn").forEach(function(btn) {
-    btn.addEventListener("click", function() {
-      selectedTextPosition = this.dataset.pos;
-      updatePositionButtons();
-    });
-  });
   
   // Volume slider
   veVolumeSlider.addEventListener("input", function() {
@@ -1516,6 +1548,70 @@ if (isPresenter) {
   // Text overlay toggle
   veTextEnabled.addEventListener("change", function() {
     veTextOptions.style.display = this.checked ? "block" : "none";
+    veTextOverlay.style.display = this.checked ? "block" : "none";
+    veDragHint.style.display = this.checked ? "block" : "none";
+    if (this.checked) {
+      updateTextOverlayPreview();
+    }
+  });
+  
+  // Text input changes
+  veTextInput.addEventListener("input", updateTextOverlayPreview);
+  veFontSize.addEventListener("change", updateTextOverlayPreview);
+  veFontColor.addEventListener("input", updateTextOverlayPreview);
+  
+  // Position sliders
+  veTextX.addEventListener("input", function() {
+    textPositionX = parseInt(this.value);
+    veTextXValue.textContent = textPositionX + "%";
+    updateTextOverlayPreview();
+  });
+  
+  veTextY.addEventListener("input", function() {
+    textPositionY = parseInt(this.value);
+    veTextYValue.textContent = textPositionY + "%";
+    updateTextOverlayPreview();
+  });
+  
+  // Draggable text overlay
+  var isDragging = false;
+  var dragStartX, dragStartY;
+  
+  veTextOverlay.addEventListener("mousedown", function(e) {
+    isDragging = true;
+    veTextOverlay.classList.add("dragging");
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    e.preventDefault();
+  });
+  
+  document.addEventListener("mousemove", function(e) {
+    if (!isDragging) return;
+    
+    var container = veTextOverlay.parentElement;
+    var rect = container.getBoundingClientRect();
+    
+    // Calculate new position as percentage
+    var newX = ((e.clientX - rect.left) / rect.width) * 100;
+    var newY = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Clamp to bounds
+    textPositionX = Math.max(5, Math.min(95, newX));
+    textPositionY = Math.max(5, Math.min(95, newY));
+    
+    // Update sliders and preview
+    veTextX.value = Math.round(textPositionX);
+    veTextY.value = Math.round(textPositionY);
+    veTextXValue.textContent = Math.round(textPositionX) + "%";
+    veTextYValue.textContent = Math.round(textPositionY) + "%";
+    updateTextOverlayPreview();
+  });
+  
+  document.addEventListener("mouseup", function() {
+    if (isDragging) {
+      isDragging = false;
+      veTextOverlay.classList.remove("dragging");
+    }
   });
   
   // Close button
@@ -1533,23 +1629,6 @@ if (isPresenter) {
     }
   });
   
-  // Get text position coordinates for FFmpeg drawtext
-  function getTextPosition(position, fontSize) {
-    var padding = 20;
-    var positions = {
-      "top-left": { x: padding, y: padding },
-      "top-center": { x: "(w-text_w)/2", y: padding },
-      "top-right": { x: "w-text_w-" + padding, y: padding },
-      "middle-left": { x: padding, y: "(h-text_h)/2" },
-      "middle-center": { x: "(w-text_w)/2", y: "(h-text_h)/2" },
-      "middle-right": { x: "w-text_w-" + padding, y: "(h-text_h)/2" },
-      "bottom-left": { x: padding, y: "h-text_h-" + padding },
-      "bottom-center": { x: "(w-text_w)/2", y: "h-text_h-" + padding },
-      "bottom-right": { x: "w-text_w-" + padding, y: "h-text_h-" + padding }
-    };
-    return positions[position] || positions["middle-center"];
-  }
-  
   // Convert hex color to FFmpeg format
   function hexToFFmpegColor(hex) {
     // FFmpeg uses format like 0xRRGGBB or white, black, etc
@@ -1560,21 +1639,38 @@ if (isPresenter) {
   veApplyBtn.addEventListener("click", async function() {
     if (!ffmpeg || !currentEditVideoSrc) return;
     
+    // Validate text overlay settings
+    if (veTextEnabled.checked) {
+      if (!veTextInput.value.trim()) {
+        alert("Please enter text for the overlay, or disable text overlay.");
+        veTextInput.focus();
+        return;
+      }
+      if (!fontLoaded) {
+        alert("Font file not loaded. Text overlay may not work correctly.");
+      }
+    }
+    
     setVideoEditState("processing");
     veProgressFill.style.width = "0%";
     veProgressText.textContent = "0%";
     veProcessingStatus.textContent = "Fetching video file...";
     
+    var inputFile = null;
+    var outputFile = "output.mp4";
+    
     try {
       // Fetch the video file
       var response = await fetch(currentEditVideoSrc);
+      if (!response.ok) {
+        throw new Error("Failed to fetch video file: " + response.statusText);
+      }
       var videoData = await response.arrayBuffer();
       
       // Determine input file extension
       var inputExt = currentEditVideoSrc.split('.').pop().toLowerCase();
       if (inputExt === "m4v") inputExt = "mp4"; // Treat m4v as mp4
-      var inputFile = "input." + inputExt;
-      var outputFile = "output.mp4";
+      inputFile = "input." + inputExt;
       
       veProcessingStatus.textContent = "Writing video to FFmpeg...";
       
@@ -1584,7 +1680,7 @@ if (isPresenter) {
       veProcessingStatus.textContent = "Processing video...";
       
       // Build FFmpeg command
-      var filters = [];
+      var videoFilters = [];
       var audioFilters = [];
       
       // Volume adjustment
@@ -1595,39 +1691,44 @@ if (isPresenter) {
       
       // Text overlay
       if (veTextEnabled.checked && veTextInput.value.trim()) {
-        var text = veTextInput.value.trim().replace(/'/g, "\\'").replace(/:/g, "\\:");
-        var fontFamily = veFontFamily.value;
+        // Escape special characters for FFmpeg
+        var text = veTextInput.value.trim()
+          .replace(/\\/g, "\\\\")
+          .replace(/'/g, "'\\''")
+          .replace(/:/g, "\\:")
+          .replace(/\[/g, "\\[")
+          .replace(/\]/g, "\\]");
+        
         var fontSize = veFontSize.value;
         var fontColor = hexToFFmpegColor(veFontColor.value);
-        var pos = getTextPosition(selectedTextPosition, fontSize);
         
-        // Build drawtext filter
-        var drawtext = "drawtext=text='" + text + "'";
+        // Calculate position based on percentage
+        // x and y are where to place the text, accounting for text dimensions
+        var xExpr = "(" + (textPositionX / 100) + "*w-text_w/2)";
+        var yExpr = "(" + (textPositionY / 100) + "*h-text_h/2)";
+        
+        // Build drawtext filter with font file
+        var drawtext = "drawtext=fontfile=/fonts/Roboto-Bold.ttf";
+        drawtext += ":text='" + text + "'";
         drawtext += ":fontsize=" + fontSize;
         drawtext += ":fontcolor=" + fontColor;
-        drawtext += ":x=" + pos.x;
-        drawtext += ":y=" + pos.y;
-        drawtext += ":borderw=2:bordercolor=black";
+        drawtext += ":x=" + xExpr;
+        drawtext += ":y=" + yExpr;
+        drawtext += ":borderw=3:bordercolor=black";
         
-        filters.push(drawtext);
+        videoFilters.push(drawtext);
       }
       
       // Build command arguments
       var args = ["-i", inputFile];
       
-      // Add filters if any
-      if (filters.length > 0 || audioFilters.length > 0) {
-        var filterComplex = [];
-        if (filters.length > 0) {
-          filterComplex.push(filters.join(","));
-        }
-        if (audioFilters.length > 0) {
-          args.push("-af", audioFilters.join(","));
-        }
-        if (filters.length > 0) {
-          args.push("-vf", filters.join(","));
-        }
-      } else if (audioFilters.length > 0) {
+      // Add video filter if any
+      if (videoFilters.length > 0) {
+        args.push("-vf", videoFilters.join(","));
+      }
+      
+      // Add audio filter if any
+      if (audioFilters.length > 0) {
         args.push("-af", audioFilters.join(","));
       }
       
@@ -1638,17 +1739,35 @@ if (isPresenter) {
       args.push("-c:a", "aac");
       args.push("-b:a", "128k");
       args.push("-movflags", "+faststart");
+      args.push("-y"); // Overwrite output
       args.push(outputFile);
       
       console.log("FFmpeg command:", args.join(" "));
       
-      // Run FFmpeg
-      await ffmpeg.exec(args);
+      // Run FFmpeg and capture return code
+      var returnCode = await ffmpeg.exec(args);
+      console.log("FFmpeg return code:", returnCode);
+      
+      if (returnCode !== 0) {
+        throw new Error("FFmpeg processing failed with code " + returnCode + ". Check console for details.");
+      }
       
       veProcessingStatus.textContent = "Reading output file...";
       
-      // Read output file
-      var outputData = await ffmpeg.readFile(outputFile);
+      // Check if output file exists and has content
+      var outputData;
+      try {
+        outputData = await ffmpeg.readFile(outputFile);
+      } catch (readError) {
+        throw new Error("Output file was not created. FFmpeg processing failed.");
+      }
+      
+      if (!outputData || outputData.length === 0) {
+        throw new Error("Output file is empty. FFmpeg processing failed.");
+      }
+      
+      console.log("Output file size:", outputData.length, "bytes");
+      
       currentEditVideoBlob = new Blob([outputData.buffer], { type: "video/mp4" });
       
       // Create download
@@ -1666,8 +1785,12 @@ if (isPresenter) {
       URL.revokeObjectURL(downloadUrl);
       
       // Clean up FFmpeg files
-      await ffmpeg.deleteFile(inputFile);
-      await ffmpeg.deleteFile(outputFile);
+      try {
+        await ffmpeg.deleteFile(inputFile);
+        await ffmpeg.deleteFile(outputFile);
+      } catch (cleanupError) {
+        console.warn("Cleanup error:", cleanupError);
+      }
       
       // Show complete state
       veOriginalPath.value = currentEditVideoSrc;
@@ -1675,8 +1798,16 @@ if (isPresenter) {
       
     } catch (error) {
       console.error("Video processing error:", error);
-      veErrorMessage.textContent = "Error processing video: " + error.message;
+      veErrorMessage.textContent = error.message || "An error occurred while processing the video.";
       setVideoEditState("error");
+      
+      // Clean up on error
+      try {
+        if (inputFile) await ffmpeg.deleteFile(inputFile);
+        await ffmpeg.deleteFile(outputFile);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
     }
   });
   

@@ -337,7 +337,14 @@
       <!-- Editor State -->
       <div id="ve-editor-state" class="ve-state" style="display: none;">
         <div class="ve-preview-section">
-          <video id="ve-preview-video" controls></video>
+          <div class="ve-video-container">
+            <video id="ve-preview-video" controls></video>
+            <!-- Text overlay preview (draggable) -->
+            <div id="ve-text-overlay" class="ve-text-overlay" style="display: none;">
+              <span id="ve-text-overlay-content">Sample Text</span>
+            </div>
+          </div>
+          <p class="ve-drag-hint" id="ve-drag-hint" style="display: none;">Drag the text to position it</p>
         </div>
         
         <div class="ve-controls">
@@ -369,29 +376,13 @@
             
             <div class="ve-control-row">
               <div class="ve-control-group">
-                <label for="ve-font-family">Font</label>
-                <select id="ve-font-family">
-                  <option value="Arial">Arial</option>
-                  <option value="Helvetica">Helvetica</option>
-                  <option value="Times New Roman">Times New Roman</option>
-                  <option value="Georgia">Georgia</option>
-                  <option value="Courier New">Courier New</option>
-                  <option value="Verdana">Verdana</option>
-                  <option value="Impact">Impact</option>
-                  <option value="Comic Sans MS">Comic Sans MS</option>
-                </select>
-              </div>
-              
-              <div class="ve-control-group">
                 <label for="ve-font-size">Size</label>
                 <select id="ve-font-size">
-                  <option value="24">24px</option>
-                  <option value="32">32px</option>
-                  <option value="48" selected>48px</option>
-                  <option value="64">64px</option>
-                  <option value="72">72px</option>
-                  <option value="96">96px</option>
-                  <option value="128">128px</option>
+                  <option value="24">Small (24px)</option>
+                  <option value="36">Medium (36px)</option>
+                  <option value="48" selected>Large (48px)</option>
+                  <option value="64">X-Large (64px)</option>
+                  <option value="96">XX-Large (96px)</option>
                 </select>
               </div>
               
@@ -401,18 +392,20 @@
               </div>
             </div>
             
-            <div class="ve-control-group">
-              <label>Position</label>
-              <div class="ve-position-grid">
-                <button type="button" class="ve-pos-btn" data-pos="top-left">↖</button>
-                <button type="button" class="ve-pos-btn" data-pos="top-center">↑</button>
-                <button type="button" class="ve-pos-btn" data-pos="top-right">↗</button>
-                <button type="button" class="ve-pos-btn" data-pos="middle-left">←</button>
-                <button type="button" class="ve-pos-btn active" data-pos="middle-center">●</button>
-                <button type="button" class="ve-pos-btn" data-pos="middle-right">→</button>
-                <button type="button" class="ve-pos-btn" data-pos="bottom-left">↙</button>
-                <button type="button" class="ve-pos-btn" data-pos="bottom-center">↓</button>
-                <button type="button" class="ve-pos-btn" data-pos="bottom-right">↘</button>
+            <div class="ve-control-row">
+              <div class="ve-control-group">
+                <label for="ve-text-x">X Position</label>
+                <div class="ve-slider-row">
+                  <input type="range" id="ve-text-x" min="0" max="100" value="50">
+                  <span id="ve-text-x-value">50%</span>
+                </div>
+              </div>
+              <div class="ve-control-group">
+                <label for="ve-text-y">Y Position</label>
+                <div class="ve-slider-row">
+                  <input type="range" id="ve-text-y" min="0" max="100" value="50">
+                  <span id="ve-text-y-value">50%</span>
+                </div>
               </div>
             </div>
           </div>
