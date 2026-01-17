@@ -1386,6 +1386,7 @@ if (isPresenter) {
   var veTextEnabled = document.getElementById("ve-text-enabled");
   var veTextOptions = document.getElementById("ve-text-options");
   var veTextInput = document.getElementById("ve-text-input");
+  var veFontFamily = document.getElementById("ve-font-family");
   var veFontSize = document.getElementById("ve-font-size");
   var veFontColor = document.getElementById("ve-font-color");
   var veTextX = document.getElementById("ve-text-x");
@@ -1448,18 +1449,46 @@ if (isPresenter) {
       ffmpegLoaded = true;
       console.log("FFmpeg loaded successfully");
       
-      // Load font file into FFmpeg's virtual filesystem
+      // Load font files into FFmpeg's virtual filesystem
       if (!fontLoaded) {
         veFFmpegStatus.textContent = "Loading fonts...";
         try {
-          var fontResponse = await fetch("lib/fonts/Roboto-Bold.ttf");
-          var fontData = await fontResponse.arrayBuffer();
-          await ffmpeg.writeFile("/fonts/Roboto-Bold.ttf", new Uint8Array(fontData));
+          // Create the fonts directory first
+          try {
+            await ffmpeg.createDir("/fonts");
+            console.log("Created /fonts directory");
+          } catch (dirError) {
+            console.log("Fonts directory may already exist:", dirError.message);
+          }
+          
+          // Load multiple fonts for redundancy
+          var fonts = [
+            { name: "Roboto-Bold.ttf", path: "lib/fonts/Roboto-Bold.ttf" },
+            { name: "Lato-Bold.ttf", path: "lib/fonts/Lato-Bold.ttf" },
+            { name: "OpenSans-Bold.ttf", path: "lib/fonts/OpenSans-Bold.ttf" }
+          ];
+          
+          for (var i = 0; i < fonts.length; i++) {
+            var font = fonts[i];
+            try {
+              var fontResponse = await fetch(font.path);
+              if (!fontResponse.ok) {
+                console.warn("Failed to fetch font " + font.name + ": " + fontResponse.statusText);
+                continue;
+              }
+              var fontData = await fontResponse.arrayBuffer();
+              await ffmpeg.writeFile("/fonts/" + font.name, new Uint8Array(fontData));
+              console.log("Loaded font: " + font.name + " (" + fontData.byteLength + " bytes)");
+            } catch (fontError) {
+              console.warn("Failed to load font " + font.name + ":", fontError);
+            }
+          }
+          
           fontLoaded = true;
-          console.log("Font loaded successfully");
+          console.log("Fonts loaded successfully");
         } catch (fontError) {
-          console.warn("Failed to load font:", fontError);
-          // Continue without font - text overlay won't work
+          console.error("Failed to load fonts:", fontError);
+          // Continue without fonts - text overlay won't work
         }
       }
       
@@ -1484,6 +1513,7 @@ if (isPresenter) {
     veTextOverlay.style.display = "none";
     veDragHint.style.display = "none";
     veTextInput.value = "";
+    veFontFamily.value = "Roboto-Bold.ttf";
     veFontSize.value = "48";
     veFontColor.value = "#ffffff";
     textPositionX = 50;
@@ -1699,6 +1729,7 @@ if (isPresenter) {
           .replace(/\[/g, "\\[")
           .replace(/\]/g, "\\]");
         
+        var fontFile = veFontFamily.value;
         var fontSize = veFontSize.value;
         var fontColor = hexToFFmpegColor(veFontColor.value);
         
@@ -1708,7 +1739,7 @@ if (isPresenter) {
         var yExpr = "(" + (textPositionY / 100) + "*h-text_h/2)";
         
         // Build drawtext filter with font file
-        var drawtext = "drawtext=fontfile=/fonts/Roboto-Bold.ttf";
+        var drawtext = "drawtext=fontfile=/fonts/" + fontFile;
         drawtext += ":text='" + text + "'";
         drawtext += ":fontsize=" + fontSize;
         drawtext += ":fontcolor=" + fontColor;

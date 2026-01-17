@@ -1367,8 +1367,12 @@ body.present-mode #controls {
 
 .ve-control-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 80px;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.ve-control-row.ve-three-col {
+  grid-template-columns: 1fr 1fr 80px;
 }
 
 .ve-control-group input[type="text"],
