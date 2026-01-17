@@ -1,11 +1,11 @@
 /**
- * Live Subtitles using Transformers.js + WebGPU
+ * Live Subtitles using Whisper + WebGPU
  * 
- * Based on research recommendations:
- * - AudioWorklet for glitch-free capture (not deprecated ScriptProcessorNode)
- * - WebGPU acceleration for 5-75x faster inference
- * - Proper downsampling from 48kHz to 16kHz
- * - Energy-based VAD to skip silence
+ * Key insights from research:
+ * - Whisper needs 10-15s context, not 2.5s chunks
+ * - Use sliding window: 15s buffer, process every 1.5s
+ * - Use timestamps to dedupe and show only new text
+ * - Use onnx-community model for WebGPU compatibility
  */
 
 (function() {
@@ -21,38 +21,87 @@ const SubtitleState = {
   audioContext: null,
   mediaStream: null,
   workletNode: null,
-  audioBuffer: [],
+  
+  // Sliding window buffer (15 seconds at 16kHz = 240,000 samples)
+  audioRingBuffer: null,
+  ringBufferWriteIdx: 0,
+  ringBufferSize: 15 * 16000, // 15 seconds
+  
+  // Processing state
   isTranscribing: false,
-  displayTimeout: null,
-  processTimeout: null
+  processInterval: null,
+  lastTranscribedText: '',
+  lastTimestamp: 0,
+  
+  displayTimeout: null
 };
 
 // Configuration
 const CONFIG = {
-  modelName: 'Xenova/whisper-tiny.en',
-  useWebGPU: true,
-  chunkDurationMs: 2500,      // Process every 2.5 seconds
-  minAudioEnergy: 0.005,      // Skip chunks below this energy level
-  maxDisplayDuration: 5000,
+  // Use the documented WebGPU-compatible model
+  modelName: 'onnx-community/whisper-tiny.en',
+  
+  // Sliding window parameters (from research)
+  windowSeconds: 15,        // Full context window
+  processIntervalMs: 1500,  // Process every 1.5 seconds
+  minAudioEnergy: 0.003,    // Lower threshold
+  stableDelaySeconds: 1,    // Only finalize text older than this
+  
+  maxDisplayDuration: 6000,
   maxWordsPerLine: 12,
   debug: true
 };
 
 /**
- * Dynamically import transformers.js
+ * Initialize the ring buffer
  */
-async function loadTransformers() {
-  const { pipeline, env } = await import('./lib/transformers/transformers.min.js');
-  
-  // Configure paths
-  env.backends.onnx.wasm.wasmPaths = './lib/transformers/';
-  env.allowLocalModels = false;
-  
-  return { pipeline, env };
+function initRingBuffer() {
+  SubtitleState.audioRingBuffer = new Float32Array(SubtitleState.ringBufferSize);
+  SubtitleState.ringBufferWriteIdx = 0;
 }
 
 /**
- * Initialize Whisper model with WebGPU if available
+ * Push audio samples into the ring buffer
+ */
+function pushToRingBuffer(samples) {
+  for (let i = 0; i < samples.length; i++) {
+    SubtitleState.audioRingBuffer[SubtitleState.ringBufferWriteIdx] = samples[i];
+    SubtitleState.ringBufferWriteIdx = (SubtitleState.ringBufferWriteIdx + 1) % SubtitleState.ringBufferSize;
+  }
+}
+
+/**
+ * Read the last N seconds from ring buffer (returns contiguous array)
+ */
+function readFromRingBuffer(seconds) {
+  const samplesToRead = Math.min(seconds * 16000, SubtitleState.ringBufferSize);
+  const result = new Float32Array(samplesToRead);
+  
+  let readIdx = (SubtitleState.ringBufferWriteIdx - samplesToRead + SubtitleState.ringBufferSize) % SubtitleState.ringBufferSize;
+  
+  for (let i = 0; i < samplesToRead; i++) {
+    result[i] = SubtitleState.audioRingBuffer[readIdx];
+    readIdx = (readIdx + 1) % SubtitleState.ringBufferSize;
+  }
+  
+  return result;
+}
+
+/**
+ * Dynamically import transformers.js
+ */
+async function loadTransformers() {
+  const module = await import('./lib/transformers/transformers.min.js');
+  
+  // Configure paths
+  module.env.backends.onnx.wasm.wasmPaths = './lib/transformers/';
+  module.env.allowLocalModels = false;
+  
+  return module;
+}
+
+/**
+ * Initialize Whisper model with WebGPU
  */
 async function initializeWhisper() {
   if (SubtitleState.isModelLoaded || SubtitleState.isModelLoading) {
@@ -65,43 +114,65 @@ async function initializeWhisper() {
   try {
     const { pipeline } = await loadTransformers();
     
-    // Check WebGPU availability
-    let device = 'wasm'; // fallback
-    if (CONFIG.useWebGPU && navigator.gpu) {
+    // Check WebGPU availability properly
+    let device = 'wasm';
+    let useWebGPU = false;
+    
+    if (navigator.gpu) {
       try {
         const adapter = await navigator.gpu.requestAdapter();
         if (adapter) {
+          const adapterInfo = await adapter.requestAdapterInfo();
+          console.log('[Subtitles] WebGPU adapter:', adapterInfo);
           device = 'webgpu';
-          console.log('[Subtitles] WebGPU available - using GPU acceleration');
+          useWebGPU = true;
         }
       } catch (e) {
-        console.log('[Subtitles] WebGPU not available, falling back to WASM');
+        console.warn('[Subtitles] WebGPU adapter request failed:', e);
       }
+    }
+    
+    if (!useWebGPU) {
+      console.warn('[Subtitles] WebGPU not available, using WASM (will be slower)');
     }
 
     console.log(`[Subtitles] Loading ${CONFIG.modelName} on ${device}...`);
+    updateStatus('loading', `Loading on ${device}...`);
+    
+    const startLoad = performance.now();
     
     SubtitleState.transcriber = await pipeline(
       'automatic-speech-recognition',
       CONFIG.modelName,
       {
         device: device,
-        dtype: device === 'webgpu' ? 'fp32' : 'q8', // FP32 for WebGPU, quantized for WASM
+        dtype: useWebGPU ? 'fp32' : 'q8',
         progress_callback: (progress) => {
-          if (progress.status === 'downloading') {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
+          if (progress.status === 'progress' && progress.progress) {
+            const percent = Math.round(progress.progress);
             updateStatus('loading', `Downloading: ${percent}%`);
-          } else if (progress.status === 'loading') {
+          } else if (progress.status === 'ready') {
             updateStatus('loading', 'Initializing...');
           }
         }
       }
     );
 
+    const loadTime = performance.now() - startLoad;
     SubtitleState.isModelLoaded = true;
     SubtitleState.isModelLoading = false;
-    console.log(`[Subtitles] Model loaded on ${device}`);
+    
+    console.log(`[Subtitles] Model loaded in ${Math.round(loadTime)}ms on ${device}`);
     updateStatus('', '');
+    
+    // Warm up the model with a dummy inference
+    if (useWebGPU) {
+      console.log('[Subtitles] Warming up WebGPU...');
+      const dummy = new Float32Array(16000); // 1 second of silence
+      await SubtitleState.transcriber(dummy, { return_timestamps: false });
+      console.log('[Subtitles] Warmup complete');
+    }
+    
     return true;
   } catch (error) {
     console.error('[Subtitles] Failed to load model:', error);
@@ -120,6 +191,9 @@ async function startListening() {
   try {
     updateStatus('loading', 'Starting mic...');
     
+    // Initialize ring buffer
+    initRingBuffer();
+    
     // Get microphone
     SubtitleState.mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
@@ -130,43 +204,74 @@ async function startListening() {
       }
     });
 
-    // Create audio context (let browser choose sample rate)
     SubtitleState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
     const actualSampleRate = SubtitleState.audioContext.sampleRate;
     console.log(`[Subtitles] AudioContext sample rate: ${actualSampleRate}Hz`);
 
-    // Load AudioWorklet
+    // Try AudioWorklet first
+    let useWorklet = false;
     try {
       await SubtitleState.audioContext.audioWorklet.addModule('./audio-processor.js');
-      console.log('[Subtitles] AudioWorklet loaded');
-    } catch (workletError) {
-      console.warn('[Subtitles] AudioWorklet failed, falling back to ScriptProcessor:', workletError);
-      return startListeningFallback();
+      useWorklet = true;
+      console.log('[Subtitles] Using AudioWorklet');
+    } catch (e) {
+      console.warn('[Subtitles] AudioWorklet failed, using ScriptProcessor:', e);
     }
 
-    // Create source and worklet node
     const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
-    SubtitleState.workletNode = new AudioWorkletNode(SubtitleState.audioContext, 'audio-capture-processor');
 
-    // Handle audio chunks from worklet
-    SubtitleState.workletNode.port.onmessage = (event) => {
-      if (event.data.type === 'audio') {
-        SubtitleState.audioBuffer.push(...event.data.audio);
-      }
-    };
+    if (useWorklet) {
+      SubtitleState.workletNode = new AudioWorkletNode(SubtitleState.audioContext, 'audio-capture-processor');
+      SubtitleState.workletNode.port.onmessage = (event) => {
+        if (event.data.type === 'audio') {
+          pushToRingBuffer(event.data.audio);
+        }
+      };
+      source.connect(SubtitleState.workletNode);
+    } else {
+      // Fallback to ScriptProcessor
+      const inputRate = actualSampleRate;
+      const outputRate = 16000;
+      const ratio = inputRate / outputRate;
+      let accumulator = 0;
+      
+      const processor = SubtitleState.audioContext.createScriptProcessor(4096, 1, 1);
+      const tempBuffer = [];
+      
+      processor.onaudioprocess = (event) => {
+        if (!SubtitleState.isListening) return;
+        const input = event.inputBuffer.getChannelData(0);
+        
+        for (let i = 0; i < input.length; i++) {
+          accumulator += 1;
+          if (accumulator >= ratio) {
+            accumulator -= ratio;
+            tempBuffer.push(input[i]);
+          }
+        }
+        
+        if (tempBuffer.length >= 1600) { // 100ms chunks
+          pushToRingBuffer(new Float32Array(tempBuffer));
+          tempBuffer.length = 0;
+        }
+      };
 
-    source.connect(SubtitleState.workletNode);
-    // Don't connect to destination - we don't want to hear ourselves
-    
+      source.connect(processor);
+      processor.connect(SubtitleState.audioContext.destination);
+      SubtitleState.processor = processor;
+    }
+
     SubtitleState.isListening = true;
-    SubtitleState.audioBuffer = [];
+    SubtitleState.lastTranscribedText = '';
+    SubtitleState.lastTimestamp = 0;
 
     // Start processing loop
-    scheduleProcessing();
+    SubtitleState.processInterval = setInterval(() => {
+      processAudioWindow();
+    }, CONFIG.processIntervalMs);
 
     updateStatus('active', 'Listening...');
-    console.log('[Subtitles] Started with AudioWorklet');
+    console.log('[Subtitles] Started listening');
 
   } catch (error) {
     console.error('[Subtitles] Failed to start:', error);
@@ -176,117 +281,95 @@ async function startListening() {
 }
 
 /**
- * Fallback to ScriptProcessor if AudioWorklet fails
+ * Process the sliding audio window
  */
-function startListeningFallback() {
-  const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
-  
-  // Downsampling parameters
-  const inputRate = SubtitleState.audioContext.sampleRate;
-  const outputRate = 16000;
-  const ratio = inputRate / outputRate;
-  let accumulator = 0;
-  
-  const processor = SubtitleState.audioContext.createScriptProcessor(4096, 1, 1);
-  
-  processor.onaudioprocess = (event) => {
-    if (!SubtitleState.isListening) return;
-    
-    const input = event.inputBuffer.getChannelData(0);
-    
-    // Downsample
-    for (let i = 0; i < input.length; i++) {
-      accumulator += 1;
-      if (accumulator >= ratio) {
-        accumulator -= ratio;
-        SubtitleState.audioBuffer.push(input[i]);
-      }
-    }
-  };
-
-  source.connect(processor);
-  processor.connect(SubtitleState.audioContext.destination);
-  
-  SubtitleState.processor = processor;
-  SubtitleState.isListening = true;
-  SubtitleState.audioBuffer = [];
-
-  scheduleProcessing();
-
-  updateStatus('active', 'Listening (fallback)...');
-  console.log('[Subtitles] Started with ScriptProcessor fallback');
-}
-
-/**
- * Schedule periodic audio processing
- */
-function scheduleProcessing() {
-  SubtitleState.processTimeout = setTimeout(async () => {
-    if (SubtitleState.isListening) {
-      await processAudioBuffer();
-      scheduleProcessing();
-    }
-  }, CONFIG.chunkDurationMs);
-}
-
-/**
- * Process accumulated audio buffer
- */
-async function processAudioBuffer() {
-  if (SubtitleState.isTranscribing || SubtitleState.audioBuffer.length < 8000) {
-    return; // Need at least 0.5s of audio
-  }
-
-  // Take current buffer
-  const audioData = new Float32Array(SubtitleState.audioBuffer);
-  SubtitleState.audioBuffer = [];
-
-  // Check energy level (simple VAD)
-  const energy = calculateEnergy(audioData);
-  if (energy < CONFIG.minAudioEnergy) {
-    if (CONFIG.debug) console.log(`[Subtitles] Skipping quiet audio (energy: ${energy.toFixed(5)})`);
+async function processAudioWindow() {
+  if (SubtitleState.isTranscribing || !SubtitleState.transcriber) {
     return;
   }
 
-  if (CONFIG.debug) console.log(`[Subtitles] Processing ${(audioData.length / 16000).toFixed(2)}s audio (energy: ${energy.toFixed(5)})`);
+  // Read last 15 seconds from ring buffer
+  const audioWindow = readFromRingBuffer(CONFIG.windowSeconds);
+  
+  // Check energy of recent audio (last 2 seconds)
+  const recentAudio = readFromRingBuffer(2);
+  const energy = calculateEnergy(recentAudio);
+  
+  if (energy < CONFIG.minAudioEnergy) {
+    if (CONFIG.debug) console.log(`[Subtitles] Quiet (energy: ${energy.toFixed(5)})`);
+    return;
+  }
 
   SubtitleState.isTranscribing = true;
-  updateStatus('active', 'Processing...');
-
+  
   try {
     const startTime = performance.now();
     
-    const result = await SubtitleState.transcriber(audioData, {
+    // Transcribe with timestamps for deduplication
+    const result = await SubtitleState.transcriber(audioWindow, {
+      return_timestamps: 'word',
       chunk_length_s: 30,
       stride_length_s: 5,
-      return_timestamps: false,
       language: 'english',
       task: 'transcribe'
     });
 
     const processingTime = performance.now() - startTime;
+    
+    if (CONFIG.debug) {
+      console.log(`[Subtitles] Processed in ${Math.round(processingTime)}ms`);
+    }
 
-    if (result && result.text) {
-      const text = cleanTranscription(result.text);
-      
-      if (CONFIG.debug) {
-        console.log(`[Subtitles] (${Math.round(processingTime)}ms) "${text}"`);
-      }
-      
-      if (text && text.length > 1) {
-        displaySubtitle(text);
-      }
+    if (result) {
+      handleTranscriptionResult(result, processingTime);
     }
   } catch (error) {
     console.error('[Subtitles] Transcription error:', error);
   } finally {
     SubtitleState.isTranscribing = false;
-    updateStatus('active', 'Listening...');
   }
 }
 
 /**
- * Calculate RMS energy of audio
+ * Handle transcription result with deduplication
+ */
+function handleTranscriptionResult(result, processingTime) {
+  let text = '';
+  
+  // Handle different result formats
+  if (result.chunks && result.chunks.length > 0) {
+    // Word-level timestamps available
+    // Only keep words from recent audio (last few seconds)
+    const recentChunks = result.chunks.filter(chunk => {
+      // Keep words that end in the last 5 seconds of the window
+      return chunk.timestamp && chunk.timestamp[1] > (CONFIG.windowSeconds - 5);
+    });
+    text = recentChunks.map(c => c.text).join('').trim();
+  } else if (result.text) {
+    text = result.text.trim();
+  }
+
+  text = cleanTranscription(text);
+  
+  if (!text || text.length < 2) {
+    return;
+  }
+
+  // Simple deduplication: check if this is substantially new
+  const isNew = !SubtitleState.lastTranscribedText || 
+                !text.startsWith(SubtitleState.lastTranscribedText.substring(0, 10));
+  
+  if (isNew || text.length > SubtitleState.lastTranscribedText.length + 5) {
+    if (CONFIG.debug) {
+      console.log(`[Subtitles] (${Math.round(processingTime)}ms) "${text}"`);
+    }
+    SubtitleState.lastTranscribedText = text;
+    displaySubtitle(text);
+  }
+}
+
+/**
+ * Calculate RMS energy
  */
 function calculateEnergy(audioData) {
   let sum = 0;
@@ -304,9 +387,9 @@ function stopListening() {
 
   SubtitleState.isListening = false;
 
-  if (SubtitleState.processTimeout) {
-    clearTimeout(SubtitleState.processTimeout);
-    SubtitleState.processTimeout = null;
+  if (SubtitleState.processInterval) {
+    clearInterval(SubtitleState.processInterval);
+    SubtitleState.processInterval = null;
   }
 
   if (SubtitleState.workletNode) {
@@ -329,7 +412,7 @@ function stopListening() {
     SubtitleState.mediaStream = null;
   }
 
-  SubtitleState.audioBuffer = [];
+  SubtitleState.audioRingBuffer = null;
   hideSubtitle();
   updateStatus('', '');
   
@@ -348,10 +431,11 @@ function cleanTranscription(text) {
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Filter hallucinations
+  // Filter common hallucinations
   const hallucinations = [
     'thank you', 'thanks for watching', 'subscribe', 'like and subscribe',
-    'see you', 'bye', 'goodbye', 'you', 'the end', 'thanks', ''
+    'see you', 'bye', 'goodbye', 'the end', 'thanks',
+    'you', 'i', 'so', 'and', 'the', 'a', 'to', 'it', 'is'
   ];
   
   if (hallucinations.includes(clean.toLowerCase())) {
@@ -366,7 +450,7 @@ function cleanTranscription(text) {
 }
 
 /**
- * Display subtitle with current word highlighted
+ * Display subtitle
  */
 function displaySubtitle(text) {
   const overlay = document.getElementById('subtitle-overlay');
@@ -377,7 +461,6 @@ function displaySubtitle(text) {
   const words = text.split(' ').filter(w => w.length > 0);
   const wrappedWords = wrapTextToFitScreen(words);
   
-  // Last word is "current", previous are "spoken"
   const wordSpans = wrappedWords.map((word, index) => {
     const className = index === wrappedWords.length - 1 ? 'word current' : 'word spoken';
     return `<span class="${className}">${escapeHtml(word)}</span>`;
@@ -485,9 +568,8 @@ function initSubtitles() {
     toggle: toggleSubtitles
   };
   
-  // Check WebGPU support
   const hasWebGPU = !!navigator.gpu;
-  console.log(`[Subtitles] Initialized (WebGPU: ${hasWebGPU ? 'available' : 'not available'})`);
+  console.log(`[Subtitles] Initialized (WebGPU: ${hasWebGPU ? 'detected' : 'not detected'})`);
 }
 
 if (document.readyState === 'loading') {
