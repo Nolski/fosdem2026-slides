@@ -27,14 +27,14 @@
     },
     {
       "type": "video",
-      "src": "media/video/5.m4v",
-      "notes": "So what if we wanted to fix this problem with contemporary solutions? We've got a malicious maintainer that can take down the internet, and we have a license problem",
+      "src": "media/video/6.m4v",
+      "notes": "Like all problems in 2026, maybe we can fix it with AI. Let's just ask AI to remake left pad. Done. That was incredibly easy.",
       "loop": false
     },
     {
       "type": "video",
-      "src": "media/video/6.m4v",
-      "notes": "Like all problems in 2026, maybe we can fix it with AI. Let's just ask AI to remake left pad. Done. That was incredibly easy.",
+      "src": "media/video/5.m4v",
+      "notes": "So what if we wanted to fix this problem with contemporary solutions? We've got a malicious maintainer that can take down the internet, and we have a license problem",
       "loop": false
     },
     {
@@ -249,7 +249,8 @@
       "type": "video",
       "notes": "To make a long story short, some law makers in the US passed a new law which didn't explicity mention software but implicitly had language designed for it",
       "src": "media/video/37.m4v",
-      "loop": true
+      "loop": true,
+      "volume": 0
     },
     {
       "type": "video",
@@ -330,11 +331,11 @@
       "loop": false
     },
     {
-      "type": "placeholder",
+      "type": "video",
       "notes": "By the 80's some crazy open source people had figured out how to circomnavigate the legal complexities of giving code away for free..",
-      "title": "Coming Soon",
-      "backgroundColor": "#333333",
-      "text": "Need transition to stallman"
+      "src": "media/video/ai-video-2026-01-17T05-33-11.mp4",
+      "loop": false,
+      "volume": 0
     },
     {
       "type": "video",
@@ -344,8 +345,8 @@
     },
     {
       "type": "placeholder",
-      "notes": "And software cleanrooming was becoming pretty established...\n\nOne very notible example of this was the IBM with Dave the Nazi, and we actually talked to Nazi Dave blablabla",
-      "title": "segway to dave the nazi",
+      "notes": "And software cleanrooming was becoming pretty established...\n\nOne very notible example of this was the IBM with Dave, and we actually talked to Dave blablabla",
+      "title": "segway to dave",
       "backgroundColor": "#333333",
       "text": ""
     },
@@ -353,14 +354,14 @@
       "type": "video",
       "src": "media/video/59.mp4",
       "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... They hired Dave to try and skirt copyright law.",
-      "loop": false
+      "loop": false,
+      "volume": 0
     },
     {
-      "type": "placeholder",
-      "notes": "Dave... Also has some interesting views....",
-      "title": "Compromising images of his twitter posts",
-      "backgroundColor": "#333333",
-      "text": ""
+      "type": "image",
+      "notes": "",
+      "src": "media/img/wikidave.png",
+      "zoompan": true
     },
     {
       "type": "image",
@@ -370,8 +371,8 @@
     },
     {
       "type": "image",
-      "notes": "Dave the Nazi.",
-      "src": "media/img/davethenazi.png",
+      "notes": "Just dave.",
+      "src": "media/img/dave.png",
       "zoompan": true
     }
   ],
