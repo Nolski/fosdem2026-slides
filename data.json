@@ -395,6 +395,20 @@
       "title": "IBM BIOS Example",
       "backgroundColor": "#333333",
       "text": ""
+    },
+    {
+      "type": "video",
+      "src": "media/video/killos.mp4",
+      "notes": "So we've established the wacky origin of copyright and how it's been hammered into a tool to address ownership of things like software. We've shown how this entire system could be and has been circumvented through labor intensive processes such as clean room software design.\n\nBut... What does any of this have to do with open source? Why would we bother on code that is already licensed in such a way that we can easily use it?\n\nWell, open source is great in that we get access to all of this work done by people not on our payroll. However, it comes with some draw backs. Let's explore a few of those",
+      "loop": false,
+      "volume": 39
+    },
+    {
+      "type": "video",
+      "src": "media/video/log4j.mp4",
+      "notes": "",
+      "loop": false,
+      "volume": 0
     }
   ],
   "audio": [
