@@ -311,6 +311,11 @@ if (isPresenter) {
     paused = false;
     if (window.currentMedia) { window.currentMedia.pause(); window.currentMedia = null; }
     for (var k in activeAudioElements) { activeAudioElements[k].pause(); delete activeAudioElements[k]; }
+    
+    // Stop subtitle system when exiting presentation
+    if (window.subtitleSystem) {
+      window.subtitleSystem.onPresentationEnd();
+    }
   }
   
   function switchToPresentMode() {
@@ -801,11 +806,20 @@ if (isPresenter) {
     window.presentationStarted = true;
     document.body.classList.add("present-mode");
     loadSlide(currentSlideIndex);
+    
+    // Start subtitle system if enabled
+    if (window.subtitleSystem && window.subtitleSystem.isEnabled()) {
+      window.subtitleSystem.onPresentationStart();
+    }
   }
   window.startPresentation = startPresentation;
 
   function loadSlide(index) {
-    var container = document.getElementById("presentation");
+    var container = document.getElementById("slide-content");
+    if (!container) {
+      // Fallback to presentation container if slide-content doesn't exist
+      container = document.getElementById("presentation");
+    }
     container.innerHTML = "";
     if (index < 0 || index >= slides.length) {
       container.innerHTML = "<h1 style='color:white;'>End of Presentation</h1>";
