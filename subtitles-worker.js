@@ -60,8 +60,17 @@ async function transcribe(audioData, sampleRate) {
   try {
     const startTime = performance.now();
     
-    // Convert to Float32Array if needed
-    const audio = audioData instanceof Float32Array ? audioData : new Float32Array(audioData);
+    // Convert ArrayBuffer to Float32Array
+    let audio;
+    if (audioData instanceof Float32Array) {
+      audio = audioData;
+    } else if (audioData instanceof ArrayBuffer) {
+      audio = new Float32Array(audioData);
+    } else {
+      audio = new Float32Array(audioData);
+    }
+    
+    console.log(`[Worker] Processing ${audio.length} samples (${(audio.length / 16000).toFixed(2)}s)`);
     
     // Run transcription with optimized settings for speed
     const result = await transcriber(audio, {
@@ -73,19 +82,26 @@ async function transcribe(audioData, sampleRate) {
     });
 
     const processingTime = performance.now() - startTime;
+    console.log(`[Worker] Transcription took ${processingTime.toFixed(0)}ms`);
 
     if (result && result.text) {
       const text = result.text.trim();
+      console.log(`[Worker] Result: "${text}"`);
       if (text && text.length > 0) {
         self.postMessage({ 
           type: 'transcription', 
           text: text,
           processingTime: processingTime
         });
+      } else {
+        // Signal processing complete even with empty result
+        self.postMessage({ type: 'transcription-empty' });
       }
+    } else {
+      self.postMessage({ type: 'transcription-empty' });
     }
   } catch (error) {
-    console.error('Transcription error:', error);
+    console.error('[Worker] Transcription error:', error);
     self.postMessage({ type: 'error', error: error.message });
   }
 }

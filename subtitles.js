@@ -31,17 +31,19 @@ const SubtitleState = {
 // Configuration - optimized for lower latency
 const CONFIG = {
   sampleRate: 16000,
-  chunkDuration: 1.5, // Reduced from 3 seconds to 1.5 for faster response
-  minChunkDuration: 0.5, // Minimum audio to process
+  chunkDuration: 2.0, // Process after 2 seconds of audio
+  minChunkDuration: 0.3, // Minimum audio to process
   maxDisplayDuration: 4000,
   maxWordsPerLine: 10,
   wordHighlightSpeed: 120,
   // Voice Activity Detection settings
-  vadThreshold: 0.015, // Audio level threshold for speech detection
-  silenceTimeout: 800, // ms of silence before processing
-  minSpeechDuration: 200, // minimum ms of speech before considering valid
+  vadThreshold: 0.005, // Lower threshold - more sensitive to speech
+  silenceTimeout: 600, // ms of silence before processing
+  minSpeechDuration: 100, // minimum ms of speech before considering valid
   // Use tiny model for faster processing (trade-off: slightly less accurate)
-  modelName: 'Xenova/whisper-tiny.en'
+  modelName: 'Xenova/whisper-tiny.en',
+  // Debug mode
+  debug: true
 };
 
 /**
@@ -68,8 +70,15 @@ function initWorker() {
         case 'transcription':
           handleTranscription(text, processingTime);
           break;
+        case 'transcription-empty':
+          // Reset processing state when no speech detected
+          SubtitleState.isProcessing = false;
+          updateStatus('active', 'Listening...');
+          if (CONFIG.debug) console.log('[Subtitles] Empty transcription result');
+          break;
         case 'error':
           console.error('Worker error:', error);
+          SubtitleState.isProcessing = false;
           updateStatus('error', 'Error: ' + error);
           break;
       }
@@ -175,67 +184,72 @@ async function startListening() {
 
     const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
 
-    // Create analyser for VAD
+    // Create analyser for VAD - use time domain for simpler level detection
     SubtitleState.analyserNode = SubtitleState.audioContext.createAnalyser();
-    SubtitleState.analyserNode.fftSize = 512;
-    SubtitleState.analyserNode.smoothingTimeConstant = 0.3;
+    SubtitleState.analyserNode.fftSize = 2048;
+    SubtitleState.analyserNode.smoothingTimeConstant = 0.5;
 
     // Create script processor for audio capture
-    const bufferSize = 2048;
+    const bufferSize = 4096;
     const processor = SubtitleState.audioContext.createScriptProcessor(bufferSize, 1, 1);
     
-    const vadBuffer = new Uint8Array(SubtitleState.analyserNode.frequencyBinCount);
+    let frameCount = 0;
+    let lastLogTime = 0;
 
     processor.onaudioprocess = (event) => {
       if (!SubtitleState.isListening) return;
 
       const inputData = event.inputBuffer.getChannelData(0);
-      
-      // Get current audio level for VAD
-      SubtitleState.analyserNode.getByteFrequencyData(vadBuffer);
-      const audioLevel = getAudioLevel(vadBuffer);
-      
       const now = Date.now();
+      
+      // Calculate RMS audio level directly from input
+      const audioLevel = calculateRMS(inputData);
       const isSpeech = audioLevel > CONFIG.vadThreshold;
+
+      // Debug logging (every 2 seconds)
+      frameCount++;
+      if (CONFIG.debug && now - lastLogTime > 2000) {
+        console.log(`[Subtitles] Audio level: ${audioLevel.toFixed(4)}, Speech: ${isSpeech}, Buffer: ${getBufferDuration().toFixed(2)}s, Chunks: ${SubtitleState.audioChunks.length}`);
+        lastLogTime = now;
+      }
+
+      // Always capture audio (simpler approach)
+      SubtitleState.audioChunks.push(new Float32Array(inputData));
 
       if (isSpeech) {
         // Speech detected
         SubtitleState.lastSpeechTime = now;
         SubtitleState.silenceStart = null;
-        
-        // Store audio chunk
-        SubtitleState.audioChunks.push(new Float32Array(inputData));
       } else {
         // Silence detected
-        if (SubtitleState.silenceStart === null && SubtitleState.audioChunks.length > 0) {
+        if (SubtitleState.silenceStart === null && SubtitleState.lastSpeechTime > 0) {
           SubtitleState.silenceStart = now;
         }
 
-        // Still capture a bit of trailing audio
-        if (SubtitleState.audioChunks.length > 0 && SubtitleState.silenceStart) {
-          const silenceDuration = now - SubtitleState.silenceStart;
-          if (silenceDuration < 300) {
-            SubtitleState.audioChunks.push(new Float32Array(inputData));
-          }
-        }
-
         // Check if we should process after silence
-        if (SubtitleState.silenceStart && SubtitleState.audioChunks.length > 0) {
+        if (SubtitleState.silenceStart && SubtitleState.lastSpeechTime > 0) {
           const silenceDuration = now - SubtitleState.silenceStart;
-          const speechDuration = SubtitleState.lastSpeechTime > 0 ? 
-            (SubtitleState.silenceStart - SubtitleState.lastSpeechTime + getBufferDuration()) : getBufferDuration();
+          const bufferDuration = getBufferDuration();
 
-          // Process if we have enough silence after speech
-          if (silenceDuration >= CONFIG.silenceTimeout && speechDuration >= CONFIG.minSpeechDuration) {
+          // Process if we have enough silence after speech and enough audio
+          if (silenceDuration >= CONFIG.silenceTimeout && bufferDuration >= CONFIG.minChunkDuration) {
+            if (CONFIG.debug) console.log(`[Subtitles] Processing after ${silenceDuration}ms silence, ${bufferDuration.toFixed(2)}s audio`);
             processAudioBuffer();
           }
         }
       }
 
-      // Also process if buffer gets too long (prevents memory issues and ensures we don't wait too long)
+      // Also process if buffer gets too long
       const bufferDuration = getBufferDuration();
       if (bufferDuration >= CONFIG.chunkDuration && !SubtitleState.isProcessing) {
+        if (CONFIG.debug) console.log(`[Subtitles] Processing due to buffer length: ${bufferDuration.toFixed(2)}s`);
         processAudioBuffer();
+      }
+      
+      // Prevent memory buildup - trim old audio if not processing
+      if (bufferDuration > CONFIG.chunkDuration * 2) {
+        const samplesToKeep = Math.floor(CONFIG.chunkDuration * CONFIG.sampleRate);
+        trimAudioBuffer(samplesToKeep);
       }
     };
 
@@ -260,22 +274,42 @@ async function startListening() {
 }
 
 /**
+ * Calculate RMS (Root Mean Square) audio level
+ */
+function calculateRMS(audioData) {
+  let sum = 0;
+  for (let i = 0; i < audioData.length; i++) {
+    sum += audioData[i] * audioData[i];
+  }
+  return Math.sqrt(sum / audioData.length);
+}
+
+/**
+ * Trim audio buffer to keep only recent samples
+ */
+function trimAudioBuffer(samplesToKeep) {
+  const totalSamples = SubtitleState.audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  if (totalSamples <= samplesToKeep) return;
+  
+  let samplesToRemove = totalSamples - samplesToKeep;
+  while (samplesToRemove > 0 && SubtitleState.audioChunks.length > 0) {
+    const chunk = SubtitleState.audioChunks[0];
+    if (chunk.length <= samplesToRemove) {
+      SubtitleState.audioChunks.shift();
+      samplesToRemove -= chunk.length;
+    } else {
+      SubtitleState.audioChunks[0] = chunk.slice(samplesToRemove);
+      break;
+    }
+  }
+}
+
+/**
  * Get current buffer duration in seconds
  */
 function getBufferDuration() {
   const totalSamples = SubtitleState.audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
   return totalSamples / CONFIG.sampleRate;
-}
-
-/**
- * Calculate audio level from frequency data
- */
-function getAudioLevel(frequencyData) {
-  let sum = 0;
-  for (let i = 0; i < frequencyData.length; i++) {
-    sum += frequencyData[i];
-  }
-  return sum / (frequencyData.length * 255);
 }
 
 /**
@@ -288,7 +322,9 @@ function processAudioBuffer() {
 
   const bufferDuration = getBufferDuration();
   if (bufferDuration < CONFIG.minChunkDuration) {
+    if (CONFIG.debug) console.log(`[Subtitles] Buffer too short (${bufferDuration.toFixed(2)}s), skipping`);
     SubtitleState.audioChunks = [];
+    SubtitleState.lastSpeechTime = 0;
     return;
   }
 
@@ -305,21 +341,32 @@ function processAudioBuffer() {
     offset += chunk.length;
   }
 
-  // Clear buffer
+  // Clear buffer and reset state
   SubtitleState.audioChunks = [];
   SubtitleState.silenceStart = null;
+  SubtitleState.lastSpeechTime = 0;
+
+  if (CONFIG.debug) console.log(`[Subtitles] Sending ${(totalLength / CONFIG.sampleRate).toFixed(2)}s audio to worker`);
 
   // Send to worker for transcription
   if (SubtitleState.worker && SubtitleState.isModelLoaded) {
-    SubtitleState.worker.postMessage({
-      type: 'transcribe',
-      data: { 
-        audio: audioData.buffer,
-        sampleRate: CONFIG.sampleRate
-      }
-    }, [audioData.buffer]); // Transfer buffer for efficiency
+    try {
+      SubtitleState.worker.postMessage({
+        type: 'transcribe',
+        data: { 
+          audio: audioData.buffer,
+          sampleRate: CONFIG.sampleRate
+        }
+      }, [audioData.buffer]); // Transfer buffer for efficiency
+    } catch (error) {
+      console.error('[Subtitles] Failed to send to worker:', error);
+      SubtitleState.isProcessing = false;
+      updateStatus('active', 'Listening...');
+    }
   } else {
+    if (CONFIG.debug) console.log('[Subtitles] Worker not ready, skipping');
     SubtitleState.isProcessing = false;
+    updateStatus('active', 'Listening...');
   }
 }
 
