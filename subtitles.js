@@ -38,8 +38,8 @@ const SubtitleState = {
 
 // Configuration
 const CONFIG = {
-  // Use the documented WebGPU-compatible model
-  modelName: 'onnx-community/whisper-tiny.en',
+  // Xenova model works with our transformers.js version
+  modelName: 'Xenova/whisper-tiny.en',
   
   // Sliding window parameters (from research)
   windowSeconds: 15,        // Full context window
