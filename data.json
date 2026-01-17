@@ -359,7 +359,7 @@
     },
     {
       "type": "image",
-      "notes": "",
+      "notes": "Introduce dave",
       "src": "media/img/wikidave.png",
       "zoompan": true
     },
@@ -385,13 +385,13 @@
     {
       "type": "video",
       "src": "media/video/cleanroom-montage.mp4",
-      "notes": "This was no easy task for Dave and his colleague. It took months of back and forth... and from what we heard, a little blurring of the lines of what could and couldn't be shared between the \"dirty\" engineer and the \"clean\" engineer. Still, at the end Phoenix was able to have a fully IBM compatible BIOS that it could sell to its customers and it did. It took months and months of engineering work but they got it working.",
+      "notes": "This was no easy task for Dave and his colleague. It took months of back and forth... and from what we heard, a little blurring of the lines of what could and couldn't be shared between the \"dirty\" engineer and the \"clean\" engineer. Still, at the end Phoenix was able to have a fully IBM compatible BIOS that it could sell to its customers and it did. It took months and months of engineering work but they got it working.\n\nThis work was more impactful than you might think. The only reason you can buy a motherboard and plug and play into any system these days, a big reason for that was the work Dave and Phoenix has done. (ask the robot)\n\nMention dave's recording",
       "loop": true,
       "volume": 100
     },
     {
       "type": "placeholder",
-      "notes": "Luckily for us, it only took the robot a few minutes.",
+      "notes": "Luckily for us, it only took the robot a few minutes.\n",
       "title": "IBM BIOS Example",
       "backgroundColor": "#333333",
       "text": ""
@@ -399,7 +399,7 @@
     {
       "type": "video",
       "src": "media/video/killos.mp4",
-      "notes": "So we've established the wacky origin of copyright and how it's been hammered into a tool to address ownership of things like software. We've shown how this entire system could be and has been circumvented through labor intensive processes such as clean room software design.\n\nBut... What does any of this have to do with open source? Why would we bother on code that is already licensed in such a way that we can easily use it?\n\nWell, open source is great in that we get access to all of this work done by people not on our payroll. However, it comes with some draw backs. Let's explore a few of those",
+      "notes": "Dylan: Did we just spend the last 30 minutes talking about the origin of copyright and whether this is legal?\n\nMike: Yes, and we've shown how this entire system could be and has been circumvented through labor intensive processes such as clean room software design.\n\nDylan: But is that even ethical? It's essentially just recreating other peoples work!\n\nMike: You're asking the wrong question Dylan, the question you should be asking is, can we get rich off of this?\n\nDylan: Get rich? What do you mean?\n\nMike: Imagine if we could just cleanroom all of the OS software we use today and not ever have to deal with the annoying community problems ever again! \n\nDylan: Wait, wouldn't that essentially kill open source? Why would we ever want to do that?\n\nMike: Well, first we have to show why large corporations have so many problems with open source today and how we can solve that.",
       "loop": false,
       "volume": 39
     },
