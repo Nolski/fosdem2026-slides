@@ -1981,9 +1981,17 @@ if (isPresenter) {
   var audioVolumeSlider = document.getElementById("audio-volume");
   var audioVolumeValue = document.getElementById("audio-volume-value");
   
-  // Update volume display
+  // Update volume display and preview playback volume
   audioVolumeSlider.addEventListener("input", function() {
-    audioVolumeValue.textContent = this.value + "%";
+    var volumePercent = parseInt(this.value);
+    audioVolumeValue.textContent = volumePercent + "%";
+    
+    // Update the audio preview player volume in real-time
+    // Volume is 0-1 for HTML audio, but our slider is 0-200%
+    // Cap at 1.0 (100%) since HTML audio can't go above that
+    if (audioPreview) {
+      audioPreview.volume = Math.min(1, volumePercent / 100);
+    }
   });
   
   // Override selectAudioTrack to include volume
@@ -1996,6 +2004,11 @@ if (isPresenter) {
     var volume = track.volume !== undefined ? track.volume : 100;
     audioVolumeSlider.value = volume;
     audioVolumeValue.textContent = volume + "%";
+    
+    // Set the audio preview player volume to match
+    if (audioPreview) {
+      audioPreview.volume = Math.min(1, volume / 100);
+    }
   };
   
   // Override audio form submit to include volume
