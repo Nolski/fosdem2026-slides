@@ -9,6 +9,16 @@ if (isPresenter) {
        <button id="pauseBtn" style="display:none;">Pause</button>
        <span id="timerDisplay" style="display:none;">00:00:00</span>
        <button id="bleepBtn">🔇 Bleep</button>
+       <span class="presenter-divider">|</span>
+       <label class="presenter-toggle">
+         <input type="checkbox" id="presenterSubtitles">
+         <span class="presenter-toggle-label">Subtitles</span>
+       </label>
+       <label class="presenter-toggle offline-indicator">
+         <input type="checkbox" id="presenterOfflineMode">
+         <span class="presenter-toggle-label">Offline</span>
+       </label>
+       <span id="presenterSubtitleStatus" class="presenter-status"></span>
     </div>
     <div id="presenter-info">
       <h2>Current Slide</h2>
@@ -197,6 +207,51 @@ if (isPresenter) {
   }
   bleepBtn.addEventListener("mouseup", stopBleep);
   bleepBtn.addEventListener("mouseleave", stopBleep);
+
+  // Subtitle controls in presenter view
+  var presenterSubtitlesToggle = document.getElementById("presenterSubtitles");
+  var presenterOfflineToggle = document.getElementById("presenterOfflineMode");
+  var presenterSubtitleStatus = document.getElementById("presenterSubtitleStatus");
+
+  presenterSubtitlesToggle.addEventListener("change", function() {
+    if (window.opener && !window.opener.closed && window.opener.subtitleSystem) {
+      window.opener.subtitleSystem.toggle(this.checked);
+      // Also update the main window's checkbox
+      var mainToggle = window.opener.document.getElementById("subtitlesEnabled");
+      if (mainToggle) mainToggle.checked = this.checked;
+    }
+  });
+
+  presenterOfflineToggle.addEventListener("change", function() {
+    if (window.opener && !window.opener.closed && window.opener.subtitleSystem) {
+      window.opener.subtitleSystem.setOfflineMode(this.checked);
+      // Also update the main window's checkbox
+      var mainToggle = window.opener.document.getElementById("offlineModeEnabled");
+      if (mainToggle) mainToggle.checked = this.checked;
+    }
+  });
+
+  // Sync initial state from main window
+  function syncSubtitleState() {
+    if (window.opener && !window.opener.closed && window.opener.subtitleSystem) {
+      presenterSubtitlesToggle.checked = window.opener.subtitleSystem.isEnabled();
+      presenterOfflineToggle.checked = window.opener.subtitleSystem.isOfflineMode();
+    }
+  }
+  
+  // Sync on load and periodically (to catch status changes)
+  syncSubtitleState();
+  setInterval(function() {
+    syncSubtitleState();
+    // Also sync status text
+    if (window.opener && !window.opener.closed) {
+      var mainStatus = window.opener.document.getElementById("subtitle-status");
+      if (mainStatus && presenterSubtitleStatus) {
+        presenterSubtitleStatus.textContent = mainStatus.textContent;
+        presenterSubtitleStatus.className = mainStatus.className.replace("subtitle-status", "presenter-status");
+      }
+    }
+  }, 500);
 
 } else {
   // ---------- MAIN VIEW CODE ----------
