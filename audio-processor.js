@@ -13,6 +13,8 @@ class AudioCaptureProcessor extends AudioWorkletProcessor {
     this.outputSampleRate = 16000;
     this.resampleRatio = this.inputSampleRate / this.outputSampleRate;
     this.resampleAccumulator = 0;
+    this.chunkCount = 0;
+    this.peakLevel = 0;
     
     console.log(`[AudioProcessor] Initialized: ${this.inputSampleRate}Hz -> ${this.outputSampleRate}Hz (ratio: ${this.resampleRatio})`);
   }
@@ -25,21 +27,37 @@ class AudioCaptureProcessor extends AudioWorkletProcessor {
 
     const channelData = input[0]; // Mono
     
+    // Track peak level for debugging
+    for (let i = 0; i < channelData.length; i++) {
+      const abs = Math.abs(channelData[i]);
+      if (abs > this.peakLevel) this.peakLevel = abs;
+    }
+    
     // Downsample using linear interpolation
     for (let i = 0; i < channelData.length; i++) {
       this.resampleAccumulator += 1;
       
       if (this.resampleAccumulator >= this.resampleRatio) {
         this.resampleAccumulator -= this.resampleRatio;
+        // Store the sample value directly
         this.buffer.push(channelData[i]);
         
         // Send chunk when buffer is full
         if (this.buffer.length >= this.bufferSize) {
+          this.chunkCount++;
+          
+          // Log every 10th chunk for monitoring
+          if (this.chunkCount <= 3 || this.chunkCount % 10 === 0) {
+            console.log(`[AudioProcessor] Chunk ${this.chunkCount}: ${this.buffer.length} samples, peak=${this.peakLevel.toFixed(4)}`);
+          }
+          
           this.port.postMessage({
             type: 'audio',
-            audio: new Float32Array(this.buffer)
+            audio: new Float32Array(this.buffer),
+            peak: this.peakLevel
           });
           this.buffer = [];
+          this.peakLevel = 0;
         }
       }
     }

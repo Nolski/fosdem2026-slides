@@ -26,6 +26,7 @@ const SubtitleState = {
   audioRingBuffer: null,
   ringBufferWriteIdx: 0,
   ringBufferSize: 15 * 16000, // 15 seconds
+  samplesReceived: 0, // Track how much audio we've received
   
   // Processing state
   isTranscribing: false,
@@ -44,7 +45,7 @@ const CONFIG = {
   // Sliding window parameters (from research)
   windowSeconds: 15,        // Full context window
   processIntervalMs: 1500,  // Process every 1.5 seconds
-  minAudioEnergy: 0.003,    // Lower threshold
+  minAudioEnergy: 0.0001,   // Much lower threshold - browser mic values are very small
   stableDelaySeconds: 1,    // Only finalize text older than this
   
   maxDisplayDuration: 6000,
@@ -58,6 +59,7 @@ const CONFIG = {
 function initRingBuffer() {
   SubtitleState.audioRingBuffer = new Float32Array(SubtitleState.ringBufferSize);
   SubtitleState.ringBufferWriteIdx = 0;
+  SubtitleState.samplesReceived = 0;
 }
 
 /**
@@ -67,6 +69,17 @@ function pushToRingBuffer(samples) {
   for (let i = 0; i < samples.length; i++) {
     SubtitleState.audioRingBuffer[SubtitleState.ringBufferWriteIdx] = samples[i];
     SubtitleState.ringBufferWriteIdx = (SubtitleState.ringBufferWriteIdx + 1) % SubtitleState.ringBufferSize;
+  }
+  SubtitleState.samplesReceived += samples.length;
+  
+  // Log first audio chunk to verify data is arriving
+  if (SubtitleState.samplesReceived === samples.length && CONFIG.debug) {
+    let max = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const abs = Math.abs(samples[i]);
+      if (abs > max) max = abs;
+    }
+    console.log(`[Subtitles] First audio chunk: ${samples.length} samples, peak=${max.toFixed(4)}`);
   }
 }
 
@@ -224,6 +237,10 @@ async function startListening() {
       SubtitleState.workletNode.port.onmessage = (event) => {
         if (event.data.type === 'audio') {
           pushToRingBuffer(event.data.audio);
+          // Log audio reception periodically
+          if (SubtitleState.samplesReceived <= event.data.audio.length * 3) {
+            console.log(`[Subtitles] Received audio chunk: ${event.data.audio.length} samples, peak=${event.data.peak?.toFixed(4) || 'N/A'}`);
+          }
         }
       };
       source.connect(SubtitleState.workletNode);
@@ -280,6 +297,27 @@ async function startListening() {
 }
 
 /**
+ * Get audio stats for debugging
+ */
+function getAudioStats(audioData) {
+  let min = Infinity, max = -Infinity, sum = 0, nonZero = 0;
+  for (let i = 0; i < audioData.length; i++) {
+    const v = audioData[i];
+    if (v < min) min = v;
+    if (v > max) max = v;
+    sum += Math.abs(v);
+    if (Math.abs(v) > 0.001) nonZero++;
+  }
+  return {
+    min: min.toFixed(4),
+    max: max.toFixed(4),
+    avg: (sum / audioData.length).toFixed(6),
+    nonZeroPercent: ((nonZero / audioData.length) * 100).toFixed(1),
+    length: audioData.length
+  };
+}
+
+/**
  * Process the sliding audio window
  */
 async function processAudioWindow() {
@@ -290,12 +328,33 @@ async function processAudioWindow() {
   // Read last 15 seconds from ring buffer
   const audioWindow = readFromRingBuffer(CONFIG.windowSeconds);
   
+  // Wait for at least 3 seconds of audio before starting to process
+  const minSamplesNeeded = 3 * 16000; // 3 seconds at 16kHz
+  if (SubtitleState.samplesReceived < minSamplesNeeded) {
+    if (CONFIG.debug) {
+      console.log(`[Subtitles] Waiting for more audio: ${SubtitleState.samplesReceived}/${minSamplesNeeded} samples`);
+    }
+    return;
+  }
+  
+  // Check how much data we actually have in the buffer
+  const bufferFillPercent = (Math.min(SubtitleState.samplesReceived, SubtitleState.ringBufferSize) / SubtitleState.ringBufferSize * 100).toFixed(1);
+  
+  // Get audio stats
+  const stats = getAudioStats(audioWindow);
+  
   // Check energy of recent audio (last 2 seconds)
   const recentAudio = readFromRingBuffer(2);
   const energy = calculateEnergy(recentAudio);
   
-  if (energy < CONFIG.minAudioEnergy) {
-    if (CONFIG.debug) console.log(`[Subtitles] Quiet (energy: ${energy.toFixed(5)})`);
+  if (CONFIG.debug) {
+    console.log(`[Subtitles] Audio: energy=${energy.toFixed(5)}, min=${stats.min}, max=${stats.max}, nonZero=${stats.nonZeroPercent}%, buffer=${bufferFillPercent}%`);
+  }
+  
+  // Skip only if audio is essentially silent
+  // The normalization step will boost quiet audio anyway
+  if (energy < CONFIG.minAudioEnergy && parseFloat(stats.nonZeroPercent) < 1) {
+    if (CONFIG.debug) console.log(`[Subtitles] Skipping - silent`);
     return;
   }
 
@@ -304,8 +363,12 @@ async function processAudioWindow() {
   try {
     const startTime = performance.now();
     
+    // Normalize the audio to improve recognition
+    // Find peak and normalize to -1 to 1 range
+    const normalizedAudio = normalizeAudio(audioWindow);
+    
     // Transcribe the audio window
-    const result = await SubtitleState.transcriber(audioWindow, {
+    const result = await SubtitleState.transcriber(normalizedAudio, {
       return_timestamps: true,
       chunk_length_s: 30,
       stride_length_s: 5,
@@ -329,6 +392,33 @@ async function processAudioWindow() {
   } finally {
     SubtitleState.isTranscribing = false;
   }
+}
+
+/**
+ * Normalize audio to improve Whisper recognition
+ */
+function normalizeAudio(audioData) {
+  // Find peak amplitude
+  let peak = 0;
+  for (let i = 0; i < audioData.length; i++) {
+    const abs = Math.abs(audioData[i]);
+    if (abs > peak) peak = abs;
+  }
+  
+  // If audio is very quiet, boost it
+  if (peak < 0.01) {
+    if (CONFIG.debug) console.log(`[Subtitles] Audio very quiet (peak: ${peak.toFixed(4)}), normalizing`);
+    // Normalize to target peak of 0.5
+    const targetPeak = 0.5;
+    const gain = peak > 0 ? targetPeak / peak : 1;
+    const normalized = new Float32Array(audioData.length);
+    for (let i = 0; i < audioData.length; i++) {
+      normalized[i] = Math.max(-1, Math.min(1, audioData[i] * gain));
+    }
+    return normalized;
+  }
+  
+  return audioData;
 }
 
 /**
