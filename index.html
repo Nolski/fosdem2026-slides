@@ -15,6 +15,19 @@
     <div id="present-controls" style="display: none;">
       <button id="startBtn">Start Presentation</button>
       <button id="presenterBtn">Open Presenter View</button>
+      <div class="subtitle-settings">
+        <label class="subtitle-toggle">
+          <input type="checkbox" id="subtitlesEnabled">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Live Subtitles</span>
+        </label>
+        <label class="subtitle-toggle offline-toggle">
+          <input type="checkbox" id="offlineModeEnabled">
+          <span class="toggle-slider small"></span>
+          <span class="toggle-label small">Offline Mode</span>
+        </label>
+        <span id="subtitle-status" class="subtitle-status"></span>
+      </div>
     </div>
     <div id="edit-controls">
       <button id="exportBtn">📥 Export JSON</button>
@@ -198,7 +211,16 @@
   </div>
 
   <!-- Main presentation container -->
-  <div id="presentation"></div>
+  <div id="presentation">
+    <!-- Slide content container -->
+    <div id="slide-content"></div>
+    <!-- Live subtitles overlay -->
+    <div id="subtitle-overlay" class="subtitle-overlay" style="display: none;">
+      <div id="subtitle-container" class="subtitle-container">
+        <div id="subtitle-text" class="subtitle-text"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- API Key Dialog -->
   <div id="api-key-dialog" class="modal-overlay" style="display: none;">
@@ -490,6 +512,10 @@
 
   <!-- FFmpeg.wasm for video/audio editing (local files) -->
   <script src="lib/ffmpeg/ffmpeg.js"></script>
+  
+  
+  <!-- Live subtitles using Whisper + WebGPU (offline capable) -->
+  <script src="subtitles.js"></script>
   
   <script src="app.js"></script>
 </body>
