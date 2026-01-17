@@ -1402,7 +1402,14 @@ if (isPresenter) {
   var currentEditVideoBlob = null;
   var selectedTextPosition = "middle-center";
   
-  // FFmpeg loading - uses local files to avoid CORS issues
+  // Helper to convert local file to blob URL
+  async function toBlobURL(url, mimeType) {
+    var response = await fetch(url);
+    var blob = await response.blob();
+    return URL.createObjectURL(new Blob([blob], { type: mimeType }));
+  }
+  
+  // FFmpeg loading - uses local files converted to blob URLs
   async function loadFFmpeg() {
     if (ffmpegLoaded && ffmpeg) return ffmpeg;
     
@@ -1427,15 +1434,20 @@ if (isPresenter) {
         veProgressText.textContent = progress + "%";
       });
       
-      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly (~30MB)...";
+      veFFmpegStatus.textContent = "Loading FFmpeg core files...";
       
-      // Use local files - paths relative to HTML file
-      var baseURL = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+      // Convert local files to blob URLs to ensure proper loading
+      var coreURL = await toBlobURL("lib/ffmpeg/ffmpeg-core.js", "text/javascript");
+      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly (~30MB)...";
+      var wasmURL = await toBlobURL("lib/ffmpeg/ffmpeg-core.wasm", "application/wasm");
+      var workerURL = await toBlobURL("lib/ffmpeg/814.ffmpeg.js", "text/javascript");
+      
+      veFFmpegStatus.textContent = "Initializing FFmpeg...";
       
       await ffmpeg.load({
-        coreURL: baseURL + "/lib/ffmpeg/ffmpeg-core.js",
-        wasmURL: baseURL + "/lib/ffmpeg/ffmpeg-core.wasm",
-        classWorkerURL: baseURL + "/lib/ffmpeg/814.ffmpeg.js"
+        coreURL: coreURL,
+        wasmURL: wasmURL,
+        classWorkerURL: workerURL
       });
       
       ffmpegLoaded = true;
