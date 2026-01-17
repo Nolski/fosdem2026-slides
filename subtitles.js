@@ -368,12 +368,14 @@ async function processAudioWindow() {
     const normalizedAudio = normalizeAudio(audioWindow);
     
     // Transcribe the audio window
+    // Simple options for tiny model
     const result = await SubtitleState.transcriber(normalizedAudio, {
-      return_timestamps: true,
-      chunk_length_s: 30,
-      stride_length_s: 5,
-      language: 'en',
-      task: 'transcribe'
+      return_timestamps: 'word',
+      language: 'english',
+      task: 'transcribe',
+      // Be more lenient with speech detection
+      no_speech_threshold: 0.9,
+      compression_ratio_threshold: 3.0
     });
 
     const processingTime = performance.now() - startTime;
@@ -396,6 +398,7 @@ async function processAudioWindow() {
 
 /**
  * Normalize audio to improve Whisper recognition
+ * Whisper expects audio normalized to -1 to 1 range
  */
 function normalizeAudio(audioData) {
   // Find peak amplitude
@@ -405,19 +408,21 @@ function normalizeAudio(audioData) {
     if (abs > peak) peak = abs;
   }
   
-  // If audio is very quiet, boost it
-  if (peak < 0.01) {
-    if (CONFIG.debug) console.log(`[Subtitles] Audio very quiet (peak: ${peak.toFixed(4)}), normalizing`);
-    // Normalize to target peak of 0.5
-    const targetPeak = 0.5;
-    const gain = peak > 0 ? targetPeak / peak : 1;
+  if (CONFIG.debug) console.log(`[Subtitles] Audio peak before normalization: ${peak.toFixed(4)}`);
+  
+  // Always normalize to ensure consistent levels for Whisper
+  // Target peak of 0.9 (leave some headroom)
+  if (peak > 0.001) {
+    const targetPeak = 0.9;
+    const gain = targetPeak / peak;
     const normalized = new Float32Array(audioData.length);
     for (let i = 0; i < audioData.length; i++) {
-      normalized[i] = Math.max(-1, Math.min(1, audioData[i] * gain));
+      normalized[i] = audioData[i] * gain;
     }
     return normalized;
   }
   
+  // Audio is essentially silent
   return audioData;
 }
 
