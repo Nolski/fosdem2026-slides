@@ -1468,27 +1468,62 @@ if (isPresenter) {
             { name: "OpenSans-Bold.ttf", path: "lib/fonts/OpenSans-Bold.ttf" }
           ];
           
+          var fontsLoadedCount = 0;
           for (var i = 0; i < fonts.length; i++) {
             var font = fonts[i];
             try {
-              var fontResponse = await fetch(font.path);
+              console.log("Fetching font: " + font.path);
+              var fontResponse = await fetch(font.path, { cache: "no-store" });
+              console.log("Font response status:", fontResponse.status, fontResponse.statusText);
+              
               if (!fontResponse.ok) {
                 console.warn("Failed to fetch font " + font.name + ": " + fontResponse.statusText);
                 continue;
               }
-              var fontData = await fontResponse.arrayBuffer();
-              await ffmpeg.writeFile("/fonts/" + font.name, new Uint8Array(fontData));
-              console.log("Loaded font: " + font.name + " (" + fontData.byteLength + " bytes)");
+              
+              // Clone the response to read it properly
+              var fontBlob = await fontResponse.blob();
+              console.log("Font blob size:", fontBlob.size, "type:", fontBlob.type);
+              
+              if (fontBlob.size === 0) {
+                console.warn("Font " + font.name + " returned empty blob");
+                continue;
+              }
+              
+              var fontData = await fontBlob.arrayBuffer();
+              console.log("Font arrayBuffer size:", fontData.byteLength);
+              
+              if (fontData.byteLength === 0) {
+                console.warn("Font " + font.name + " has 0 bytes after conversion");
+                continue;
+              }
+              
+              var fontUint8 = new Uint8Array(fontData);
+              console.log("Writing font to FFmpeg FS: /fonts/" + font.name, "size:", fontUint8.length);
+              
+              await ffmpeg.writeFile("/fonts/" + font.name, fontUint8);
+              
+              // Verify the file was written
+              try {
+                var written = await ffmpeg.readFile("/fonts/" + font.name);
+                console.log("Verified font in FFmpeg FS: " + font.name + " (" + written.length + " bytes)");
+                fontsLoadedCount++;
+              } catch (verifyError) {
+                console.warn("Could not verify font " + font.name + ":", verifyError);
+              }
             } catch (fontError) {
               console.warn("Failed to load font " + font.name + ":", fontError);
             }
           }
           
-          fontLoaded = true;
-          console.log("Fonts loaded successfully");
+          fontLoaded = fontsLoadedCount > 0;
+          console.log("Fonts loaded: " + fontsLoadedCount + " of " + fonts.length);
+          
+          if (!fontLoaded) {
+            console.error("No fonts were loaded! Text overlay will not work.");
+          }
         } catch (fontError) {
           console.error("Failed to load fonts:", fontError);
-          // Continue without fonts - text overlay won't work
         }
       }
       
