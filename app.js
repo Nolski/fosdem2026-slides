@@ -1402,15 +1402,7 @@ if (isPresenter) {
   var currentEditVideoBlob = null;
   var selectedTextPosition = "middle-center";
   
-  // Helper to convert URL to blob URL (avoids CORS issues with workers)
-  async function toBlobURL(url, mimeType) {
-    var response = await fetch(url);
-    var blob = await response.blob();
-    var blobWithType = new Blob([blob], { type: mimeType });
-    return URL.createObjectURL(blobWithType);
-  }
-  
-  // FFmpeg loading
+  // FFmpeg loading - uses local files to avoid CORS issues
   async function loadFFmpeg() {
     if (ffmpegLoaded && ffmpeg) return ffmpeg;
     
@@ -1435,25 +1427,15 @@ if (isPresenter) {
         veProgressText.textContent = progress + "%";
       });
       
-      veFFmpegStatus.textContent = "Downloading FFmpeg core (~30MB, please wait)...";
+      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly (~30MB)...";
       
-      // Convert CDN URLs to blob URLs to avoid CORS issues with workers
-      var coreBaseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-      var ffmpegBaseURL = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd";
-      
-      // Download all required files in parallel
-      var [coreURL, wasmURL, workerURL] = await Promise.all([
-        toBlobURL(coreBaseURL + "/ffmpeg-core.js", "text/javascript"),
-        toBlobURL(coreBaseURL + "/ffmpeg-core.wasm", "application/wasm"),
-        toBlobURL(ffmpegBaseURL + "/814.ffmpeg.js", "text/javascript")
-      ]);
-      
-      veFFmpegStatus.textContent = "Initializing FFmpeg...";
+      // Use local files - paths relative to HTML file
+      var baseURL = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
       
       await ffmpeg.load({
-        coreURL: coreURL,
-        wasmURL: wasmURL,
-        classWorkerURL: workerURL
+        coreURL: baseURL + "/lib/ffmpeg/ffmpeg-core.js",
+        wasmURL: baseURL + "/lib/ffmpeg/ffmpeg-core.wasm",
+        classWorkerURL: baseURL + "/lib/ffmpeg/814.ffmpeg.js"
       });
       
       ffmpegLoaded = true;
