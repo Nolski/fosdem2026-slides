@@ -1,96 +1,157 @@
 /**
  * Live Subtitles Module using Whisper (Xenova/transformers.js)
  * 
- * Captures microphone audio and transcribes it in real-time
- * with modern social media-style subtitle display.
+ * Uses a Web Worker for non-blocking transcription and
+ * optimized audio chunking for lower latency.
  */
-
-// Import from local transformers.js file
-import { pipeline, env } from './lib/transformers/transformers.min.js';
-
-// Configure transformers.js to use local WASM files
-env.backends.onnx.wasm.wasmPaths = './lib/transformers/';
-// Allow loading from local files
-env.allowLocalModels = false; // Models will still be fetched from HuggingFace and cached
 
 // Subtitle state
 const SubtitleState = {
-  transcriber: null,
+  worker: null,
   isModelLoaded: false,
   isModelLoading: false,
   isListening: false,
   audioContext: null,
   mediaStream: null,
-  processor: null,
-  audioBuffer: [],
+  workletNode: null,
+  analyserNode: null,
+  audioChunks: [],
   lastTranscription: '',
-  transcriptionHistory: [],
   displayTimeout: null,
-  processingInterval: null,
+  processingTimeout: null,
   enabled: false,
   currentWords: [],
   currentWordIndex: 0,
-  wordHighlightInterval: null
+  wordHighlightInterval: null,
+  isProcessing: false,
+  silenceStart: null,
+  lastSpeechTime: 0
 };
 
-// Configuration
+// Configuration - optimized for lower latency
 const CONFIG = {
   sampleRate: 16000,
-  chunkDuration: 3, // seconds of audio to process at once
-  overlapDuration: 0.5, // overlap between chunks
-  maxDisplayDuration: 5000, // ms to keep subtitle on screen
-  maxWordsPerLine: 12, // max words before wrapping
-  wordHighlightSpeed: 150, // ms between word highlights
-  minAudioLevel: 0.01, // minimum audio level to process
-  modelName: 'Xenova/whisper-base.en'
+  chunkDuration: 1.5, // Reduced from 3 seconds to 1.5 for faster response
+  minChunkDuration: 0.5, // Minimum audio to process
+  maxDisplayDuration: 4000,
+  maxWordsPerLine: 10,
+  wordHighlightSpeed: 120,
+  // Voice Activity Detection settings
+  vadThreshold: 0.015, // Audio level threshold for speech detection
+  silenceTimeout: 800, // ms of silence before processing
+  minSpeechDuration: 200, // minimum ms of speech before considering valid
+  // Use tiny model for faster processing (trade-off: slightly less accurate)
+  modelName: 'Xenova/whisper-tiny.en'
 };
 
 /**
- * Initialize the Whisper transcription model
+ * Initialize the Web Worker
+ */
+function initWorker() {
+  if (SubtitleState.worker) return;
+
+  try {
+    SubtitleState.worker = new Worker('./subtitles-worker.js', { type: 'module' });
+    
+    SubtitleState.worker.onmessage = (event) => {
+      const { type, text, status, message, processingTime, error } = event.data;
+      
+      switch (type) {
+        case 'status':
+          updateStatus(status, message);
+          break;
+        case 'model-loaded':
+          SubtitleState.isModelLoaded = true;
+          SubtitleState.isModelLoading = false;
+          console.log('Whisper model loaded in worker');
+          break;
+        case 'transcription':
+          handleTranscription(text, processingTime);
+          break;
+        case 'error':
+          console.error('Worker error:', error);
+          updateStatus('error', 'Error: ' + error);
+          break;
+      }
+    };
+
+    SubtitleState.worker.onerror = (error) => {
+      console.error('Worker error:', error);
+      updateStatus('error', 'Worker failed');
+    };
+
+    console.log('Subtitle worker initialized');
+  } catch (error) {
+    console.error('Failed to create worker:', error);
+    // Fallback: will need to run on main thread
+  }
+}
+
+/**
+ * Initialize the Whisper model via worker
  */
 async function initializeModel() {
   if (SubtitleState.isModelLoaded || SubtitleState.isModelLoading) {
     return SubtitleState.isModelLoaded;
   }
 
+  initWorker();
+  
+  if (!SubtitleState.worker) {
+    updateStatus('error', 'Worker unavailable');
+    return false;
+  }
+
   SubtitleState.isModelLoading = true;
   updateStatus('loading', 'Loading AI model...');
 
-  try {
-    console.log('Loading Whisper model...');
-    
-    // Create the automatic speech recognition pipeline
-    SubtitleState.transcriber = await pipeline(
-      'automatic-speech-recognition',
-      CONFIG.modelName,
-      {
-        quantized: true,
-        progress_callback: (progress) => {
-          if (progress.status === 'downloading') {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
-            updateStatus('loading', `Downloading model: ${percent}%`);
-          } else if (progress.status === 'loading') {
-            updateStatus('loading', 'Loading model...');
-          }
-        }
+  return new Promise((resolve) => {
+    const checkLoaded = () => {
+      if (SubtitleState.isModelLoaded) {
+        resolve(true);
+      } else if (!SubtitleState.isModelLoading) {
+        resolve(false);
+      } else {
+        setTimeout(checkLoaded, 100);
       }
-    );
+    };
 
-    SubtitleState.isModelLoaded = true;
-    SubtitleState.isModelLoading = false;
-    console.log('Whisper model loaded successfully');
-    updateStatus('', '');
-    return true;
-  } catch (error) {
-    console.error('Failed to load Whisper model:', error);
-    SubtitleState.isModelLoading = false;
-    updateStatus('error', 'Failed to load model');
-    throw error;
-  }
+    SubtitleState.worker.postMessage({
+      type: 'init',
+      data: { modelName: CONFIG.modelName }
+    });
+
+    checkLoaded();
+  });
 }
 
 /**
- * Start capturing microphone audio
+ * Handle transcription result from worker
+ */
+function handleTranscription(text, processingTime) {
+  SubtitleState.isProcessing = false;
+  
+  if (!text || text === SubtitleState.lastTranscription) {
+    return;
+  }
+
+  // Clean and validate text
+  const cleanText = cleanTranscription(text);
+  if (!cleanText || cleanText.length < 2) {
+    return;
+  }
+
+  console.log(`Transcription (${Math.round(processingTime)}ms): "${cleanText}"`);
+  
+  SubtitleState.lastTranscription = text;
+  displaySubtitle(cleanText);
+  
+  // Update status to show we're actively listening
+  updateStatus('active', 'Listening...');
+}
+
+/**
+ * Start capturing microphone audio with Voice Activity Detection
  */
 async function startListening() {
   if (SubtitleState.isListening) return;
@@ -107,42 +168,158 @@ async function startListening() {
       }
     });
 
-    // Create audio context
+    // Create audio context at target sample rate
     SubtitleState.audioContext = new (window.AudioContext || window.webkitAudioContext)({
       sampleRate: CONFIG.sampleRate
     });
 
-    // Create source from microphone
     const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
 
-    // Create script processor for audio processing
-    const bufferSize = 4096;
-    SubtitleState.processor = SubtitleState.audioContext.createScriptProcessor(bufferSize, 1, 1);
+    // Create analyser for VAD
+    SubtitleState.analyserNode = SubtitleState.audioContext.createAnalyser();
+    SubtitleState.analyserNode.fftSize = 512;
+    SubtitleState.analyserNode.smoothingTimeConstant = 0.3;
 
-    SubtitleState.processor.onaudioprocess = (event) => {
+    // Create script processor for audio capture
+    const bufferSize = 2048;
+    const processor = SubtitleState.audioContext.createScriptProcessor(bufferSize, 1, 1);
+    
+    const vadBuffer = new Uint8Array(SubtitleState.analyserNode.frequencyBinCount);
+
+    processor.onaudioprocess = (event) => {
       if (!SubtitleState.isListening) return;
 
       const inputData = event.inputBuffer.getChannelData(0);
-      // Store audio data for processing
-      SubtitleState.audioBuffer.push(new Float32Array(inputData));
+      
+      // Get current audio level for VAD
+      SubtitleState.analyserNode.getByteFrequencyData(vadBuffer);
+      const audioLevel = getAudioLevel(vadBuffer);
+      
+      const now = Date.now();
+      const isSpeech = audioLevel > CONFIG.vadThreshold;
+
+      if (isSpeech) {
+        // Speech detected
+        SubtitleState.lastSpeechTime = now;
+        SubtitleState.silenceStart = null;
+        
+        // Store audio chunk
+        SubtitleState.audioChunks.push(new Float32Array(inputData));
+      } else {
+        // Silence detected
+        if (SubtitleState.silenceStart === null && SubtitleState.audioChunks.length > 0) {
+          SubtitleState.silenceStart = now;
+        }
+
+        // Still capture a bit of trailing audio
+        if (SubtitleState.audioChunks.length > 0 && SubtitleState.silenceStart) {
+          const silenceDuration = now - SubtitleState.silenceStart;
+          if (silenceDuration < 300) {
+            SubtitleState.audioChunks.push(new Float32Array(inputData));
+          }
+        }
+
+        // Check if we should process after silence
+        if (SubtitleState.silenceStart && SubtitleState.audioChunks.length > 0) {
+          const silenceDuration = now - SubtitleState.silenceStart;
+          const speechDuration = SubtitleState.lastSpeechTime > 0 ? 
+            (SubtitleState.silenceStart - SubtitleState.lastSpeechTime + getBufferDuration()) : getBufferDuration();
+
+          // Process if we have enough silence after speech
+          if (silenceDuration >= CONFIG.silenceTimeout && speechDuration >= CONFIG.minSpeechDuration) {
+            processAudioBuffer();
+          }
+        }
+      }
+
+      // Also process if buffer gets too long (prevents memory issues and ensures we don't wait too long)
+      const bufferDuration = getBufferDuration();
+      if (bufferDuration >= CONFIG.chunkDuration && !SubtitleState.isProcessing) {
+        processAudioBuffer();
+      }
     };
 
     // Connect nodes
-    source.connect(SubtitleState.processor);
-    SubtitleState.processor.connect(SubtitleState.audioContext.destination);
+    source.connect(SubtitleState.analyserNode);
+    source.connect(processor);
+    processor.connect(SubtitleState.audioContext.destination);
 
+    SubtitleState.processor = processor;
     SubtitleState.isListening = true;
-    SubtitleState.audioBuffer = [];
-
-    // Start processing interval
-    startProcessingLoop();
+    SubtitleState.audioChunks = [];
+    SubtitleState.silenceStart = null;
+    SubtitleState.lastSpeechTime = 0;
 
     updateStatus('active', 'Listening...');
-    console.log('Microphone capture started');
+    console.log('Microphone capture started with VAD');
   } catch (error) {
     console.error('Failed to access microphone:', error);
     updateStatus('error', 'Mic access denied');
     throw error;
+  }
+}
+
+/**
+ * Get current buffer duration in seconds
+ */
+function getBufferDuration() {
+  const totalSamples = SubtitleState.audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  return totalSamples / CONFIG.sampleRate;
+}
+
+/**
+ * Calculate audio level from frequency data
+ */
+function getAudioLevel(frequencyData) {
+  let sum = 0;
+  for (let i = 0; i < frequencyData.length; i++) {
+    sum += frequencyData[i];
+  }
+  return sum / (frequencyData.length * 255);
+}
+
+/**
+ * Process the accumulated audio buffer
+ */
+function processAudioBuffer() {
+  if (SubtitleState.isProcessing || SubtitleState.audioChunks.length === 0) {
+    return;
+  }
+
+  const bufferDuration = getBufferDuration();
+  if (bufferDuration < CONFIG.minChunkDuration) {
+    SubtitleState.audioChunks = [];
+    return;
+  }
+
+  SubtitleState.isProcessing = true;
+  updateStatus('active', 'Processing...');
+
+  // Concatenate all audio chunks
+  const totalLength = SubtitleState.audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const audioData = new Float32Array(totalLength);
+  
+  let offset = 0;
+  for (const chunk of SubtitleState.audioChunks) {
+    audioData.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  // Clear buffer
+  SubtitleState.audioChunks = [];
+  SubtitleState.silenceStart = null;
+
+  // Send to worker for transcription
+  if (SubtitleState.worker && SubtitleState.isModelLoaded) {
+    SubtitleState.worker.postMessage({
+      type: 'transcribe',
+      data: { 
+        audio: audioData.buffer,
+        sampleRate: CONFIG.sampleRate
+      }
+    }, [audioData.buffer]); // Transfer buffer for efficiency
+  } else {
+    SubtitleState.isProcessing = false;
   }
 }
 
@@ -154,16 +331,15 @@ function stopListening() {
 
   SubtitleState.isListening = false;
 
-  // Stop processing loop
-  if (SubtitleState.processingInterval) {
-    clearInterval(SubtitleState.processingInterval);
-    SubtitleState.processingInterval = null;
-  }
-
   // Disconnect audio processing
   if (SubtitleState.processor) {
     SubtitleState.processor.disconnect();
     SubtitleState.processor = null;
+  }
+
+  if (SubtitleState.analyserNode) {
+    SubtitleState.analyserNode.disconnect();
+    SubtitleState.analyserNode = null;
   }
 
   // Close audio context
@@ -179,7 +355,8 @@ function stopListening() {
   }
 
   // Clear buffers
-  SubtitleState.audioBuffer = [];
+  SubtitleState.audioChunks = [];
+  SubtitleState.isProcessing = false;
 
   // Stop word highlighting
   stopWordHighlight();
@@ -189,87 +366,36 @@ function stopListening() {
 }
 
 /**
- * Start the audio processing loop
+ * Clean up transcription text
  */
-function startProcessingLoop() {
-  const processInterval = CONFIG.chunkDuration * 1000;
+function cleanTranscription(text) {
+  let clean = text
+    .replace(/\[.*?\]/g, '') // Remove bracketed content
+    .replace(/\(.*?\)/g, '') // Remove parenthetical content
+    .replace(/<\|.*?\|>/g, '') // Remove Whisper tokens
+    .replace(/♪/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   
-  SubtitleState.processingInterval = setInterval(async () => {
-    if (!SubtitleState.isListening || SubtitleState.audioBuffer.length === 0) {
-      return;
-    }
-
-    try {
-      await processAudioBuffer();
-    } catch (error) {
-      console.error('Error processing audio:', error);
-    }
-  }, processInterval);
-}
-
-/**
- * Process accumulated audio buffer
- */
-async function processAudioBuffer() {
-  if (!SubtitleState.transcriber || SubtitleState.audioBuffer.length === 0) {
-    return;
-  }
-
-  // Concatenate all audio chunks
-  const totalLength = SubtitleState.audioBuffer.reduce((acc, chunk) => acc + chunk.length, 0);
-  const audioData = new Float32Array(totalLength);
+  // Remove common Whisper hallucinations
+  const hallucinations = [
+    'thank you', 'thanks for watching', 'subscribe', 'like and subscribe',
+    'see you next time', 'bye', 'goodbye', 'you'
+  ];
   
-  let offset = 0;
-  for (const chunk of SubtitleState.audioBuffer) {
-    audioData.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  // Keep some overlap for the next chunk
-  const overlapSamples = Math.floor(CONFIG.overlapDuration * CONFIG.sampleRate);
-  if (totalLength > overlapSamples) {
-    SubtitleState.audioBuffer = [audioData.slice(-overlapSamples)];
-  } else {
-    SubtitleState.audioBuffer = [];
-  }
-
-  // Check if audio has sufficient level
-  const audioLevel = calculateAudioLevel(audioData);
-  if (audioLevel < CONFIG.minAudioLevel) {
-    return;
-  }
-
-  // Transcribe the audio
-  try {
-    const result = await SubtitleState.transcriber(audioData, {
-      chunk_length_s: CONFIG.chunkDuration,
-      stride_length_s: CONFIG.overlapDuration,
-      return_timestamps: false
-    });
-
-    if (result && result.text) {
-      const text = result.text.trim();
-      
-      // Skip if same as last transcription or empty
-      if (text && text !== SubtitleState.lastTranscription && text.length > 1) {
-        SubtitleState.lastTranscription = text;
-        displaySubtitle(text);
-      }
+  const lowerClean = clean.toLowerCase();
+  for (const h of hallucinations) {
+    if (lowerClean === h) {
+      return '';
     }
-  } catch (error) {
-    console.error('Transcription error:', error);
   }
-}
-
-/**
- * Calculate the RMS audio level
- */
-function calculateAudioLevel(audioData) {
-  let sum = 0;
-  for (let i = 0; i < audioData.length; i++) {
-    sum += audioData[i] * audioData[i];
+  
+  // Capitalize first letter
+  if (clean.length > 0) {
+    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   }
-  return Math.sqrt(sum / audioData.length);
+  
+  return clean;
 }
 
 /**
@@ -281,18 +407,14 @@ function displaySubtitle(text) {
   
   if (!overlay || !container) return;
 
-  // Clean up the text
-  const cleanText = cleanTranscription(text);
-  if (!cleanText) return;
-
   // Calculate if text needs to wrap based on screen width
-  const words = cleanText.split(' ').filter(w => w.length > 0);
-  const wrappedText = wrapTextToFitScreen(words);
+  const words = text.split(' ').filter(w => w.length > 0);
+  const wrappedWords = wrapTextToFitScreen(words);
 
   // Create word spans with animation classes
-  const wordSpans = wrappedText.map((word, index) => {
+  const wordSpans = wrappedWords.map((word, index) => {
     const className = index === 0 ? 'word current' : 'word upcoming';
-    return `<span class="${className}" data-index="${index}">${word}</span>`;
+    return `<span class="${className}" data-index="${index}">${escapeHtml(word)}</span>`;
   }).join(' ');
 
   container.innerHTML = wordSpans;
@@ -302,7 +424,7 @@ function displaySubtitle(text) {
   overlay.style.display = 'flex';
 
   // Start word highlighting animation
-  SubtitleState.currentWords = wrappedText;
+  SubtitleState.currentWords = wrappedWords;
   SubtitleState.currentWordIndex = 0;
   startWordHighlight();
 
@@ -319,7 +441,7 @@ function displaySubtitle(text) {
   // Set timeout to fade out subtitle
   const displayDuration = Math.max(
     CONFIG.maxDisplayDuration,
-    wrappedText.length * CONFIG.wordHighlightSpeed + 1000
+    wrappedWords.length * CONFIG.wordHighlightSpeed + 1000
   );
   
   SubtitleState.displayTimeout = setTimeout(() => {
@@ -328,58 +450,37 @@ function displaySubtitle(text) {
 }
 
 /**
- * Clean up transcription text
+ * Escape HTML special characters
  */
-function cleanTranscription(text) {
-  // Remove common Whisper artifacts
-  let clean = text
-    .replace(/\[.*?\]/g, '') // Remove bracketed content like [MUSIC]
-    .replace(/\(.*?\)/g, '') // Remove parenthetical content
-    .replace(/♪/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  
-  // Capitalize first letter
-  if (clean.length > 0) {
-    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
-  }
-  
-  return clean;
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /**
  * Wrap text to fit screen width
  */
 function wrapTextToFitScreen(words) {
-  // Get available width
   const screenWidth = window.innerWidth;
-  const maxCharsPerLine = Math.floor(screenWidth / 20); // Approximate chars that fit
+  const maxCharsPerLine = Math.floor(screenWidth / 25);
   
   const result = [];
-  let currentLine = [];
   let currentLength = 0;
   
   for (const word of words) {
-    if (currentLength + word.length > maxCharsPerLine && currentLine.length > 0) {
-      // Word would exceed line, but we keep single words
-      if (result.length === 0 || currentLine.length <= CONFIG.maxWordsPerLine) {
-        result.push(...currentLine);
-      }
-      currentLine = [word];
+    if (result.length >= CONFIG.maxWordsPerLine * 2) break;
+    
+    if (currentLength + word.length > maxCharsPerLine && result.length > 0) {
+      // Start new conceptual line but keep in same array
       currentLength = word.length;
     } else {
-      currentLine.push(word);
       currentLength += word.length + 1;
     }
+    result.push(word);
   }
   
-  // Add remaining words
-  if (currentLine.length > 0) {
-    result.push(...currentLine);
-  }
-  
-  // Limit total words
-  return result.slice(0, CONFIG.maxWordsPerLine * 2);
+  return result;
 }
 
 /**
@@ -394,7 +495,6 @@ function startWordHighlight() {
     
     const words = container.querySelectorAll('.word');
     
-    // Update word classes
     words.forEach((word, index) => {
       word.classList.remove('current', 'spoken', 'upcoming');
       
@@ -409,7 +509,6 @@ function startWordHighlight() {
     
     SubtitleState.currentWordIndex++;
     
-    // Stop when all words are highlighted
     if (SubtitleState.currentWordIndex > SubtitleState.currentWords.length) {
       stopWordHighlight();
     }
@@ -478,7 +577,6 @@ async function toggleSubtitles(enabled) {
       }
     } catch (error) {
       console.error('Failed to enable subtitles:', error);
-      // Uncheck the toggle on error
       const checkbox = document.getElementById('subtitlesEnabled');
       if (checkbox) checkbox.checked = false;
       SubtitleState.enabled = false;
@@ -501,8 +599,7 @@ function initSubtitles() {
     });
   }
   
-  // Listen for presentation state changes
-  // We'll expose functions globally for app.js to call
+  // Expose functions globally for app.js to call
   window.subtitleSystem = {
     onPresentationStart: async () => {
       if (SubtitleState.enabled) {
@@ -524,7 +621,7 @@ function initSubtitles() {
     toggle: toggleSubtitles
   };
   
-  console.log('Subtitle system initialized');
+  console.log('Subtitle system initialized (Web Worker mode)');
 }
 
 // Initialize when DOM is ready
@@ -534,5 +631,4 @@ if (document.readyState === 'loading') {
   initSubtitles();
 }
 
-// Export for potential external use
 export { initSubtitles, toggleSubtitles, SubtitleState };
