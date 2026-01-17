@@ -1409,7 +1409,12 @@ if (isPresenter) {
     try {
       veFFmpegStatus.textContent = "Loading FFmpeg core...";
       
-      var FFmpegWASM = FFmpeg;
+      // FFmpeg.wasm UMD build exposes FFmpegWASM global with FFmpeg class
+      if (typeof FFmpegWASM === 'undefined' || !FFmpegWASM.FFmpeg) {
+        throw new Error("FFmpeg library not loaded. Please refresh the page and try again.");
+      }
+      
+      console.log("Creating FFmpeg instance...");
       ffmpeg = new FFmpegWASM.FFmpeg();
       
       ffmpeg.on("log", function(info) {
@@ -1422,7 +1427,7 @@ if (isPresenter) {
         veProgressText.textContent = progress + "%";
       });
       
-      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly...";
+      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly (this may take a moment)...";
       
       await ffmpeg.load({
         coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
@@ -1430,6 +1435,7 @@ if (isPresenter) {
       });
       
       ffmpegLoaded = true;
+      console.log("FFmpeg loaded successfully");
       return ffmpeg;
     } catch (error) {
       console.error("Failed to load FFmpeg:", error);
