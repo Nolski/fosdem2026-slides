@@ -223,8 +223,9 @@
     {
       "type": "video",
       "notes": "",
-      "src": "media/video/34.m4v",
-      "loop": false
+      "src": "media/video/34-edited-2026-01-17T19-36-47.mp4",
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
@@ -387,7 +388,14 @@
       "src": "media/video/cleanroom-montage.mp4",
       "notes": "This was no easy task for Dave and his colleague. It took months of back and forth... and from what we heard, a little blurring of the lines of what could and couldn't be shared between the \"dirty\" engineer and the \"clean\" engineer. Still, at the end Phoenix was able to have a fully IBM compatible BIOS that it could sell to its customers and it did. It took months and months of engineering work but they got it working.",
       "loop": true,
-      "volume": 100
+      "volume": 9
+    },
+    {
+      "type": "placeholder",
+      "notes": "",
+      "title": "Coming Soon",
+      "backgroundColor": "#333333",
+      "text": "put how it took work to cleanroom back in the day"
     },
     {
       "type": "placeholder",
@@ -401,7 +409,7 @@
       "src": "media/video/killos.mp4",
       "notes": "So we've established the wacky origin of copyright and how it's been hammered into a tool to address ownership of things like software. We've shown how this entire system could be and has been circumvented through labor intensive processes such as clean room software design.\n\nBut... What does any of this have to do with open source? Why would we bother on code that is already licensed in such a way that we can easily use it?\n\nWell, open source is great in that we get access to all of this work done by people not on our payroll. However, it comes with some draw backs. Let's explore a few of those",
       "loop": false,
-      "volume": 39
+      "volume": 0
     },
     {
       "type": "video",
@@ -415,8 +423,9 @@
     {
       "src": "media/audio/suspicious_up_to_something.mp3",
       "startSlide": 0,
-      "endSlide": 0,
-      "loop": true
+      "endSlide": 15,
+      "loop": true,
+      "volume": 8
     }
   ]
 }
