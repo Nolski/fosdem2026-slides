@@ -16,12 +16,7 @@ const SubtitleState = {
   recognition: null,
   isListening: false,
   enabled: false,
-  finalTranscript: '',
-  interimTranscript: '',
   displayTimeout: null,
-  currentWords: [],
-  currentWordIndex: 0,
-  wordHighlightInterval: null,
   restartTimeout: null
 };
 
@@ -29,7 +24,6 @@ const SubtitleState = {
 const CONFIG = {
   maxDisplayDuration: 5000,
   maxWordsPerLine: 12,
-  wordHighlightSpeed: 100,
   language: 'en-US',
   continuous: true,
   interimResults: true,
@@ -171,7 +165,6 @@ function stopListening() {
     SubtitleState.recognition = null;
   }
   
-  stopWordHighlight();
   hideSubtitle();
   updateStatus('', '');
   
@@ -179,7 +172,7 @@ function stopListening() {
 }
 
 /**
- * Display subtitle
+ * Display subtitle - highlights current word as it's being spoken
  */
 function displaySubtitle(text, isInterim) {
   const overlay = document.getElementById('subtitle-overlay');
@@ -191,26 +184,24 @@ function displaySubtitle(text, isInterim) {
   const words = cleanText.split(' ').filter(w => w.length > 0);
   const wrappedWords = wrapTextToFitScreen(words);
   
-  if (isInterim) {
-    // For interim results, show without highlighting (updates rapidly)
-    container.innerHTML = wrappedWords.map(word => 
-      `<span class="word spoken">${escapeHtml(word)}</span>`
-    ).join(' ');
-    container.classList.remove('has-highlight');
-  } else {
-    // For final results, show with word highlighting
-    const wordSpans = wrappedWords.map((word, index) => {
-      const className = index === 0 ? 'word current' : 'word upcoming';
-      return `<span class="${className}">${escapeHtml(word)}</span>`;
-    }).join(' ');
-    
-    container.innerHTML = wordSpans;
-    container.classList.add('new-text', 'has-highlight');
-    
-    SubtitleState.currentWords = wrappedWords;
-    SubtitleState.currentWordIndex = 0;
-    startWordHighlight();
-    
+  // The last word is the one currently being spoken
+  // Previous words have been spoken, no upcoming words yet (real-time)
+  const wordSpans = wrappedWords.map((word, index) => {
+    let className = 'word';
+    if (index === wrappedWords.length - 1) {
+      className += ' current'; // Last word = currently being spoken
+    } else {
+      className += ' spoken';  // Previous words = already spoken
+    }
+    return `<span class="${className}">${escapeHtml(word)}</span>`;
+  }).join(' ');
+  
+  container.innerHTML = wordSpans;
+  container.classList.add('has-highlight');
+  
+  if (!isInterim) {
+    // Final result - briefly pulse the text
+    container.classList.add('new-text');
     setTimeout(() => container.classList.remove('new-text'), 300);
   }
   
@@ -221,11 +212,8 @@ function displaySubtitle(text, isInterim) {
     clearTimeout(SubtitleState.displayTimeout);
   }
   
-  const displayDuration = isInterim ? 3000 : Math.max(
-    CONFIG.maxDisplayDuration,
-    wrappedWords.length * CONFIG.wordHighlightSpeed + 1500
-  );
-  
+  // Keep visible longer for final results
+  const displayDuration = isInterim ? 3000 : CONFIG.maxDisplayDuration;
   SubtitleState.displayTimeout = setTimeout(hideSubtitle, displayDuration);
 }
 
@@ -252,38 +240,8 @@ function wrapTextToFitScreen(words) {
   return result;
 }
 
-function startWordHighlight() {
-  stopWordHighlight();
-  
-  SubtitleState.wordHighlightInterval = setInterval(() => {
-    const container = document.getElementById('subtitle-text');
-    if (!container) return;
-    
-    const words = container.querySelectorAll('.word');
-    words.forEach((word, index) => {
-      word.classList.remove('current', 'spoken', 'upcoming');
-      if (index < SubtitleState.currentWordIndex) {
-        word.classList.add('spoken');
-      } else if (index === SubtitleState.currentWordIndex) {
-        word.classList.add('current');
-      } else {
-        word.classList.add('upcoming');
-      }
-    });
-    
-    SubtitleState.currentWordIndex++;
-    if (SubtitleState.currentWordIndex > SubtitleState.currentWords.length) {
-      stopWordHighlight();
-    }
-  }, CONFIG.wordHighlightSpeed);
-}
-
-function stopWordHighlight() {
-  if (SubtitleState.wordHighlightInterval) {
-    clearInterval(SubtitleState.wordHighlightInterval);
-    SubtitleState.wordHighlightInterval = null;
-  }
-}
+// Word highlighting now happens naturally as new words come in from speech recognition
+// The last word is always "current", previous words are "spoken"
 
 function hideSubtitle() {
   const overlay = document.getElementById('subtitle-overlay');
@@ -294,7 +252,6 @@ function hideSubtitle() {
     container.innerHTML = '';
     container.classList.remove('has-highlight');
   }
-  stopWordHighlight();
 }
 
 function updateStatus(type, message) {
