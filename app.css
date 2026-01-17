@@ -1557,6 +1557,20 @@ body.present-mode #controls {
 }
 
 /* ============================================
+   Video Editor Help Text
+   ============================================ */
+.ve-help-text {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 8px 0 0 0;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ============================================
    Responsive for Video Edit Modal
    ============================================ */
 @media (max-width: 600px) {

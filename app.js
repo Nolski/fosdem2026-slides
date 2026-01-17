@@ -264,6 +264,9 @@ if (isPresenter) {
   var placeholderGroup = document.getElementById("placeholder-group");
   var loopGroup = document.getElementById("loop-group");
   var zoompanGroup = document.getElementById("zoompan-group");
+  var videoVolumeGroup = document.getElementById("video-volume-group");
+  var videoVolumeSlider = document.getElementById("video-volume");
+  var videoVolumeValue = document.getElementById("video-volume-value");
   
   var audioSrcInput = document.getElementById("audio-src");
   var audioStartInput = document.getElementById("audio-start");
@@ -531,6 +534,13 @@ if (isPresenter) {
     placeholderTextInput.value = slide.text || "";
     placeholderColorInput.value = slide.backgroundColor || "#333333";
     
+    // Load video volume setting
+    if (slide.type === "video" && videoVolumeSlider && videoVolumeValue) {
+      var volume = slide.volume !== undefined ? slide.volume : 100;
+      videoVolumeSlider.value = volume;
+      videoVolumeValue.textContent = volume + "%";
+    }
+    
     updateFormVisibility(slide.type);
     updatePreview(slide);
     updateNavButtons();
@@ -576,7 +586,10 @@ if (isPresenter) {
     loopGroup.style.display = type === "placeholder" ? "none" : "flex";
     zoompanGroup.style.display = type === "image" ? "flex" : "none";
     
-    // Show Edit Video button only for video slides
+    // Show video-specific controls only for video slides
+    if (videoVolumeGroup) {
+      videoVolumeGroup.style.display = type === "video" ? "flex" : "none";
+    }
     var editVideoGroup = document.getElementById("edit-video-group");
     if (editVideoGroup) {
       editVideoGroup.style.display = type === "video" ? "flex" : "none";
@@ -584,6 +597,13 @@ if (isPresenter) {
   }
   
   slideTypeSelect.addEventListener("change", function() { updateFormVisibility(this.value); });
+  
+  // Video volume slider listener
+  if (videoVolumeSlider) {
+    videoVolumeSlider.addEventListener("input", function() {
+      videoVolumeValue.textContent = this.value + "%";
+    });
+  }
   
   function updatePreview(slide) {
     previewContainer.innerHTML = "";
@@ -620,14 +640,19 @@ if (isPresenter) {
       slide.title = placeholderTitleInput.value;
       slide.text = placeholderTextInput.value;
       slide.backgroundColor = placeholderColorInput.value;
-      delete slide.src; delete slide.loop; delete slide.zoompan;
+      delete slide.src; delete slide.loop; delete slide.zoompan; delete slide.volume;
     } else if (slide.type === "image") {
       slide.src = slideSrcInput.value;
       slide.zoompan = slideZoompanInput.checked;
-      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume;
     } else {
+      // Video slide
       slide.src = slideSrcInput.value;
       slide.loop = slideLoopInput.checked;
+      // Save volume setting
+      if (videoVolumeSlider) {
+        slide.volume = parseInt(videoVolumeSlider.value);
+      }
       delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.zoompan;
     }
     slide.notes = slideNotesInput.value;
@@ -799,6 +824,9 @@ if (isPresenter) {
       video.src = slide.src;
       video.autoplay = true;
       if (slide.loop) video.loop = true;
+      // Apply volume setting from JSON (0-200% mapped to 0-1 for HTML5)
+      var volume = slide.volume !== undefined ? slide.volume : 100;
+      video.volume = Math.min(1, volume / 100);
       container.appendChild(video);
       window.currentMedia = video;
       video.addEventListener("loadeddata", function() { video.play().catch(function(){}); });
@@ -1381,8 +1409,6 @@ if (isPresenter) {
   var veOriginalPath = document.getElementById("ve-original-path");
   
   var vePreviewVideo = document.getElementById("ve-preview-video");
-  var veVolumeSlider = document.getElementById("ve-volume");
-  var veVolumeValue = document.getElementById("ve-volume-value");
   var veTextEnabled = document.getElementById("ve-text-enabled");
   var veTextOptions = document.getElementById("ve-text-options");
   var veTextInput = document.getElementById("ve-text-input");
@@ -1586,8 +1612,6 @@ if (isPresenter) {
     setVideoEditState("loading");
     
     // Reset controls
-    veVolumeSlider.value = 100;
-    veVolumeValue.textContent = "100%";
     veTextEnabled.checked = false;
     veTextOptions.style.display = "none";
     veTextOverlay.style.display = "none";
@@ -1684,11 +1708,6 @@ if (isPresenter) {
     veTextOverlay.style.left = textPositionX + "%";
     veTextOverlay.style.top = textPositionY + "%";
   }
-  
-  // Volume slider
-  veVolumeSlider.addEventListener("input", function() {
-    veVolumeValue.textContent = this.value + "%";
-  });
   
   // Text overlay toggle
   veTextEnabled.addEventListener("change", function() {
@@ -1797,6 +1816,9 @@ if (isPresenter) {
       if (!fontLoaded) {
         alert("Font file not loaded. Text overlay may not work correctly.");
       }
+    } else {
+      alert("Please enable text overlay and enter text to process the video. Volume can be adjusted in the slide editor without re-encoding.");
+      return;
     }
     
     setVideoEditState("processing");
@@ -1827,72 +1849,54 @@ if (isPresenter) {
       
       veProcessingStatus.textContent = "Processing video...";
       
-      // Build FFmpeg command
+      // Build FFmpeg command for text overlay only
+      // Volume is handled via JSON settings in the slide editor
       var videoFilters = [];
-      var audioFilters = [];
       
-      // Volume adjustment
-      var volume = parseInt(veVolumeSlider.value) / 100;
-      if (volume !== 1) {
-        audioFilters.push("volume=" + volume);
+      // Text overlay - escape special characters for FFmpeg
+      var text = veTextInput.value.trim()
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "'\\''")
+        .replace(/:/g, "\\:")
+        .replace(/\[/g, "\\[")
+        .replace(/\]/g, "\\]");
+      
+      var fontFile = veFontFamily.value;
+      var fontSize = parseInt(veFontSize.value) || 48;
+      var fontColor = hexToFFmpegColor(veFontColor.value);
+      var hasBorder = veTextBorder.checked;
+      var borderWidth = parseInt(veBorderSize.value) || 3;
+      
+      // Calculate position based on percentage
+      var xExpr = "(" + (textPositionX / 100) + "*w-text_w/2)";
+      var yExpr = "(" + (textPositionY / 100) + "*h-text_h/2)";
+      
+      // Build drawtext filter with font file
+      var drawtext = "drawtext=fontfile=/fonts/" + fontFile;
+      drawtext += ":text='" + text + "'";
+      drawtext += ":fontsize=" + fontSize;
+      drawtext += ":fontcolor=" + fontColor;
+      drawtext += ":x=" + xExpr;
+      drawtext += ":y=" + yExpr;
+      
+      // Add border if enabled
+      if (hasBorder && borderWidth > 0) {
+        drawtext += ":borderw=" + borderWidth + ":bordercolor=black";
       }
       
-      // Text overlay
-      if (veTextEnabled.checked && veTextInput.value.trim()) {
-        // Escape special characters for FFmpeg
-        var text = veTextInput.value.trim()
-          .replace(/\\/g, "\\\\")
-          .replace(/'/g, "'\\''")
-          .replace(/:/g, "\\:")
-          .replace(/\[/g, "\\[")
-          .replace(/\]/g, "\\]");
-        
-        var fontFile = veFontFamily.value;
-        var fontSize = parseInt(veFontSize.value) || 48;
-        var fontColor = hexToFFmpegColor(veFontColor.value);
-        var hasBorder = veTextBorder.checked;
-        var borderWidth = parseInt(veBorderSize.value) || 3;
-        
-        // Calculate position based on percentage
-        // x and y are where to place the text, accounting for text dimensions
-        var xExpr = "(" + (textPositionX / 100) + "*w-text_w/2)";
-        var yExpr = "(" + (textPositionY / 100) + "*h-text_h/2)";
-        
-        // Build drawtext filter with font file
-        var drawtext = "drawtext=fontfile=/fonts/" + fontFile;
-        drawtext += ":text='" + text + "'";
-        drawtext += ":fontsize=" + fontSize;
-        drawtext += ":fontcolor=" + fontColor;
-        drawtext += ":x=" + xExpr;
-        drawtext += ":y=" + yExpr;
-        
-        // Add border if enabled
-        if (hasBorder && borderWidth > 0) {
-          drawtext += ":borderw=" + borderWidth + ":bordercolor=black";
-        }
-        
-        videoFilters.push(drawtext);
-      }
+      videoFilters.push(drawtext);
       
       // Build command arguments
       var args = ["-i", inputFile];
       
-      // Add video filter if any
-      if (videoFilters.length > 0) {
-        args.push("-vf", videoFilters.join(","));
-      }
+      // Add video filter for text overlay
+      args.push("-vf", videoFilters.join(","));
       
-      // Add audio filter if any
-      if (audioFilters.length > 0) {
-        args.push("-af", audioFilters.join(","));
-      }
-      
-      // Output settings
+      // Output settings - copy audio stream without modification
       args.push("-c:v", "libx264");
       args.push("-preset", "fast");
       args.push("-crf", "23");
-      args.push("-c:a", "aac");
-      args.push("-b:a", "128k");
+      args.push("-c:a", "copy"); // Copy audio as-is, volume is handled by playback settings
       args.push("-movflags", "+faststart");
       args.push("-y"); // Overwrite output
       args.push(outputFile);
