@@ -371,9 +371,30 @@
     },
     {
       "type": "image",
-      "notes": "Just dave.",
+      "notes": "That engineer would be Dave. Now unlike Compaq or the other companies that got sued into oblivion for re-implementing the IBM BIOS, Dave here didn't bother with re-implementing. ",
       "src": "media/img/dave.png",
       "zoompan": true
+    },
+    {
+      "type": "video",
+      "src": "media/video/cleanroom-diagram.mp4",
+      "notes": "He would instead become intimately familiar with the IBM BIOS and write a detailed specification of every component of it. He would look at how IBM applications interfaced with it, even in undocumented ways, and he would write that all down, without ever copying down any of the original code. Then Dave would hand that document over to his colleague. Who would read the specification and implement a new BIOS, without ever having even seen the original material, guaranteeing that copying would have been physically impossible.",
+      "loop": false,
+      "volume": 0
+    },
+    {
+      "type": "video",
+      "src": "media/video/cleanroom-montage.mp4",
+      "notes": "This was no easy task for Dave and his colleague. It took months of back and forth... and from what we heard, a little blurring of the lines of what could and couldn't be shared between the \"dirty\" engineer and the \"clean\" engineer. Still, at the end Phoenix was able to have a fully IBM compatible BIOS that it could sell to its customers and it did. It took months and months of engineering work but they got it working.",
+      "loop": true,
+      "volume": 100
+    },
+    {
+      "type": "placeholder",
+      "notes": "Luckily for us, it only took the robot a few minutes.",
+      "title": "IBM BIOS Example",
+      "backgroundColor": "#333333",
+      "text": ""
     }
   ],
   "audio": [
