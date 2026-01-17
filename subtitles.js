@@ -1,36 +1,41 @@
 /**
- * Live Subtitles Module using Silero VAD + Whisper
+ * Live Subtitles Module using Whisper
  * 
- * Uses Silero VAD (neural network) for accurate real-time voice detection
- * and Whisper for transcription.
+ * Simple, reliable approach: continuous audio capture with
+ * time-based chunking. Whisper handles silence detection internally.
  */
 
-// Import from local transformers.js file
 import { pipeline, env } from './lib/transformers/transformers.min.js';
 
 // Configure transformers.js
 env.backends.onnx.wasm.wasmPaths = './lib/transformers/';
 env.allowLocalModels = false;
 
-// Subtitle state
+// State
 const SubtitleState = {
-  vadInstance: null,
   transcriber: null,
   isModelLoaded: false,
   isModelLoading: false,
   isListening: false,
   enabled: false,
+  audioContext: null,
+  mediaStream: null,
+  processor: null,
+  audioBuffer: [],
+  isTranscribing: false,
   lastTranscription: '',
   displayTimeout: null,
+  processInterval: null,
   currentWords: [],
   currentWordIndex: 0,
-  wordHighlightInterval: null,
-  pendingAudio: null,
-  isTranscribing: false
+  wordHighlightInterval: null
 };
 
 // Configuration
 const CONFIG = {
+  sampleRate: 16000,
+  chunkSeconds: 2.5,        // Process every 2.5 seconds
+  minAudioLevel: 0.01,      // Skip if audio is too quiet
   maxDisplayDuration: 4000,
   maxWordsPerLine: 10,
   wordHighlightSpeed: 120,
@@ -39,7 +44,7 @@ const CONFIG = {
 };
 
 /**
- * Initialize the Whisper transcription model
+ * Initialize Whisper model
  */
 async function initializeWhisper() {
   if (SubtitleState.isModelLoaded || SubtitleState.isModelLoading) {
@@ -82,17 +87,94 @@ async function initializeWhisper() {
 }
 
 /**
- * Transcribe audio using Whisper
+ * Start listening with simple audio capture
  */
-async function transcribeAudio(audioData) {
-  if (!SubtitleState.transcriber || SubtitleState.isTranscribing) {
-    // Queue the audio if we're busy
-    SubtitleState.pendingAudio = audioData;
+async function startListening() {
+  if (SubtitleState.isListening) return;
+
+  try {
+    updateStatus('loading', 'Starting mic...');
+    
+    // Get microphone
+    SubtitleState.mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        sampleRate: CONFIG.sampleRate,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+
+    // Create audio context
+    SubtitleState.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: CONFIG.sampleRate
+    });
+
+    const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
+    
+    // Use ScriptProcessor for simplicity (yes it's deprecated, but it works reliably)
+    const bufferSize = 4096;
+    SubtitleState.processor = SubtitleState.audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+    SubtitleState.processor.onaudioprocess = (event) => {
+      if (!SubtitleState.isListening) return;
+      const inputData = event.inputBuffer.getChannelData(0);
+      SubtitleState.audioBuffer.push(new Float32Array(inputData));
+    };
+
+    source.connect(SubtitleState.processor);
+    SubtitleState.processor.connect(SubtitleState.audioContext.destination);
+
+    SubtitleState.isListening = true;
+    SubtitleState.audioBuffer = [];
+
+    // Process audio at regular intervals
+    SubtitleState.processInterval = setInterval(() => {
+      processAudioChunk();
+    }, CONFIG.chunkSeconds * 1000);
+
+    updateStatus('active', 'Listening...');
+    console.log('[Subtitles] Microphone started');
+
+  } catch (error) {
+    console.error('[Subtitles] Failed to start:', error);
+    updateStatus('error', 'Mic failed: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Process accumulated audio
+ */
+async function processAudioChunk() {
+  if (SubtitleState.isTranscribing || SubtitleState.audioBuffer.length === 0) {
     return;
   }
 
+  // Concatenate audio chunks
+  const totalLength = SubtitleState.audioBuffer.reduce((acc, chunk) => acc + chunk.length, 0);
+  const audioData = new Float32Array(totalLength);
+  
+  let offset = 0;
+  for (const chunk of SubtitleState.audioBuffer) {
+    audioData.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  // Clear buffer for next chunk
+  SubtitleState.audioBuffer = [];
+
+  // Check audio level - skip if too quiet
+  const rms = calculateRMS(audioData);
+  if (rms < CONFIG.minAudioLevel) {
+    if (CONFIG.debug) console.log(`[Subtitles] Skipping quiet audio (RMS: ${rms.toFixed(4)})`);
+    return;
+  }
+
+  // Transcribe
   SubtitleState.isTranscribing = true;
-  updateStatus('active', 'Transcribing...');
+  updateStatus('active', 'Processing...');
 
   try {
     const startTime = performance.now();
@@ -109,8 +191,9 @@ async function transcribeAudio(audioData) {
 
     if (result && result.text) {
       const text = cleanTranscription(result.text);
+      
       if (CONFIG.debug) {
-        console.log(`[Subtitles] Transcription (${Math.round(processingTime)}ms): "${text}"`);
+        console.log(`[Subtitles] (${Math.round(processingTime)}ms) "${text}"`);
       }
       
       if (text && text.length > 1 && text !== SubtitleState.lastTranscription) {
@@ -123,75 +206,18 @@ async function transcribeAudio(audioData) {
   } finally {
     SubtitleState.isTranscribing = false;
     updateStatus('active', 'Listening...');
-    
-    // Process pending audio if any
-    if (SubtitleState.pendingAudio) {
-      const pending = SubtitleState.pendingAudio;
-      SubtitleState.pendingAudio = null;
-      transcribeAudio(pending);
-    }
   }
 }
 
 /**
- * Initialize VAD and start listening
+ * Calculate RMS audio level
  */
-async function startListening() {
-  if (SubtitleState.isListening) return;
-
-  try {
-    updateStatus('loading', 'Starting VAD...');
-    
-    // Check if vad is available (loaded from vad.bundle.min.js)
-    if (typeof vad === 'undefined') {
-      throw new Error('VAD library not loaded');
-    }
-
-    console.log('[Subtitles] Initializing Silero VAD...');
-
-    // Create VAD instance with callbacks
-    // Using CDN version which handles all model/WASM paths automatically
-    SubtitleState.vadInstance = await vad.MicVAD.new({
-      // VAD parameters for responsiveness
-      positiveSpeechThreshold: 0.5,  // Lower = more sensitive
-      negativeSpeechThreshold: 0.35,
-      redemptionFrames: 8,           // Frames to wait before ending speech
-      minSpeechFrames: 3,            // Minimum frames to consider as speech
-      preSpeechPadFrames: 10,        // Frames to include before speech start
-      
-      // Callbacks
-      onSpeechStart: () => {
-        if (CONFIG.debug) console.log('[VAD] Speech started');
-        updateStatus('active', 'Speaking...');
-      },
-      
-      onSpeechEnd: (audio) => {
-        // audio is Float32Array at 16kHz - perfect for Whisper!
-        if (CONFIG.debug) console.log(`[VAD] Speech ended, ${(audio.length / 16000).toFixed(2)}s audio`);
-        
-        // Send to Whisper for transcription
-        if (SubtitleState.isModelLoaded && audio.length > 1600) { // Min 0.1s
-          transcribeAudio(audio);
-        }
-      },
-      
-      onVADMisfire: () => {
-        if (CONFIG.debug) console.log('[VAD] Misfire (too short)');
-      }
-    });
-
-    // Start the VAD
-    SubtitleState.vadInstance.start();
-    SubtitleState.isListening = true;
-    
-    updateStatus('active', 'Listening...');
-    console.log('[Subtitles] VAD started - listening for speech');
-    
-  } catch (error) {
-    console.error('[Subtitles] Failed to start VAD:', error);
-    updateStatus('error', 'VAD failed: ' + error.message);
-    throw error;
+function calculateRMS(audioData) {
+  let sum = 0;
+  for (let i = 0; i < audioData.length; i++) {
+    sum += audioData[i] * audioData[i];
   }
+  return Math.sqrt(sum / audioData.length);
 }
 
 /**
@@ -200,22 +226,38 @@ async function startListening() {
 function stopListening() {
   if (!SubtitleState.isListening) return;
 
-  if (SubtitleState.vadInstance) {
-    SubtitleState.vadInstance.pause();
-    SubtitleState.vadInstance.destroy();
-    SubtitleState.vadInstance = null;
+  SubtitleState.isListening = false;
+
+  if (SubtitleState.processInterval) {
+    clearInterval(SubtitleState.processInterval);
+    SubtitleState.processInterval = null;
   }
 
-  SubtitleState.isListening = false;
-  SubtitleState.pendingAudio = null;
+  if (SubtitleState.processor) {
+    SubtitleState.processor.disconnect();
+    SubtitleState.processor = null;
+  }
+
+  if (SubtitleState.audioContext) {
+    SubtitleState.audioContext.close();
+    SubtitleState.audioContext = null;
+  }
+
+  if (SubtitleState.mediaStream) {
+    SubtitleState.mediaStream.getTracks().forEach(track => track.stop());
+    SubtitleState.mediaStream = null;
+  }
+
+  SubtitleState.audioBuffer = [];
   stopWordHighlight();
+  hideSubtitle();
   
   updateStatus('', '');
-  console.log('[Subtitles] Stopped listening');
+  console.log('[Subtitles] Stopped');
 }
 
 /**
- * Clean up transcription text
+ * Clean transcription text
  */
 function cleanTranscription(text) {
   let clean = text
@@ -226,19 +268,18 @@ function cleanTranscription(text) {
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Remove common Whisper hallucinations
+  // Filter Whisper hallucinations
   const hallucinations = [
     'thank you', 'thanks for watching', 'subscribe', 'like and subscribe',
-    'see you next time', 'bye', 'goodbye', 'you', 'the end', 'thanks'
+    'see you', 'bye', 'goodbye', 'you', 'the end', 'thanks', 'thank you for watching',
+    'please subscribe', 'don\'t forget to subscribe', ''
   ];
   
-  const lowerClean = clean.toLowerCase();
-  for (const h of hallucinations) {
-    if (lowerClean === h) {
-      return '';
-    }
+  if (hallucinations.includes(clean.toLowerCase())) {
+    return '';
   }
   
+  // Capitalize
   if (clean.length > 0) {
     clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   }
@@ -247,7 +288,7 @@ function cleanTranscription(text) {
 }
 
 /**
- * Display subtitle with word-by-word highlighting
+ * Display subtitle
  */
 function displaySubtitle(text) {
   const overlay = document.getElementById('subtitle-overlay');
@@ -260,12 +301,11 @@ function displaySubtitle(text) {
 
   const wordSpans = wrappedWords.map((word, index) => {
     const className = index === 0 ? 'word current' : 'word upcoming';
-    return `<span class="${className}" data-index="${index}">${escapeHtml(word)}</span>`;
+    return `<span class="${className}">${escapeHtml(word)}</span>`;
   }).join(' ');
 
   container.innerHTML = wordSpans;
   container.classList.add('new-text', 'has-highlight');
-  
   overlay.style.display = 'flex';
 
   SubtitleState.currentWords = wrappedWords;
@@ -276,18 +316,14 @@ function displaySubtitle(text) {
     clearTimeout(SubtitleState.displayTimeout);
   }
 
-  setTimeout(() => {
-    container.classList.remove('new-text');
-  }, 300);
+  setTimeout(() => container.classList.remove('new-text'), 300);
 
   const displayDuration = Math.max(
     CONFIG.maxDisplayDuration,
     wrappedWords.length * CONFIG.wordHighlightSpeed + 1000
   );
   
-  SubtitleState.displayTimeout = setTimeout(() => {
-    hideSubtitle();
-  }, displayDuration);
+  SubtitleState.displayTimeout = setTimeout(hideSubtitle, displayDuration);
 }
 
 function escapeHtml(text) {
@@ -297,23 +333,19 @@ function escapeHtml(text) {
 }
 
 function wrapTextToFitScreen(words) {
-  const screenWidth = window.innerWidth;
-  const maxCharsPerLine = Math.floor(screenWidth / 25);
-  
+  const maxChars = Math.floor(window.innerWidth / 25);
   const result = [];
-  let currentLength = 0;
+  let len = 0;
   
   for (const word of words) {
     if (result.length >= CONFIG.maxWordsPerLine * 2) break;
-    
-    if (currentLength + word.length > maxCharsPerLine && result.length > 0) {
-      currentLength = word.length;
+    if (len + word.length > maxChars && result.length > 0) {
+      len = word.length;
     } else {
-      currentLength += word.length + 1;
+      len += word.length + 1;
     }
     result.push(word);
   }
-  
   return result;
 }
 
@@ -325,10 +357,8 @@ function startWordHighlight() {
     if (!container) return;
     
     const words = container.querySelectorAll('.word');
-    
     words.forEach((word, index) => {
       word.classList.remove('current', 'spoken', 'upcoming');
-      
       if (index < SubtitleState.currentWordIndex) {
         word.classList.add('spoken');
       } else if (index === SubtitleState.currentWordIndex) {
@@ -339,7 +369,6 @@ function startWordHighlight() {
     });
     
     SubtitleState.currentWordIndex++;
-    
     if (SubtitleState.currentWordIndex > SubtitleState.currentWords.length) {
       stopWordHighlight();
     }
@@ -357,15 +386,11 @@ function hideSubtitle() {
   const overlay = document.getElementById('subtitle-overlay');
   const container = document.getElementById('subtitle-text');
   
-  if (overlay) {
-    overlay.style.display = 'none';
-  }
-  
+  if (overlay) overlay.style.display = 'none';
   if (container) {
     container.innerHTML = '';
     container.classList.remove('has-highlight');
   }
-  
   stopWordHighlight();
 }
 
@@ -374,26 +399,21 @@ function updateStatus(type, message) {
   if (!statusEl) return;
   
   statusEl.className = 'subtitle-status';
-  if (type) {
-    statusEl.classList.add(type);
-  }
+  if (type) statusEl.classList.add(type);
   statusEl.textContent = message;
 }
 
 /**
- * Toggle subtitles on/off
+ * Toggle subtitles
  */
 async function toggleSubtitles(enabled) {
   SubtitleState.enabled = enabled;
   
   if (enabled) {
     try {
-      // Initialize Whisper model if needed
       if (!SubtitleState.isModelLoaded) {
         await initializeWhisper();
       }
-      
-      // Start VAD listening if presentation is active
       if (window.presentationStarted) {
         await startListening();
       }
@@ -405,51 +425,37 @@ async function toggleSubtitles(enabled) {
     }
   } else {
     stopListening();
-    hideSubtitle();
   }
 }
 
 /**
- * Initialize subtitle system
+ * Initialize
  */
 function initSubtitles() {
   const toggle = document.getElementById('subtitlesEnabled');
   if (toggle) {
-    toggle.addEventListener('change', (e) => {
-      toggleSubtitles(e.target.checked);
-    });
+    toggle.addEventListener('change', (e) => toggleSubtitles(e.target.checked));
   }
   
-  // Expose functions globally for app.js
   window.subtitleSystem = {
     onPresentationStart: async () => {
       if (SubtitleState.enabled) {
-        try {
-          if (!SubtitleState.isModelLoaded) {
-            await initializeWhisper();
-          }
-          await startListening();
-        } catch (error) {
-          console.error('[Subtitles] Failed to start:', error);
-        }
+        if (!SubtitleState.isModelLoaded) await initializeWhisper();
+        await startListening();
       }
     },
-    onPresentationEnd: () => {
-      stopListening();
-      hideSubtitle();
-    },
+    onPresentationEnd: () => stopListening(),
     isEnabled: () => SubtitleState.enabled,
     toggle: toggleSubtitles
   };
   
-  console.log('[Subtitles] System initialized (Silero VAD + Whisper)');
+  console.log('[Subtitles] Initialized (simple mode)');
 }
 
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSubtitles);
 } else {
   initSubtitles();
 }
 
-export { initSubtitles, toggleSubtitles, SubtitleState };
+export { initSubtitles, toggleSubtitles };
