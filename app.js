@@ -1709,11 +1709,6 @@ if (isPresenter) {
     veTextOverlay.style.top = textPositionY + "%";
   }
   
-  // Volume slider
-  veVolumeSlider.addEventListener("input", function() {
-    veVolumeValue.textContent = this.value + "%";
-  });
-  
   // Text overlay toggle
   veTextEnabled.addEventListener("change", function() {
     veTextOptions.style.display = this.checked ? "block" : "none";
