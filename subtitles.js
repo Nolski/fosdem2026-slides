@@ -22,10 +22,10 @@ const SubtitleState = {
   mediaStream: null,
   workletNode: null,
   
-  // Sliding window buffer (15 seconds at 16kHz = 240,000 samples)
+  // Sliding window buffer (5 seconds at 16kHz = 80,000 samples)
   audioRingBuffer: null,
   ringBufferWriteIdx: 0,
-  ringBufferSize: 15 * 16000, // 15 seconds
+  ringBufferSize: 5 * 16000, // 5 seconds
   samplesReceived: 0, // Track how much audio we've received
   
   // Processing state
@@ -42,9 +42,9 @@ const CONFIG = {
   // Xenova model works with our transformers.js version
   modelName: 'Xenova/whisper-tiny.en',
   
-  // Sliding window parameters (from research)
-  windowSeconds: 15,        // Full context window
-  processIntervalMs: 1500,  // Process every 1.5 seconds
+  // Shorter window - 15s with silence may trigger no-speech detection
+  windowSeconds: 5,         // 5 second window
+  processIntervalMs: 2000,  // Process every 2 seconds
   minAudioEnergy: 0.0001,   // Much lower threshold - browser mic values are very small
   stableDelaySeconds: 1,    // Only finalize text older than this
   
@@ -177,13 +177,21 @@ async function initializeWhisper() {
     console.log(`[Subtitles] Model loaded in ${Math.round(loadTime)}ms on ${device}`);
     updateStatus('', '');
     
-    // Warm up the model with a dummy inference
-    if (useWebGPU) {
-      console.log('[Subtitles] Warming up WebGPU...');
-      const dummy = new Float32Array(16000); // 1 second of silence
-      await SubtitleState.transcriber(dummy, { return_timestamps: false });
-      console.log('[Subtitles] Warmup complete');
+    // Warm up the model with a test tone to verify it works
+    console.log('[Subtitles] Warming up with test tone...');
+    // Generate a 1-second test tone (440Hz sine wave)
+    const testTone = new Float32Array(16000);
+    for (let i = 0; i < 16000; i++) {
+      testTone[i] = 0.5 * Math.sin(2 * Math.PI * 440 * i / 16000);
     }
+    const warmupResult = await SubtitleState.transcriber(testTone);
+    console.log('[Subtitles] Warmup result:', warmupResult);
+    
+    // Test with actual speech sample - "hello" approximation
+    // This helps verify the model can output ANY text
+    console.log('[Subtitles] Testing basic transcription...');
+    const testResult = await SubtitleState.transcriber(testTone, { language: 'english' });
+    console.log('[Subtitles] Test result:', testResult);
     
     return true;
   } catch (error) {
@@ -328,8 +336,8 @@ async function processAudioWindow() {
   // Read last 15 seconds from ring buffer
   const audioWindow = readFromRingBuffer(CONFIG.windowSeconds);
   
-  // Wait for at least 3 seconds of audio before starting to process
-  const minSamplesNeeded = 3 * 16000; // 3 seconds at 16kHz
+  // Wait for at least 2 seconds of audio before starting to process
+  const minSamplesNeeded = 2 * 16000; // 2 seconds at 16kHz
   if (SubtitleState.samplesReceived < minSamplesNeeded) {
     if (CONFIG.debug) {
       console.log(`[Subtitles] Waiting for more audio: ${SubtitleState.samplesReceived}/${minSamplesNeeded} samples`);
@@ -367,16 +375,9 @@ async function processAudioWindow() {
     // Find peak and normalize to -1 to 1 range
     const normalizedAudio = normalizeAudio(audioWindow);
     
-    // Transcribe the audio window
-    // Simple options for tiny model
-    const result = await SubtitleState.transcriber(normalizedAudio, {
-      return_timestamps: 'word',
-      language: 'english',
-      task: 'transcribe',
-      // Be more lenient with speech detection
-      no_speech_threshold: 0.9,
-      compression_ratio_threshold: 3.0
-    });
+    // Transcribe the audio window - minimal options
+    // First try with no options at all
+    const result = await SubtitleState.transcriber(normalizedAudio);
 
     const processingTime = performance.now() - startTime;
     
