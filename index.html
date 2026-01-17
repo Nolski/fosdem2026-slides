@@ -395,18 +395,10 @@
               </select>
             </div>
             
-            <div class="ve-control-row ve-three-col">
+            <div class="ve-control-row ve-four-col">
               <div class="ve-control-group">
-                <label for="ve-font-size">Size</label>
-                <select id="ve-font-size">
-                  <option value="24">24px</option>
-                  <option value="36">36px</option>
-                  <option value="48" selected>48px</option>
-                  <option value="64">64px</option>
-                  <option value="72">72px</option>
-                  <option value="96">96px</option>
-                  <option value="120">120px</option>
-                </select>
+                <label for="ve-font-size">Size (px)</label>
+                <input type="number" id="ve-font-size" min="12" max="200" value="48" step="1">
               </div>
               
               <div class="ve-control-group">
@@ -415,9 +407,14 @@
               </div>
               
               <div class="ve-control-group">
+                <label for="ve-border-size">Border</label>
+                <input type="number" id="ve-border-size" min="0" max="10" value="3" step="1">
+              </div>
+              
+              <div class="ve-control-group">
                 <label class="ve-checkbox-label">
                   <input type="checkbox" id="ve-text-border" checked>
-                  <span>Border</span>
+                  <span>On</span>
                 </label>
               </div>
             </div>

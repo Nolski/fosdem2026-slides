@@ -1390,6 +1390,7 @@ if (isPresenter) {
   var veFontSize = document.getElementById("ve-font-size");
   var veFontColor = document.getElementById("ve-font-color");
   var veTextBorder = document.getElementById("ve-text-border");
+  var veBorderSize = document.getElementById("ve-border-size");
   var veTextX = document.getElementById("ve-text-x");
   var veTextY = document.getElementById("ve-text-y");
   var veTextXValue = document.getElementById("ve-text-x-value");
@@ -1407,12 +1408,47 @@ if (isPresenter) {
   var ffmpeg = null;
   var ffmpegLoaded = false;
   var fontLoaded = false;
+  var webFontsLoaded = false;
   var currentEditVideoSrc = null;
   var currentEditVideoBlob = null;
   var textPositionX = 50; // percentage
   var textPositionY = 50; // percentage
   var videoWidth = 1920; // actual video width
   var videoHeight = 1080; // actual video height
+  
+  // Map font filenames to CSS font-family names
+  var fontFamilyMap = {
+    "Roboto-Bold.ttf": "Roboto-Bold",
+    "Roboto-Regular.ttf": "Roboto-Regular",
+    "OpenSans-Bold.ttf": "OpenSans-Bold",
+    "Lato-Bold.ttf": "Lato-Bold",
+    "Montserrat-Bold.ttf": "Montserrat-Bold",
+    "Montserrat-Regular.ttf": "Montserrat-Regular",
+    "SourceSansPro-Bold.ttf": "SourceSansPro-Bold",
+    "Oswald-Bold.ttf": "Oswald-Bold",
+    "Pacifico-Regular.ttf": "Pacifico-Regular"
+  };
+  
+  // Load fonts for web preview
+  function loadWebFonts() {
+    if (webFontsLoaded) return;
+    
+    var style = document.createElement("style");
+    var css = "";
+    
+    for (var filename in fontFamilyMap) {
+      var familyName = fontFamilyMap[filename];
+      css += "@font-face { font-family: '" + familyName + "'; src: url('lib/fonts/" + filename + "'); }\n";
+    }
+    
+    style.textContent = css;
+    document.head.appendChild(style);
+    webFontsLoaded = true;
+    console.log("Web fonts loaded for preview");
+  }
+  
+  // Load web fonts immediately
+  loadWebFonts();
   
   // FFmpeg loading - uses local files
   async function loadFFmpeg() {
@@ -1561,6 +1597,7 @@ if (isPresenter) {
     veFontSize.value = "48";
     veFontColor.value = "#ffffff";
     veTextBorder.checked = true;
+    veBorderSize.value = "3";
     textPositionX = 50;
     textPositionY = 50;
     veTextX.value = 50;
@@ -1605,9 +1642,11 @@ if (isPresenter) {
   // Update text overlay preview
   function updateTextOverlayPreview() {
     var text = veTextInput.value || "Sample Text";
-    var fontSize = parseInt(veFontSize.value);
+    var fontFile = veFontFamily.value;
+    var fontSize = parseInt(veFontSize.value) || 48;
     var color = veFontColor.value;
     var hasBorder = veTextBorder.checked;
+    var borderWidth = parseInt(veBorderSize.value) || 3;
     
     // Calculate scale factor based on actual video vs preview size
     var previewRect = vePreviewVideo.getBoundingClientRect();
@@ -1617,13 +1656,26 @@ if (isPresenter) {
     // Scale font size for preview
     var previewFontSize = Math.max(10, Math.round(fontSize * scaleFactor));
     
+    // Get CSS font family name from the map
+    var cssFontFamily = fontFamilyMap[fontFile] || "sans-serif";
+    
     veTextOverlayContent.textContent = text;
+    veTextOverlayContent.style.fontFamily = "'" + cssFontFamily + "', sans-serif";
     veTextOverlayContent.style.fontSize = previewFontSize + "px";
     veTextOverlayContent.style.color = color;
     
-    // Apply or remove text shadow (border effect)
-    if (hasBorder) {
-      veTextOverlayContent.style.textShadow = "2px 2px 0 black, -2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 0 2px 0 black, 0 -2px 0 black, 2px 0 0 black, -2px 0 0 black";
+    // Apply or remove text shadow (border effect) - scale border with preview
+    if (hasBorder && borderWidth > 0) {
+      var scaledBorder = Math.max(1, Math.round(borderWidth * scaleFactor));
+      veTextOverlayContent.style.textShadow = 
+        scaledBorder + "px " + scaledBorder + "px 0 black, " +
+        (-scaledBorder) + "px " + (-scaledBorder) + "px 0 black, " +
+        scaledBorder + "px " + (-scaledBorder) + "px 0 black, " +
+        (-scaledBorder) + "px " + scaledBorder + "px 0 black, " +
+        "0 " + scaledBorder + "px 0 black, " +
+        "0 " + (-scaledBorder) + "px 0 black, " +
+        scaledBorder + "px 0 0 black, " +
+        (-scaledBorder) + "px 0 0 black";
     } else {
       veTextOverlayContent.style.textShadow = "none";
     }
@@ -1648,12 +1700,13 @@ if (isPresenter) {
     }
   });
   
-  // Text input changes
+  // Text input changes - all trigger preview update
   veTextInput.addEventListener("input", updateTextOverlayPreview);
   veFontFamily.addEventListener("change", updateTextOverlayPreview);
-  veFontSize.addEventListener("change", updateTextOverlayPreview);
+  veFontSize.addEventListener("input", updateTextOverlayPreview);
   veFontColor.addEventListener("input", updateTextOverlayPreview);
   veTextBorder.addEventListener("change", updateTextOverlayPreview);
+  veBorderSize.addEventListener("input", updateTextOverlayPreview);
   
   // Position sliders
   veTextX.addEventListener("input", function() {
@@ -1795,9 +1848,10 @@ if (isPresenter) {
           .replace(/\]/g, "\\]");
         
         var fontFile = veFontFamily.value;
-        var fontSize = veFontSize.value;
+        var fontSize = parseInt(veFontSize.value) || 48;
         var fontColor = hexToFFmpegColor(veFontColor.value);
         var hasBorder = veTextBorder.checked;
+        var borderWidth = parseInt(veBorderSize.value) || 3;
         
         // Calculate position based on percentage
         // x and y are where to place the text, accounting for text dimensions
@@ -1813,8 +1867,8 @@ if (isPresenter) {
         drawtext += ":y=" + yExpr;
         
         // Add border if enabled
-        if (hasBorder) {
-          drawtext += ":borderw=3:bordercolor=black";
+        if (hasBorder && borderWidth > 0) {
+          drawtext += ":borderw=" + borderWidth + ":bordercolor=black";
         }
         
         videoFilters.push(drawtext);

@@ -1394,6 +1394,10 @@ body.present-mode #controls {
   grid-template-columns: 1fr 1fr 80px;
 }
 
+.ve-control-row.ve-four-col {
+  grid-template-columns: 1fr 1fr 1fr 60px;
+}
+
 .ve-control-group input[type="text"],
 .ve-control-group select {
   padding: 10px 12px;
