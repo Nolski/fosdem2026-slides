@@ -120,6 +120,11 @@
                 <input type="checkbox" id="slide-loop"> Loop media
               </label>
             </div>
+            <div class="form-group" id="edit-video-group" style="display: none;">
+              <button type="button" id="editVideoBtn" class="edit-video-btn">
+                <span class="btn-icon">🎬</span> Edit Video
+              </button>
+            </div>
             <div class="form-actions">
               <button type="submit" class="save-btn">Save</button>
               <button type="button" id="deleteSlideBtn" class="delete-btn">Delete</button>
@@ -151,6 +156,14 @@
               <label class="checkbox-label">
                 <input type="checkbox" id="audio-loop"> Loop
               </label>
+            </div>
+            <div class="form-group" id="audio-volume-group">
+              <label for="audio-volume">Volume</label>
+              <div class="audio-volume-row">
+                <input type="range" id="audio-volume" min="0" max="200" value="100">
+                <span id="audio-volume-value">100%</span>
+              </div>
+              <p class="audio-volume-help">Adjust playback volume (0-200%)</p>
             </div>
             <div class="form-actions">
               <button type="submit" class="save-btn">Save</button>
@@ -304,6 +317,163 @@
     </div>
   </div>
 
+  <!-- Video Edit Modal -->
+  <div id="video-edit-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content video-edit-modal">
+      <div class="modal-header">
+        <h2>🎬 Edit Video</h2>
+        <button id="video-edit-close" class="modal-close-btn">&times;</button>
+      </div>
+      
+      <!-- Loading FFmpeg -->
+      <div id="ve-loading-ffmpeg" class="ve-state">
+        <div class="vg-loading">
+          <div class="vg-spinner"></div>
+          <h3>Loading FFmpeg...</h3>
+          <p id="ve-ffmpeg-status">Initializing video editor...</p>
+        </div>
+      </div>
+      
+      <!-- Editor State -->
+      <div id="ve-editor-state" class="ve-state" style="display: none;">
+        <div class="ve-preview-section">
+          <video id="ve-preview-video" controls></video>
+        </div>
+        
+        <div class="ve-controls">
+          <!-- Volume Control -->
+          <div class="ve-control-group">
+            <label>
+              <span class="ve-label-icon">🔊</span> Volume
+            </label>
+            <div class="ve-slider-row">
+              <input type="range" id="ve-volume" min="0" max="200" value="100">
+              <span id="ve-volume-value">100%</span>
+            </div>
+          </div>
+          
+          <!-- Text Overlay Section -->
+          <div class="ve-section-header">
+            <span class="ve-label-icon">✏️</span> Text Overlay
+            <label class="ve-toggle-label">
+              <input type="checkbox" id="ve-text-enabled">
+              <span>Enable</span>
+            </label>
+          </div>
+          
+          <div id="ve-text-options" class="ve-text-options" style="display: none;">
+            <div class="ve-control-group">
+              <label for="ve-text-input">Text</label>
+              <input type="text" id="ve-text-input" placeholder="Enter overlay text...">
+            </div>
+            
+            <div class="ve-control-row">
+              <div class="ve-control-group">
+                <label for="ve-font-family">Font</label>
+                <select id="ve-font-family">
+                  <option value="Arial">Arial</option>
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Courier New">Courier New</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Impact">Impact</option>
+                  <option value="Comic Sans MS">Comic Sans MS</option>
+                </select>
+              </div>
+              
+              <div class="ve-control-group">
+                <label for="ve-font-size">Size</label>
+                <select id="ve-font-size">
+                  <option value="24">24px</option>
+                  <option value="32">32px</option>
+                  <option value="48" selected>48px</option>
+                  <option value="64">64px</option>
+                  <option value="72">72px</option>
+                  <option value="96">96px</option>
+                  <option value="128">128px</option>
+                </select>
+              </div>
+              
+              <div class="ve-control-group">
+                <label for="ve-font-color">Color</label>
+                <input type="color" id="ve-font-color" value="#ffffff">
+              </div>
+            </div>
+            
+            <div class="ve-control-group">
+              <label>Position</label>
+              <div class="ve-position-grid">
+                <button type="button" class="ve-pos-btn" data-pos="top-left">↖</button>
+                <button type="button" class="ve-pos-btn" data-pos="top-center">↑</button>
+                <button type="button" class="ve-pos-btn" data-pos="top-right">↗</button>
+                <button type="button" class="ve-pos-btn" data-pos="middle-left">←</button>
+                <button type="button" class="ve-pos-btn active" data-pos="middle-center">●</button>
+                <button type="button" class="ve-pos-btn" data-pos="middle-right">→</button>
+                <button type="button" class="ve-pos-btn" data-pos="bottom-left">↙</button>
+                <button type="button" class="ve-pos-btn" data-pos="bottom-center">↓</button>
+                <button type="button" class="ve-pos-btn" data-pos="bottom-right">↘</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button id="ve-cancel-btn" class="modal-btn cancel">Cancel</button>
+          <button id="ve-apply-btn" class="modal-btn primary">
+            <span class="btn-icon">⚙️</span> Apply & Download
+          </button>
+        </div>
+      </div>
+      
+      <!-- Processing State -->
+      <div id="ve-processing-state" class="ve-state" style="display: none;">
+        <div class="vg-loading">
+          <div class="vg-spinner"></div>
+          <h3>Processing Video...</h3>
+          <p id="ve-processing-status">This may take a few minutes depending on video length.</p>
+          <div class="ve-progress-bar">
+            <div id="ve-progress-fill" class="ve-progress-fill"></div>
+          </div>
+          <span id="ve-progress-text">0%</span>
+        </div>
+      </div>
+      
+      <!-- Complete State -->
+      <div id="ve-complete-state" class="ve-state" style="display: none;">
+        <div class="ve-complete">
+          <div class="modal-icon">✅</div>
+          <h3>Video Processed!</h3>
+          <p>Your edited video has been downloaded.</p>
+          <p class="ve-complete-instructions">Replace the original video file with the downloaded one to apply changes.</p>
+          <div class="vg-form-group">
+            <label>Original file location:</label>
+            <input type="text" id="ve-original-path" readonly>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="ve-done-btn" class="modal-btn primary">Done</button>
+        </div>
+      </div>
+      
+      <!-- Error State -->
+      <div id="ve-error-state" class="ve-state" style="display: none;">
+        <div class="vg-error">
+          <div class="vg-error-icon">❌</div>
+          <h3>Processing Failed</h3>
+          <p id="ve-error-message">An error occurred while processing the video.</p>
+        </div>
+        <div class="modal-actions">
+          <button id="ve-error-retry-btn" class="modal-btn primary">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FFmpeg.wasm for video/audio editing -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+  <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
+  
   <script src="app.js"></script>
 </body>
 </html>

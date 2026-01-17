@@ -575,6 +575,12 @@ if (isPresenter) {
     placeholderGroup.style.display = type === "placeholder" ? "flex" : "none";
     loopGroup.style.display = type === "placeholder" ? "none" : "flex";
     zoompanGroup.style.display = type === "image" ? "flex" : "none";
+    
+    // Show Edit Video button only for video slides
+    var editVideoGroup = document.getElementById("edit-video-group");
+    if (editVideoGroup) {
+      editVideoGroup.style.display = type === "video" ? "flex" : "none";
+    }
   }
   
   slideTypeSelect.addEventListener("change", function() { updateFormVisibility(this.value); });
@@ -1350,7 +1356,384 @@ if (isPresenter) {
         hideVideoGenModal();
       } else if (addToDeckModal.style.display === "flex") {
         addToDeckModal.style.display = "none";
+      } else if (videoEditModal && videoEditModal.style.display === "flex") {
+        hideVideoEditModal();
       }
     }
   });
+
+  // ============================================
+  // VIDEO EDITING FEATURE (FFmpeg.wasm)
+  // ============================================
+  
+  var videoEditModal = document.getElementById("video-edit-modal");
+  var videoEditCloseBtn = document.getElementById("video-edit-close");
+  var veLoadingFFmpeg = document.getElementById("ve-loading-ffmpeg");
+  var veEditorState = document.getElementById("ve-editor-state");
+  var veProcessingState = document.getElementById("ve-processing-state");
+  var veCompleteState = document.getElementById("ve-complete-state");
+  var veErrorState = document.getElementById("ve-error-state");
+  var veFFmpegStatus = document.getElementById("ve-ffmpeg-status");
+  var veProcessingStatus = document.getElementById("ve-processing-status");
+  var veProgressFill = document.getElementById("ve-progress-fill");
+  var veProgressText = document.getElementById("ve-progress-text");
+  var veErrorMessage = document.getElementById("ve-error-message");
+  var veOriginalPath = document.getElementById("ve-original-path");
+  
+  var vePreviewVideo = document.getElementById("ve-preview-video");
+  var veVolumeSlider = document.getElementById("ve-volume");
+  var veVolumeValue = document.getElementById("ve-volume-value");
+  var veTextEnabled = document.getElementById("ve-text-enabled");
+  var veTextOptions = document.getElementById("ve-text-options");
+  var veTextInput = document.getElementById("ve-text-input");
+  var veFontFamily = document.getElementById("ve-font-family");
+  var veFontSize = document.getElementById("ve-font-size");
+  var veFontColor = document.getElementById("ve-font-color");
+  var veApplyBtn = document.getElementById("ve-apply-btn");
+  var veCancelBtn = document.getElementById("ve-cancel-btn");
+  var veDoneBtn = document.getElementById("ve-done-btn");
+  var veErrorRetryBtn = document.getElementById("ve-error-retry-btn");
+  var editVideoBtn = document.getElementById("editVideoBtn");
+  var editVideoGroup = document.getElementById("edit-video-group");
+  
+  var ffmpeg = null;
+  var ffmpegLoaded = false;
+  var currentEditVideoSrc = null;
+  var currentEditVideoBlob = null;
+  var selectedTextPosition = "middle-center";
+  
+  // FFmpeg loading
+  async function loadFFmpeg() {
+    if (ffmpegLoaded && ffmpeg) return ffmpeg;
+    
+    try {
+      veFFmpegStatus.textContent = "Loading FFmpeg core...";
+      
+      var FFmpegWASM = FFmpeg;
+      ffmpeg = new FFmpegWASM.FFmpeg();
+      
+      ffmpeg.on("log", function(info) {
+        console.log("FFmpeg log:", info.message);
+      });
+      
+      ffmpeg.on("progress", function(info) {
+        var progress = Math.round(info.progress * 100);
+        veProgressFill.style.width = progress + "%";
+        veProgressText.textContent = progress + "%";
+      });
+      
+      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly...";
+      
+      await ffmpeg.load({
+        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm"
+      });
+      
+      ffmpegLoaded = true;
+      return ffmpeg;
+    } catch (error) {
+      console.error("Failed to load FFmpeg:", error);
+      throw error;
+    }
+  }
+  
+  // Show/hide video edit modal
+  function showVideoEditModal(videoSrc) {
+    currentEditVideoSrc = videoSrc;
+    videoEditModal.style.display = "flex";
+    setVideoEditState("loading");
+    
+    // Reset controls
+    veVolumeSlider.value = 100;
+    veVolumeValue.textContent = "100%";
+    veTextEnabled.checked = false;
+    veTextOptions.style.display = "none";
+    veTextInput.value = "";
+    veFontFamily.value = "Arial";
+    veFontSize.value = "48";
+    veFontColor.value = "#ffffff";
+    selectedTextPosition = "middle-center";
+    updatePositionButtons();
+    
+    // Load video preview
+    vePreviewVideo.src = videoSrc;
+    
+    // Load FFmpeg
+    loadFFmpeg().then(function() {
+      setVideoEditState("editor");
+    }).catch(function(error) {
+      veErrorMessage.textContent = "Failed to load FFmpeg: " + error.message;
+      setVideoEditState("error");
+    });
+  }
+  
+  function hideVideoEditModal() {
+    videoEditModal.style.display = "none";
+    vePreviewVideo.pause();
+    vePreviewVideo.src = "";
+    currentEditVideoSrc = null;
+    currentEditVideoBlob = null;
+  }
+  
+  function setVideoEditState(state) {
+    veLoadingFFmpeg.style.display = state === "loading" ? "block" : "none";
+    veEditorState.style.display = state === "editor" ? "block" : "none";
+    veProcessingState.style.display = state === "processing" ? "block" : "none";
+    veCompleteState.style.display = state === "complete" ? "block" : "none";
+    veErrorState.style.display = state === "error" ? "block" : "none";
+  }
+  
+  function updatePositionButtons() {
+    document.querySelectorAll(".ve-pos-btn").forEach(function(btn) {
+      btn.classList.toggle("active", btn.dataset.pos === selectedTextPosition);
+    });
+  }
+  
+  // Position button clicks
+  document.querySelectorAll(".ve-pos-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      selectedTextPosition = this.dataset.pos;
+      updatePositionButtons();
+    });
+  });
+  
+  // Volume slider
+  veVolumeSlider.addEventListener("input", function() {
+    veVolumeValue.textContent = this.value + "%";
+  });
+  
+  // Text overlay toggle
+  veTextEnabled.addEventListener("change", function() {
+    veTextOptions.style.display = this.checked ? "block" : "none";
+  });
+  
+  // Close button
+  videoEditCloseBtn.addEventListener("click", hideVideoEditModal);
+  veCancelBtn.addEventListener("click", hideVideoEditModal);
+  veDoneBtn.addEventListener("click", hideVideoEditModal);
+  veErrorRetryBtn.addEventListener("click", function() {
+    setVideoEditState("editor");
+  });
+  
+  // Click outside to close
+  videoEditModal.addEventListener("click", function(e) {
+    if (e.target === videoEditModal) {
+      hideVideoEditModal();
+    }
+  });
+  
+  // Get text position coordinates for FFmpeg drawtext
+  function getTextPosition(position, fontSize) {
+    var padding = 20;
+    var positions = {
+      "top-left": { x: padding, y: padding },
+      "top-center": { x: "(w-text_w)/2", y: padding },
+      "top-right": { x: "w-text_w-" + padding, y: padding },
+      "middle-left": { x: padding, y: "(h-text_h)/2" },
+      "middle-center": { x: "(w-text_w)/2", y: "(h-text_h)/2" },
+      "middle-right": { x: "w-text_w-" + padding, y: "(h-text_h)/2" },
+      "bottom-left": { x: padding, y: "h-text_h-" + padding },
+      "bottom-center": { x: "(w-text_w)/2", y: "h-text_h-" + padding },
+      "bottom-right": { x: "w-text_w-" + padding, y: "h-text_h-" + padding }
+    };
+    return positions[position] || positions["middle-center"];
+  }
+  
+  // Convert hex color to FFmpeg format
+  function hexToFFmpegColor(hex) {
+    // FFmpeg uses format like 0xRRGGBB or white, black, etc
+    return hex.replace("#", "0x");
+  }
+  
+  // Apply edits and download
+  veApplyBtn.addEventListener("click", async function() {
+    if (!ffmpeg || !currentEditVideoSrc) return;
+    
+    setVideoEditState("processing");
+    veProgressFill.style.width = "0%";
+    veProgressText.textContent = "0%";
+    veProcessingStatus.textContent = "Fetching video file...";
+    
+    try {
+      // Fetch the video file
+      var response = await fetch(currentEditVideoSrc);
+      var videoData = await response.arrayBuffer();
+      
+      // Determine input file extension
+      var inputExt = currentEditVideoSrc.split('.').pop().toLowerCase();
+      if (inputExt === "m4v") inputExt = "mp4"; // Treat m4v as mp4
+      var inputFile = "input." + inputExt;
+      var outputFile = "output.mp4";
+      
+      veProcessingStatus.textContent = "Writing video to FFmpeg...";
+      
+      // Write input file to FFmpeg
+      await ffmpeg.writeFile(inputFile, new Uint8Array(videoData));
+      
+      veProcessingStatus.textContent = "Processing video...";
+      
+      // Build FFmpeg command
+      var filters = [];
+      var audioFilters = [];
+      
+      // Volume adjustment
+      var volume = parseInt(veVolumeSlider.value) / 100;
+      if (volume !== 1) {
+        audioFilters.push("volume=" + volume);
+      }
+      
+      // Text overlay
+      if (veTextEnabled.checked && veTextInput.value.trim()) {
+        var text = veTextInput.value.trim().replace(/'/g, "\\'").replace(/:/g, "\\:");
+        var fontFamily = veFontFamily.value;
+        var fontSize = veFontSize.value;
+        var fontColor = hexToFFmpegColor(veFontColor.value);
+        var pos = getTextPosition(selectedTextPosition, fontSize);
+        
+        // Build drawtext filter
+        var drawtext = "drawtext=text='" + text + "'";
+        drawtext += ":fontsize=" + fontSize;
+        drawtext += ":fontcolor=" + fontColor;
+        drawtext += ":x=" + pos.x;
+        drawtext += ":y=" + pos.y;
+        drawtext += ":borderw=2:bordercolor=black";
+        
+        filters.push(drawtext);
+      }
+      
+      // Build command arguments
+      var args = ["-i", inputFile];
+      
+      // Add filters if any
+      if (filters.length > 0 || audioFilters.length > 0) {
+        var filterComplex = [];
+        if (filters.length > 0) {
+          filterComplex.push(filters.join(","));
+        }
+        if (audioFilters.length > 0) {
+          args.push("-af", audioFilters.join(","));
+        }
+        if (filters.length > 0) {
+          args.push("-vf", filters.join(","));
+        }
+      } else if (audioFilters.length > 0) {
+        args.push("-af", audioFilters.join(","));
+      }
+      
+      // Output settings
+      args.push("-c:v", "libx264");
+      args.push("-preset", "fast");
+      args.push("-crf", "23");
+      args.push("-c:a", "aac");
+      args.push("-b:a", "128k");
+      args.push("-movflags", "+faststart");
+      args.push(outputFile);
+      
+      console.log("FFmpeg command:", args.join(" "));
+      
+      // Run FFmpeg
+      await ffmpeg.exec(args);
+      
+      veProcessingStatus.textContent = "Reading output file...";
+      
+      // Read output file
+      var outputData = await ffmpeg.readFile(outputFile);
+      currentEditVideoBlob = new Blob([outputData.buffer], { type: "video/mp4" });
+      
+      // Create download
+      var timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      var originalFilename = currentEditVideoSrc.split('/').pop().replace(/\.[^/.]+$/, "");
+      var downloadFilename = originalFilename + "-edited-" + timestamp + ".mp4";
+      
+      var downloadUrl = URL.createObjectURL(currentEditVideoBlob);
+      var downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = downloadFilename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadUrl);
+      
+      // Clean up FFmpeg files
+      await ffmpeg.deleteFile(inputFile);
+      await ffmpeg.deleteFile(outputFile);
+      
+      // Show complete state
+      veOriginalPath.value = currentEditVideoSrc;
+      setVideoEditState("complete");
+      
+    } catch (error) {
+      console.error("Video processing error:", error);
+      veErrorMessage.textContent = "Error processing video: " + error.message;
+      setVideoEditState("error");
+    }
+  });
+  
+  // Edit Video button click
+  editVideoBtn.addEventListener("click", function() {
+    if (selectedSlideIndex < 0) return;
+    var slide = slides[selectedSlideIndex];
+    if (slide.type !== "video" || !slide.src) return;
+    showVideoEditModal(slide.src);
+  });
+
+  // ============================================
+  // AUDIO VOLUME CONTROL
+  // ============================================
+  
+  var audioVolumeSlider = document.getElementById("audio-volume");
+  var audioVolumeValue = document.getElementById("audio-volume-value");
+  
+  // Update volume display
+  audioVolumeSlider.addEventListener("input", function() {
+    audioVolumeValue.textContent = this.value + "%";
+  });
+  
+  // Override selectAudioTrack to include volume
+  var originalSelectAudioTrack = selectAudioTrack;
+  selectAudioTrack = function(index) {
+    originalSelectAudioTrack(index);
+    
+    // Load volume setting
+    var track = audioTracks[index];
+    var volume = track.volume !== undefined ? track.volume : 100;
+    audioVolumeSlider.value = volume;
+    audioVolumeValue.textContent = volume + "%";
+  };
+  
+  // Override audio form submit to include volume
+  var originalAudioFormSubmit = audioForm.onsubmit;
+  audioForm.addEventListener("submit", function(e) {
+    // Save volume to track before the original handler
+    if (selectedAudioIndex >= 0) {
+      audioTracks[selectedAudioIndex].volume = parseInt(audioVolumeSlider.value);
+    }
+  });
+  
+  // Override updateAudio to apply volume during playback
+  var originalUpdateAudio = updateAudio;
+  updateAudio = function() {
+    for (var i = 0; i < audioTracks.length; i++) {
+      var track = audioTracks[i];
+      if (currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide) {
+        if (!activeAudioElements[i]) {
+          var el = new Audio(track.src);
+          el.loop = !!track.loop;
+          // Apply volume
+          var volume = track.volume !== undefined ? track.volume : 100;
+          el.volume = Math.min(1, volume / 100);
+          activeAudioElements[i] = el;
+          if (!paused) el.play().catch(function(){});
+        } else {
+          // Update volume if track settings changed
+          var volume = track.volume !== undefined ? track.volume : 100;
+          activeAudioElements[i].volume = Math.min(1, volume / 100);
+        }
+      } else if (activeAudioElements[i]) {
+        activeAudioElements[i].pause();
+        activeAudioElements[i].currentTime = 0;
+        delete activeAudioElements[i];
+      }
+    }
+  };
 }
