@@ -1402,12 +1402,20 @@ if (isPresenter) {
   var currentEditVideoBlob = null;
   var selectedTextPosition = "middle-center";
   
+  // Helper to convert URL to blob URL (avoids CORS issues with workers)
+  async function toBlobURL(url, mimeType) {
+    var response = await fetch(url);
+    var blob = await response.blob();
+    var blobWithType = new Blob([blob], { type: mimeType });
+    return URL.createObjectURL(blobWithType);
+  }
+  
   // FFmpeg loading
   async function loadFFmpeg() {
     if (ffmpegLoaded && ffmpeg) return ffmpeg;
     
     try {
-      veFFmpegStatus.textContent = "Loading FFmpeg core...";
+      veFFmpegStatus.textContent = "Loading FFmpeg library...";
       
       // FFmpeg.wasm UMD build exposes FFmpegWASM global with FFmpeg class
       if (typeof FFmpegWASM === 'undefined' || !FFmpegWASM.FFmpeg) {
@@ -1427,11 +1435,25 @@ if (isPresenter) {
         veProgressText.textContent = progress + "%";
       });
       
-      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly (this may take a moment)...";
+      veFFmpegStatus.textContent = "Downloading FFmpeg core (~30MB, please wait)...";
+      
+      // Convert CDN URLs to blob URLs to avoid CORS issues with workers
+      var coreBaseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+      var ffmpegBaseURL = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd";
+      
+      // Download all required files in parallel
+      var [coreURL, wasmURL, workerURL] = await Promise.all([
+        toBlobURL(coreBaseURL + "/ffmpeg-core.js", "text/javascript"),
+        toBlobURL(coreBaseURL + "/ffmpeg-core.wasm", "application/wasm"),
+        toBlobURL(ffmpegBaseURL + "/814.ffmpeg.js", "text/javascript")
+      ]);
+      
+      veFFmpegStatus.textContent = "Initializing FFmpeg...";
       
       await ffmpeg.load({
-        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
-        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm"
+        coreURL: coreURL,
+        wasmURL: wasmURL,
+        classWorkerURL: workerURL
       });
       
       ffmpegLoaded = true;
