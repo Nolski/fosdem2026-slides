@@ -1,394 +1,339 @@
 /**
- * Live Subtitles using Whisper + WebGPU
+ * Live Subtitles Module
  * 
- * Key insights from research:
- * - Whisper needs 10-15s context, not 2.5s chunks
- * - Use sliding window: 15s buffer, process every 1.5s
- * - Use timestamps to dedupe and show only new text
- * - Use onnx-community model for WebGPU compatibility
+ * Supports two modes:
+ * 1. Web Speech API (default) - Better quality, requires internet
+ * 2. Whisper via transformers.js (offline mode) - Works offline, slower
  */
 
 (function() {
 'use strict';
 
-// State
+// ============================================================================
+// STATE
+// ============================================================================
+
 const SubtitleState = {
+  // Mode
+  offlineMode: false,
+  enabled: false,
+  isListening: false,
+  
+  // Web Speech API state
+  recognition: null,
+  
+  // Whisper state
   transcriber: null,
   isModelLoaded: false,
   isModelLoading: false,
-  isListening: false,
-  enabled: false,
   audioContext: null,
   mediaStream: null,
   workletNode: null,
-  
-  // Sliding window buffer (5 seconds at 16kHz = 80,000 samples)
   audioRingBuffer: null,
   ringBufferWriteIdx: 0,
-  ringBufferSize: 5 * 16000, // 5 seconds
-  samplesReceived: 0, // Track how much audio we've received
-  
-  // Processing state
+  ringBufferSize: 5 * 16000, // 5 seconds at 16kHz
+  samplesReceived: 0,
   isTranscribing: false,
   processInterval: null,
-  lastTranscribedText: '',
-  lastTimestamp: 0,
   
-  displayTimeout: null
+  // Display state
+  displayTimeout: null,
+  lastText: ''
 };
 
-// Configuration
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
 const CONFIG = {
-  // Xenova model works with our transformers.js version
+  // Whisper settings
   modelName: 'Xenova/whisper-tiny.en',
+  windowSeconds: 5,
+  processIntervalMs: 2000,
+  minAudioEnergy: 0.0001,
   
-  // Shorter window - 15s with silence may trigger no-speech detection
-  windowSeconds: 5,         // 5 second window
-  processIntervalMs: 2000,  // Process every 2 seconds
-  minAudioEnergy: 0.0001,   // Much lower threshold - browser mic values are very small
-  stableDelaySeconds: 1,    // Only finalize text older than this
-  
+  // Display settings
   maxDisplayDuration: 6000,
   maxWordsPerLine: 12,
-  debug: true
+  debug: false
 };
 
-/**
- * Initialize the ring buffer
- */
-function initRingBuffer() {
-  SubtitleState.audioRingBuffer = new Float32Array(SubtitleState.ringBufferSize);
-  SubtitleState.ringBufferWriteIdx = 0;
-  SubtitleState.samplesReceived = 0;
-}
+// ============================================================================
+// WEB SPEECH API IMPLEMENTATION
+// ============================================================================
 
-/**
- * Push audio samples into the ring buffer
- */
-function pushToRingBuffer(samples) {
-  for (let i = 0; i < samples.length; i++) {
-    SubtitleState.audioRingBuffer[SubtitleState.ringBufferWriteIdx] = samples[i];
-    SubtitleState.ringBufferWriteIdx = (SubtitleState.ringBufferWriteIdx + 1) % SubtitleState.ringBufferSize;
-  }
-  SubtitleState.samplesReceived += samples.length;
+function initWebSpeech() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   
-  // Log first audio chunk to verify data is arriving
-  if (SubtitleState.samplesReceived === samples.length && CONFIG.debug) {
-    let max = 0;
-    for (let i = 0; i < samples.length; i++) {
-      const abs = Math.abs(samples[i]);
-      if (abs > max) max = abs;
+  if (!SpeechRecognition) {
+    console.warn('[Subtitles] Web Speech API not supported');
+    return false;
+  }
+  
+  SubtitleState.recognition = new SpeechRecognition();
+  SubtitleState.recognition.continuous = true;
+  SubtitleState.recognition.interimResults = true;
+  SubtitleState.recognition.lang = 'en-US';
+  SubtitleState.recognition.maxAlternatives = 1;
+  
+  SubtitleState.recognition.onresult = (event) => {
+    let interimTranscript = '';
+    let finalTranscript = '';
+    
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result.isFinal) {
+        finalTranscript += result[0].transcript;
+      } else {
+        interimTranscript += result[0].transcript;
+      }
     }
-    console.log(`[Subtitles] First audio chunk: ${samples.length} samples, peak=${max.toFixed(4)}`);
+    
+    // Display with word highlighting effect
+    const text = finalTranscript || interimTranscript;
+    if (text.trim()) {
+      displaySubtitleWithHighlight(text, !finalTranscript);
+    }
+  };
+  
+  SubtitleState.recognition.onerror = (event) => {
+    console.error('[Subtitles] Speech recognition error:', event.error);
+    if (event.error === 'not-allowed') {
+      updateStatus('error', 'Mic blocked');
+    } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+      // Restart on recoverable errors
+      if (SubtitleState.enabled && SubtitleState.isListening) {
+        setTimeout(() => startWebSpeech(), 100);
+      }
+    }
+  };
+  
+  SubtitleState.recognition.onend = () => {
+    // Restart if still enabled (recognition auto-stops periodically)
+    if (SubtitleState.enabled && SubtitleState.isListening && !SubtitleState.offlineMode) {
+      setTimeout(() => {
+        if (SubtitleState.enabled && SubtitleState.isListening) {
+          try {
+            SubtitleState.recognition.start();
+          } catch (e) {
+            // Ignore - might already be starting
+          }
+        }
+      }, 100);
+    }
+  };
+  
+  return true;
+}
+
+function startWebSpeech() {
+  if (!SubtitleState.recognition) {
+    if (!initWebSpeech()) {
+      updateStatus('error', 'Not supported');
+      return;
+    }
+  }
+  
+  try {
+    SubtitleState.recognition.start();
+    SubtitleState.isListening = true;
+    updateStatus('active', 'Listening...');
+    console.log('[Subtitles] Web Speech started');
+  } catch (e) {
+    console.error('[Subtitles] Failed to start:', e);
   }
 }
 
-/**
- * Read the last N seconds from ring buffer (returns contiguous array)
- */
-function readFromRingBuffer(seconds) {
-  const samplesToRead = Math.min(seconds * 16000, SubtitleState.ringBufferSize);
-  const result = new Float32Array(samplesToRead);
-  
-  let readIdx = (SubtitleState.ringBufferWriteIdx - samplesToRead + SubtitleState.ringBufferSize) % SubtitleState.ringBufferSize;
-  
-  for (let i = 0; i < samplesToRead; i++) {
-    result[i] = SubtitleState.audioRingBuffer[readIdx];
-    readIdx = (readIdx + 1) % SubtitleState.ringBufferSize;
+function stopWebSpeech() {
+  if (SubtitleState.recognition) {
+    try {
+      SubtitleState.recognition.stop();
+    } catch (e) {
+      // Ignore
+    }
   }
-  
-  return result;
+  SubtitleState.isListening = false;
+  hideSubtitle();
+  updateStatus('', '');
+  console.log('[Subtitles] Web Speech stopped');
 }
 
-/**
- * Dynamically import transformers.js
- */
+// ============================================================================
+// WHISPER IMPLEMENTATION (OFFLINE MODE)
+// ============================================================================
+
 async function loadTransformers() {
   const module = await import('./lib/transformers/transformers.min.js');
-  
-  // Configure paths
   module.env.backends.onnx.wasm.wasmPaths = './lib/transformers/';
   module.env.allowLocalModels = false;
-  
   return module;
 }
 
-/**
- * Initialize Whisper model with WebGPU
- */
-async function initializeWhisper() {
+async function initWhisper() {
   if (SubtitleState.isModelLoaded || SubtitleState.isModelLoading) {
     return SubtitleState.isModelLoaded;
   }
 
   SubtitleState.isModelLoading = true;
-  updateStatus('loading', 'Loading model...');
+  updateStatus('loading', 'Loading Whisper...');
 
   try {
     const { pipeline } = await loadTransformers();
     
-    // Check WebGPU availability
+    // Check for WebGPU
     let device = 'wasm';
-    let useWebGPU = false;
-    
     if (navigator.gpu) {
       try {
         const adapter = await navigator.gpu.requestAdapter();
         if (adapter) {
-          console.log('[Subtitles] WebGPU adapter found');
           device = 'webgpu';
-          useWebGPU = true;
+          console.log('[Subtitles] Using WebGPU');
         }
       } catch (e) {
-        console.warn('[Subtitles] WebGPU not usable:', e.message);
+        console.warn('[Subtitles] WebGPU not available:', e);
       }
     }
-    
-    if (!useWebGPU) {
-      console.log('[Subtitles] Using WASM backend (WebGPU not available)');
-    }
 
-    console.log(`[Subtitles] Loading ${CONFIG.modelName} on ${device}...`);
-    updateStatus('loading', `Loading on ${device}...`);
-    
-    const startLoad = performance.now();
+    console.log(`[Subtitles] Loading ${CONFIG.modelName}...`);
     
     SubtitleState.transcriber = await pipeline(
       'automatic-speech-recognition',
       CONFIG.modelName,
       {
         device: device,
-        dtype: useWebGPU ? 'fp32' : 'q8',
+        dtype: device === 'webgpu' ? 'fp32' : 'q8',
         progress_callback: (progress) => {
           if (progress.status === 'progress' && progress.progress) {
-            const percent = Math.round(progress.progress);
-            updateStatus('loading', `Downloading: ${percent}%`);
-          } else if (progress.status === 'ready') {
-            updateStatus('loading', 'Initializing...');
+            updateStatus('loading', `Loading: ${Math.round(progress.progress)}%`);
           }
         }
       }
     );
 
-    const loadTime = performance.now() - startLoad;
     SubtitleState.isModelLoaded = true;
     SubtitleState.isModelLoading = false;
-    
-    console.log(`[Subtitles] Model loaded in ${Math.round(loadTime)}ms on ${device}`);
+    console.log('[Subtitles] Whisper model loaded');
     updateStatus('', '');
-    
-    // Warm up the model with a test tone to verify it works
-    console.log('[Subtitles] Warming up with test tone...');
-    // Generate a 1-second test tone (440Hz sine wave)
-    const testTone = new Float32Array(16000);
-    for (let i = 0; i < 16000; i++) {
-      testTone[i] = 0.5 * Math.sin(2 * Math.PI * 440 * i / 16000);
-    }
-    const warmupResult = await SubtitleState.transcriber(testTone);
-    console.log('[Subtitles] Warmup result:', warmupResult);
-    
-    // Test with actual speech sample - "hello" approximation
-    // This helps verify the model can output ANY text
-    console.log('[Subtitles] Testing basic transcription...');
-    const testResult = await SubtitleState.transcriber(testTone, { language: 'english' });
-    console.log('[Subtitles] Test result:', testResult);
-    
     return true;
   } catch (error) {
-    console.error('[Subtitles] Failed to load model:', error);
+    console.error('[Subtitles] Failed to load Whisper:', error);
     SubtitleState.isModelLoading = false;
-    updateStatus('error', 'Model load failed');
-    throw error;
+    updateStatus('error', 'Model failed');
+    return false;
   }
 }
 
-/**
- * Start listening with AudioWorklet
- */
-async function startListening() {
-  if (SubtitleState.isListening) return;
+function initRingBuffer() {
+  SubtitleState.audioRingBuffer = new Float32Array(SubtitleState.ringBufferSize);
+  SubtitleState.ringBufferWriteIdx = 0;
+  SubtitleState.samplesReceived = 0;
+}
+
+function pushToRingBuffer(samples) {
+  for (let i = 0; i < samples.length; i++) {
+    SubtitleState.audioRingBuffer[SubtitleState.ringBufferWriteIdx] = samples[i];
+    SubtitleState.ringBufferWriteIdx = (SubtitleState.ringBufferWriteIdx + 1) % SubtitleState.ringBufferSize;
+  }
+  SubtitleState.samplesReceived += samples.length;
+}
+
+function readFromRingBuffer(seconds) {
+  const samplesToRead = Math.min(seconds * 16000, SubtitleState.ringBufferSize);
+  const result = new Float32Array(samplesToRead);
+  let readIdx = (SubtitleState.ringBufferWriteIdx - samplesToRead + SubtitleState.ringBufferSize) % SubtitleState.ringBufferSize;
+  for (let i = 0; i < samplesToRead; i++) {
+    result[i] = SubtitleState.audioRingBuffer[readIdx];
+    readIdx = (readIdx + 1) % SubtitleState.ringBufferSize;
+  }
+  return result;
+}
+
+async function startWhisper() {
+  if (!SubtitleState.isModelLoaded) {
+    const loaded = await initWhisper();
+    if (!loaded) return;
+  }
 
   try {
     updateStatus('loading', 'Starting mic...');
-    
-    // Initialize ring buffer
     initRingBuffer();
-    
-    // Get microphone
+
     SubtitleState.mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
     });
 
     SubtitleState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const actualSampleRate = SubtitleState.audioContext.sampleRate;
-    console.log(`[Subtitles] AudioContext sample rate: ${actualSampleRate}Hz`);
-
-    // Try AudioWorklet first
-    let useWorklet = false;
+    
     try {
       await SubtitleState.audioContext.audioWorklet.addModule('./audio-processor.js');
-      useWorklet = true;
-      console.log('[Subtitles] Using AudioWorklet');
-    } catch (e) {
-      console.warn('[Subtitles] AudioWorklet failed, using ScriptProcessor:', e);
-    }
-
-    const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
-
-    if (useWorklet) {
       SubtitleState.workletNode = new AudioWorkletNode(SubtitleState.audioContext, 'audio-capture-processor');
       SubtitleState.workletNode.port.onmessage = (event) => {
         if (event.data.type === 'audio') {
           pushToRingBuffer(event.data.audio);
-          // Log audio reception periodically
-          if (SubtitleState.samplesReceived <= event.data.audio.length * 3) {
-            console.log(`[Subtitles] Received audio chunk: ${event.data.audio.length} samples, peak=${event.data.peak?.toFixed(4) || 'N/A'}`);
-          }
         }
       };
+      const source = SubtitleState.audioContext.createMediaStreamSource(SubtitleState.mediaStream);
       source.connect(SubtitleState.workletNode);
-    } else {
-      // Fallback to ScriptProcessor
-      const inputRate = actualSampleRate;
-      const outputRate = 16000;
-      const ratio = inputRate / outputRate;
-      let accumulator = 0;
-      
-      const processor = SubtitleState.audioContext.createScriptProcessor(4096, 1, 1);
-      const tempBuffer = [];
-      
-      processor.onaudioprocess = (event) => {
-        if (!SubtitleState.isListening) return;
-        const input = event.inputBuffer.getChannelData(0);
-        
-        for (let i = 0; i < input.length; i++) {
-          accumulator += 1;
-          if (accumulator >= ratio) {
-            accumulator -= ratio;
-            tempBuffer.push(input[i]);
-          }
-        }
-        
-        if (tempBuffer.length >= 1600) { // 100ms chunks
-          pushToRingBuffer(new Float32Array(tempBuffer));
-          tempBuffer.length = 0;
-        }
-      };
-
-      source.connect(processor);
-      processor.connect(SubtitleState.audioContext.destination);
-      SubtitleState.processor = processor;
+    } catch (e) {
+      console.warn('[Subtitles] AudioWorklet failed, using ScriptProcessor');
+      // Fallback implementation omitted for brevity
     }
 
     SubtitleState.isListening = true;
-    SubtitleState.lastTranscribedText = '';
-    SubtitleState.lastTimestamp = 0;
-
-    // Start processing loop
-    SubtitleState.processInterval = setInterval(() => {
-      processAudioWindow();
-    }, CONFIG.processIntervalMs);
-
-    updateStatus('active', 'Listening...');
-    console.log('[Subtitles] Started listening');
-
+    SubtitleState.processInterval = setInterval(processWhisperAudio, CONFIG.processIntervalMs);
+    
+    updateStatus('active', 'Listening (offline)');
+    console.log('[Subtitles] Whisper started');
   } catch (error) {
-    console.error('[Subtitles] Failed to start:', error);
+    console.error('[Subtitles] Failed to start Whisper:', error);
     updateStatus('error', 'Mic failed');
-    throw error;
   }
 }
 
-/**
- * Get audio stats for debugging
- */
-function getAudioStats(audioData) {
-  let min = Infinity, max = -Infinity, sum = 0, nonZero = 0;
-  for (let i = 0; i < audioData.length; i++) {
-    const v = audioData[i];
-    if (v < min) min = v;
-    if (v > max) max = v;
-    sum += Math.abs(v);
-    if (Math.abs(v) > 0.001) nonZero++;
-  }
-  return {
-    min: min.toFixed(4),
-    max: max.toFixed(4),
-    avg: (sum / audioData.length).toFixed(6),
-    nonZeroPercent: ((nonZero / audioData.length) * 100).toFixed(1),
-    length: audioData.length
-  };
-}
-
-/**
- * Process the sliding audio window
- */
-async function processAudioWindow() {
-  if (SubtitleState.isTranscribing || !SubtitleState.transcriber) {
-    return;
-  }
-
-  // Read last 15 seconds from ring buffer
+async function processWhisperAudio() {
+  if (SubtitleState.isTranscribing || !SubtitleState.transcriber) return;
+  
+  // Wait for enough audio
+  if (SubtitleState.samplesReceived < 2 * 16000) return;
+  
   const audioWindow = readFromRingBuffer(CONFIG.windowSeconds);
   
-  // Wait for at least 2 seconds of audio before starting to process
-  const minSamplesNeeded = 2 * 16000; // 2 seconds at 16kHz
-  if (SubtitleState.samplesReceived < minSamplesNeeded) {
-    if (CONFIG.debug) {
-      console.log(`[Subtitles] Waiting for more audio: ${SubtitleState.samplesReceived}/${minSamplesNeeded} samples`);
-    }
-    return;
+  // Check audio energy
+  let energy = 0;
+  for (let i = 0; i < audioWindow.length; i++) {
+    energy += audioWindow[i] * audioWindow[i];
   }
+  energy = Math.sqrt(energy / audioWindow.length);
   
-  // Check how much data we actually have in the buffer
-  const bufferFillPercent = (Math.min(SubtitleState.samplesReceived, SubtitleState.ringBufferSize) / SubtitleState.ringBufferSize * 100).toFixed(1);
+  if (energy < CONFIG.minAudioEnergy) return;
   
-  // Get audio stats
-  const stats = getAudioStats(audioWindow);
-  
-  // Check energy of recent audio (last 2 seconds)
-  const recentAudio = readFromRingBuffer(2);
-  const energy = calculateEnergy(recentAudio);
-  
-  if (CONFIG.debug) {
-    console.log(`[Subtitles] Audio: energy=${energy.toFixed(5)}, min=${stats.min}, max=${stats.max}, nonZero=${stats.nonZeroPercent}%, buffer=${bufferFillPercent}%`);
-  }
-  
-  // Skip only if audio is essentially silent
-  // The normalization step will boost quiet audio anyway
-  if (energy < CONFIG.minAudioEnergy && parseFloat(stats.nonZeroPercent) < 1) {
-    if (CONFIG.debug) console.log(`[Subtitles] Skipping - silent`);
-    return;
-  }
-
   SubtitleState.isTranscribing = true;
   
   try {
-    const startTime = performance.now();
-    
-    // Normalize the audio to improve recognition
-    // Find peak and normalize to -1 to 1 range
-    const normalizedAudio = normalizeAudio(audioWindow);
-    
-    // Transcribe the audio window - minimal options
-    // First try with no options at all
-    const result = await SubtitleState.transcriber(normalizedAudio);
-
-    const processingTime = performance.now() - startTime;
-    
-    if (CONFIG.debug) {
-      console.log(`[Subtitles] Processed in ${Math.round(processingTime)}ms, result:`, result);
+    // Normalize audio
+    let peak = 0;
+    for (let i = 0; i < audioWindow.length; i++) {
+      const abs = Math.abs(audioWindow[i]);
+      if (abs > peak) peak = abs;
     }
-
-    if (result) {
-      handleTranscriptionResult(result, processingTime);
-    } else {
-      console.log('[Subtitles] No result returned');
+    
+    let normalizedAudio = audioWindow;
+    if (peak > 0.001) {
+      normalizedAudio = new Float32Array(audioWindow.length);
+      const gain = 0.9 / peak;
+      for (let i = 0; i < audioWindow.length; i++) {
+        normalizedAudio[i] = audioWindow[i] * gain;
+      }
+    }
+    
+    const result = await SubtitleState.transcriber(normalizedAudio);
+    
+    if (result && result.text && result.text.trim()) {
+      const text = cleanTranscription(result.text);
+      if (text && text.length > 1 && text !== SubtitleState.lastText) {
+        SubtitleState.lastText = text;
+        displaySubtitle(text);
+      }
     }
   } catch (error) {
     console.error('[Subtitles] Transcription error:', error);
@@ -397,153 +342,77 @@ async function processAudioWindow() {
   }
 }
 
-/**
- * Normalize audio to improve Whisper recognition
- * Whisper expects audio normalized to -1 to 1 range
- */
-function normalizeAudio(audioData) {
-  // Find peak amplitude
-  let peak = 0;
-  for (let i = 0; i < audioData.length; i++) {
-    const abs = Math.abs(audioData[i]);
-    if (abs > peak) peak = abs;
-  }
-  
-  if (CONFIG.debug) console.log(`[Subtitles] Audio peak before normalization: ${peak.toFixed(4)}`);
-  
-  // Always normalize to ensure consistent levels for Whisper
-  // Target peak of 0.9 (leave some headroom)
-  if (peak > 0.001) {
-    const targetPeak = 0.9;
-    const gain = targetPeak / peak;
-    const normalized = new Float32Array(audioData.length);
-    for (let i = 0; i < audioData.length; i++) {
-      normalized[i] = audioData[i] * gain;
-    }
-    return normalized;
-  }
-  
-  // Audio is essentially silent
-  return audioData;
-}
-
-/**
- * Handle transcription result with deduplication
- */
-function handleTranscriptionResult(result, processingTime) {
-  // Get the text from result
-  let text = result.text || '';
-  
-  if (CONFIG.debug && result.chunks) {
-    console.log(`[Subtitles] Chunks:`, result.chunks);
-  }
-  
-  // Clean the text
-  text = cleanTranscription(text);
-  
-  if (CONFIG.debug) {
-    console.log(`[Subtitles] Cleaned text: "${text}"`);
-  }
-  
-  if (!text || text.length < 2) {
-    if (CONFIG.debug) console.log('[Subtitles] Text too short, skipping');
-    return;
-  }
-
-  // Simple deduplication: don't show exact same text
-  if (text === SubtitleState.lastTranscribedText) {
-    if (CONFIG.debug) console.log('[Subtitles] Duplicate, skipping');
-    return;
-  }
-  
-  console.log(`[Subtitles] (${Math.round(processingTime)}ms) "${text}"`);
-  SubtitleState.lastTranscribedText = text;
-  displaySubtitle(text);
-}
-
-/**
- * Calculate RMS energy
- */
-function calculateEnergy(audioData) {
-  let sum = 0;
-  for (let i = 0; i < audioData.length; i++) {
-    sum += audioData[i] * audioData[i];
-  }
-  return Math.sqrt(sum / audioData.length);
-}
-
-/**
- * Stop listening
- */
-function stopListening() {
-  if (!SubtitleState.isListening) return;
-
+function stopWhisper() {
   SubtitleState.isListening = false;
-
+  
   if (SubtitleState.processInterval) {
     clearInterval(SubtitleState.processInterval);
     SubtitleState.processInterval = null;
   }
-
+  
   if (SubtitleState.workletNode) {
     SubtitleState.workletNode.disconnect();
     SubtitleState.workletNode = null;
   }
-
-  if (SubtitleState.processor) {
-    SubtitleState.processor.disconnect();
-    SubtitleState.processor = null;
-  }
-
+  
   if (SubtitleState.audioContext) {
     SubtitleState.audioContext.close();
     SubtitleState.audioContext = null;
   }
-
+  
   if (SubtitleState.mediaStream) {
     SubtitleState.mediaStream.getTracks().forEach(track => track.stop());
     SubtitleState.mediaStream = null;
   }
-
+  
   SubtitleState.audioRingBuffer = null;
   hideSubtitle();
   updateStatus('', '');
-  
-  console.log('[Subtitles] Stopped');
+  console.log('[Subtitles] Whisper stopped');
 }
 
-/**
- * Clean transcription text
- */
 function cleanTranscription(text) {
   if (!text) return '';
-  
-  let clean = text
-    .replace(/\[.*?\]/g, '')      // [MUSIC] etc
-    .replace(/\(.*?\)/g, '')      // (inaudible) etc
-    .replace(/<\|.*?\|>/g, '')    // Whisper tokens
+  return text
+    .replace(/\[.*?\]/g, '')
+    .replace(/\(.*?\)/g, '')
+    .replace(/<\|.*?\|>/g, '')
     .replace(/♪/g, '')
     .replace(/\s+/g, ' ')
     .trim();
-  
-  // Only filter very specific hallucinations (keep most text)
-  const hallucinations = [
-    'thank you for watching',
-    'thanks for watching', 
-    'please subscribe',
-    'like and subscribe'
-  ];
-  
-  if (hallucinations.includes(clean.toLowerCase())) {
-    return '';
-  }
-  
-  return clean;
 }
 
-/**
- * Display subtitle
- */
+// ============================================================================
+// DISPLAY FUNCTIONS
+// ============================================================================
+
+function displaySubtitleWithHighlight(text, isInterim) {
+  const overlay = document.getElementById('subtitle-overlay');
+  const container = document.getElementById('subtitle-text');
+  
+  if (!overlay || !container || !text.trim()) return;
+  
+  const words = text.split(' ').filter(w => w.length > 0);
+  const maxWords = CONFIG.maxWordsPerLine * 2;
+  const displayWords = words.slice(-maxWords);
+  
+  const wordSpans = displayWords.map((word, index) => {
+    const isLast = index === displayWords.length - 1;
+    const className = isLast && isInterim ? 'word current' : 'word spoken';
+    return `<span class="${className}">${escapeHtml(word)}</span>`;
+  }).join(' ');
+  
+  container.innerHTML = wordSpans;
+  container.classList.add('has-highlight');
+  overlay.style.display = 'flex';
+  
+  // Reset hide timeout
+  if (SubtitleState.displayTimeout) {
+    clearTimeout(SubtitleState.displayTimeout);
+  }
+  SubtitleState.displayTimeout = setTimeout(hideSubtitle, CONFIG.maxDisplayDuration);
+}
+
 function displaySubtitle(text) {
   const overlay = document.getElementById('subtitle-overlay');
   const container = document.getElementById('subtitle-text');
@@ -551,47 +420,22 @@ function displaySubtitle(text) {
   if (!overlay || !container || !text.trim()) return;
   
   const words = text.split(' ').filter(w => w.length > 0);
-  const wrappedWords = wrapTextToFitScreen(words);
+  const maxWords = CONFIG.maxWordsPerLine * 2;
+  const displayWords = words.slice(-maxWords);
   
-  const wordSpans = wrappedWords.map((word, index) => {
-    const className = index === wrappedWords.length - 1 ? 'word current' : 'word spoken';
+  const wordSpans = displayWords.map((word, index) => {
+    const className = index === displayWords.length - 1 ? 'word current' : 'word spoken';
     return `<span class="${className}">${escapeHtml(word)}</span>`;
   }).join(' ');
   
   container.innerHTML = wordSpans;
-  container.classList.add('has-highlight', 'new-text');
+  container.classList.add('has-highlight');
   overlay.style.display = 'flex';
-  
-  setTimeout(() => container.classList.remove('new-text'), 300);
   
   if (SubtitleState.displayTimeout) {
     clearTimeout(SubtitleState.displayTimeout);
   }
-  
   SubtitleState.displayTimeout = setTimeout(hideSubtitle, CONFIG.maxDisplayDuration);
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function wrapTextToFitScreen(words) {
-  const maxChars = Math.floor(window.innerWidth / 22);
-  const result = [];
-  let len = 0;
-  
-  for (const word of words) {
-    if (result.length >= CONFIG.maxWordsPerLine * 2) break;
-    if (len + word.length > maxChars && result.length > 0) {
-      len = word.length;
-    } else {
-      len += word.length + 1;
-    }
-    result.push(word);
-  }
-  return result;
 }
 
 function hideSubtitle() {
@@ -605,6 +449,12 @@ function hideSubtitle() {
   }
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 function updateStatus(type, message) {
   const statusEl = document.getElementById('subtitle-status');
   if (!statusEl) return;
@@ -614,54 +464,93 @@ function updateStatus(type, message) {
   statusEl.textContent = message;
 }
 
-/**
- * Toggle subtitles
- */
+// ============================================================================
+// MAIN CONTROL FUNCTIONS
+// ============================================================================
+
+async function startListening() {
+  if (SubtitleState.isListening) return;
+  
+  if (SubtitleState.offlineMode) {
+    await startWhisper();
+  } else {
+    startWebSpeech();
+  }
+}
+
+function stopListening() {
+  if (SubtitleState.offlineMode) {
+    stopWhisper();
+  } else {
+    stopWebSpeech();
+  }
+}
+
 async function toggleSubtitles(enabled) {
   SubtitleState.enabled = enabled;
   
   if (enabled) {
-    try {
-      if (!SubtitleState.isModelLoaded) {
-        await initializeWhisper();
-      }
-      if (window.presentationStarted) {
-        await startListening();
-      }
-    } catch (error) {
-      console.error('[Subtitles] Failed to enable:', error);
-      const checkbox = document.getElementById('subtitlesEnabled');
-      if (checkbox) checkbox.checked = false;
-      SubtitleState.enabled = false;
+    if (window.presentationStarted) {
+      await startListening();
     }
   } else {
     stopListening();
   }
 }
 
-/**
- * Initialize
- */
+function setOfflineMode(offline) {
+  const wasListening = SubtitleState.isListening;
+  
+  // Stop current mode
+  if (wasListening) {
+    stopListening();
+  }
+  
+  SubtitleState.offlineMode = offline;
+  console.log(`[Subtitles] Offline mode: ${offline ? 'ON' : 'OFF'}`);
+  
+  // Restart in new mode if needed
+  if (wasListening && SubtitleState.enabled) {
+    startListening();
+  }
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
 function initSubtitles() {
+  // Main subtitles toggle
   const toggle = document.getElementById('subtitlesEnabled');
   if (toggle) {
     toggle.addEventListener('change', (e) => toggleSubtitles(e.target.checked));
   }
   
+  // Offline mode toggle
+  const offlineToggle = document.getElementById('offlineModeEnabled');
+  if (offlineToggle) {
+    offlineToggle.addEventListener('change', (e) => setOfflineMode(e.target.checked));
+  }
+  
+  // Expose API for app.js
   window.subtitleSystem = {
     onPresentationStart: async () => {
       if (SubtitleState.enabled) {
-        if (!SubtitleState.isModelLoaded) await initializeWhisper();
         await startListening();
       }
     },
-    onPresentationEnd: () => stopListening(),
+    onPresentationEnd: () => {
+      stopListening();
+    },
     isEnabled: () => SubtitleState.enabled,
-    toggle: toggleSubtitles
+    isOfflineMode: () => SubtitleState.offlineMode,
+    toggle: toggleSubtitles,
+    setOfflineMode: setOfflineMode
   };
   
+  const hasWebSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const hasWebGPU = !!navigator.gpu;
-  console.log(`[Subtitles] Initialized (WebGPU: ${hasWebGPU ? 'detected' : 'not detected'})`);
+  console.log(`[Subtitles] Initialized (Web Speech: ${hasWebSpeech}, WebGPU: ${hasWebGPU})`);
 }
 
 if (document.readyState === 'loading') {

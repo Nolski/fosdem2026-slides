@@ -1683,6 +1683,39 @@ body.present-mode #controls {
   background: rgba(239, 68, 68, 0.2);
 }
 
+/* Offline mode toggle - smaller version */
+.offline-toggle {
+  margin-left: 15px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.offline-toggle:hover {
+  opacity: 1;
+}
+
+.toggle-slider.small {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+}
+
+.toggle-slider.small::after {
+  width: 12px;
+  height: 12px;
+  top: 3px;
+  left: 3px;
+}
+
+.subtitle-toggle input:checked + .toggle-slider.small::after {
+  transform: translateX(14px);
+}
+
+.toggle-label.small {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* Subtitle overlay in presentation mode */
 .subtitle-overlay {
   position: fixed;
