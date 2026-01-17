@@ -150,11 +150,8 @@ async function startListening() {
     console.log('[Subtitles] Initializing Silero VAD...');
 
     // Create VAD instance with callbacks
+    // Using CDN version which handles all model/WASM paths automatically
     SubtitleState.vadInstance = await vad.MicVAD.new({
-      // Use local model files (VAD model and worklet)
-      modelURL: './lib/vad/silero_vad_legacy.onnx',
-      workletURL: './lib/vad/vad.worklet.bundle.min.js',
-      
       // VAD parameters for responsiveness
       positiveSpeechThreshold: 0.5,  // Lower = more sensitive
       negativeSpeechThreshold: 0.35,
