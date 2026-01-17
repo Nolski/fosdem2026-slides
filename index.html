@@ -374,30 +374,51 @@
               <input type="text" id="ve-text-input" placeholder="Enter overlay text...">
             </div>
             
-            <div class="ve-control-row ve-three-col">
-              <div class="ve-control-group">
-                <label for="ve-font-family">Font</label>
-                <select id="ve-font-family">
+            <div class="ve-control-group">
+              <label for="ve-font-family">Font</label>
+              <select id="ve-font-family">
+                <optgroup label="Sans-Serif">
                   <option value="Roboto-Bold.ttf">Roboto Bold</option>
-                  <option value="Lato-Bold.ttf">Lato Bold</option>
+                  <option value="Roboto-Regular.ttf">Roboto Regular</option>
                   <option value="OpenSans-Bold.ttf">Open Sans Bold</option>
-                </select>
-              </div>
-              
+                  <option value="Lato-Bold.ttf">Lato Bold</option>
+                  <option value="Montserrat-Bold.ttf">Montserrat Bold</option>
+                  <option value="Montserrat-Regular.ttf">Montserrat Regular</option>
+                  <option value="SourceSansPro-Bold.ttf">Source Sans Bold</option>
+                </optgroup>
+                <optgroup label="Display">
+                  <option value="Oswald-Bold.ttf">Oswald Bold</option>
+                </optgroup>
+                <optgroup label="Script">
+                  <option value="Pacifico-Regular.ttf">Pacifico</option>
+                </optgroup>
+              </select>
+            </div>
+            
+            <div class="ve-control-row ve-three-col">
               <div class="ve-control-group">
                 <label for="ve-font-size">Size</label>
                 <select id="ve-font-size">
-                  <option value="24">Small (24px)</option>
-                  <option value="36">Medium (36px)</option>
-                  <option value="48" selected>Large (48px)</option>
-                  <option value="64">X-Large (64px)</option>
-                  <option value="96">XX-Large (96px)</option>
+                  <option value="24">24px</option>
+                  <option value="36">36px</option>
+                  <option value="48" selected>48px</option>
+                  <option value="64">64px</option>
+                  <option value="72">72px</option>
+                  <option value="96">96px</option>
+                  <option value="120">120px</option>
                 </select>
               </div>
               
               <div class="ve-control-group">
                 <label for="ve-font-color">Color</label>
                 <input type="color" id="ve-font-color" value="#ffffff">
+              </div>
+              
+              <div class="ve-control-group">
+                <label class="ve-checkbox-label">
+                  <input type="checkbox" id="ve-text-border" checked>
+                  <span>Border</span>
+                </label>
               </div>
             </div>
             

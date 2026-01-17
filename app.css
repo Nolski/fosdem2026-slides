@@ -1263,6 +1263,25 @@ body.present-mode #controls {
   margin: 8px 0 0 0;
 }
 
+.ve-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding-top: 18px;
+}
+
+.ve-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.ve-checkbox-label span {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .ve-controls {
   display: flex;
   flex-direction: column;

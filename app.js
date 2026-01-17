@@ -1389,6 +1389,7 @@ if (isPresenter) {
   var veFontFamily = document.getElementById("ve-font-family");
   var veFontSize = document.getElementById("ve-font-size");
   var veFontColor = document.getElementById("ve-font-color");
+  var veTextBorder = document.getElementById("ve-text-border");
   var veTextX = document.getElementById("ve-text-x");
   var veTextY = document.getElementById("ve-text-y");
   var veTextXValue = document.getElementById("ve-text-x-value");
@@ -1410,6 +1411,8 @@ if (isPresenter) {
   var currentEditVideoBlob = null;
   var textPositionX = 50; // percentage
   var textPositionY = 50; // percentage
+  var videoWidth = 1920; // actual video width
+  var videoHeight = 1080; // actual video height
   
   // FFmpeg loading - uses local files
   async function loadFFmpeg() {
@@ -1461,11 +1464,17 @@ if (isPresenter) {
             console.log("Fonts directory may already exist:", dirError.message);
           }
           
-          // Load multiple fonts for redundancy
+          // Load all available fonts
           var fonts = [
             { name: "Roboto-Bold.ttf", path: "lib/fonts/Roboto-Bold.ttf" },
+            { name: "Roboto-Regular.ttf", path: "lib/fonts/Roboto-Regular.ttf" },
+            { name: "OpenSans-Bold.ttf", path: "lib/fonts/OpenSans-Bold.ttf" },
             { name: "Lato-Bold.ttf", path: "lib/fonts/Lato-Bold.ttf" },
-            { name: "OpenSans-Bold.ttf", path: "lib/fonts/OpenSans-Bold.ttf" }
+            { name: "Montserrat-Bold.ttf", path: "lib/fonts/Montserrat-Bold.ttf" },
+            { name: "Montserrat-Regular.ttf", path: "lib/fonts/Montserrat-Regular.ttf" },
+            { name: "SourceSansPro-Bold.ttf", path: "lib/fonts/SourceSansPro-Bold.ttf" },
+            { name: "Oswald-Bold.ttf", path: "lib/fonts/Oswald-Bold.ttf" },
+            { name: "Pacifico-Regular.ttf", path: "lib/fonts/Pacifico-Regular.ttf" }
           ];
           
           var fontsLoadedCount = 0;
@@ -1551,16 +1560,22 @@ if (isPresenter) {
     veFontFamily.value = "Roboto-Bold.ttf";
     veFontSize.value = "48";
     veFontColor.value = "#ffffff";
+    veTextBorder.checked = true;
     textPositionX = 50;
     textPositionY = 50;
     veTextX.value = 50;
     veTextY.value = 50;
     veTextXValue.textContent = "50%";
     veTextYValue.textContent = "50%";
-    updateTextOverlayPreview();
     
-    // Load video preview
+    // Load video preview and get dimensions
     vePreviewVideo.src = videoSrc;
+    vePreviewVideo.onloadedmetadata = function() {
+      videoWidth = vePreviewVideo.videoWidth || 1920;
+      videoHeight = vePreviewVideo.videoHeight || 1080;
+      console.log("Video dimensions:", videoWidth, "x", videoHeight);
+      updateTextOverlayPreview();
+    };
     
     // Load FFmpeg
     loadFFmpeg().then(function() {
@@ -1592,13 +1607,26 @@ if (isPresenter) {
     var text = veTextInput.value || "Sample Text";
     var fontSize = parseInt(veFontSize.value);
     var color = veFontColor.value;
+    var hasBorder = veTextBorder.checked;
     
-    // Scale font size for preview (video preview is smaller than actual video)
-    var previewFontSize = Math.max(12, Math.round(fontSize * 0.4));
+    // Calculate scale factor based on actual video vs preview size
+    var previewRect = vePreviewVideo.getBoundingClientRect();
+    var previewWidth = previewRect.width || 400;
+    var scaleFactor = previewWidth / videoWidth;
+    
+    // Scale font size for preview
+    var previewFontSize = Math.max(10, Math.round(fontSize * scaleFactor));
     
     veTextOverlayContent.textContent = text;
     veTextOverlayContent.style.fontSize = previewFontSize + "px";
     veTextOverlayContent.style.color = color;
+    
+    // Apply or remove text shadow (border effect)
+    if (hasBorder) {
+      veTextOverlayContent.style.textShadow = "2px 2px 0 black, -2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 0 2px 0 black, 0 -2px 0 black, 2px 0 0 black, -2px 0 0 black";
+    } else {
+      veTextOverlayContent.style.textShadow = "none";
+    }
     
     // Position the overlay
     veTextOverlay.style.left = textPositionX + "%";
@@ -1622,8 +1650,10 @@ if (isPresenter) {
   
   // Text input changes
   veTextInput.addEventListener("input", updateTextOverlayPreview);
+  veFontFamily.addEventListener("change", updateTextOverlayPreview);
   veFontSize.addEventListener("change", updateTextOverlayPreview);
   veFontColor.addEventListener("input", updateTextOverlayPreview);
+  veTextBorder.addEventListener("change", updateTextOverlayPreview);
   
   // Position sliders
   veTextX.addEventListener("input", function() {
@@ -1767,6 +1797,7 @@ if (isPresenter) {
         var fontFile = veFontFamily.value;
         var fontSize = veFontSize.value;
         var fontColor = hexToFFmpegColor(veFontColor.value);
+        var hasBorder = veTextBorder.checked;
         
         // Calculate position based on percentage
         // x and y are where to place the text, accounting for text dimensions
@@ -1780,7 +1811,11 @@ if (isPresenter) {
         drawtext += ":fontcolor=" + fontColor;
         drawtext += ":x=" + xExpr;
         drawtext += ":y=" + yExpr;
-        drawtext += ":borderw=3:bordercolor=black";
+        
+        // Add border if enabled
+        if (hasBorder) {
+          drawtext += ":borderw=3:bordercolor=black";
+        }
         
         videoFilters.push(drawtext);
       }
