@@ -120,6 +120,11 @@
                 <input type="checkbox" id="slide-loop"> Loop media
               </label>
             </div>
+            <div class="form-group" id="edit-video-group" style="display: none;">
+              <button type="button" id="editVideoBtn" class="edit-video-btn">
+                <span class="btn-icon">🎬</span> Edit Video
+              </button>
+            </div>
             <div class="form-actions">
               <button type="submit" class="save-btn">Save</button>
               <button type="button" id="deleteSlideBtn" class="delete-btn">Delete</button>
@@ -151,6 +156,14 @@
               <label class="checkbox-label">
                 <input type="checkbox" id="audio-loop"> Loop
               </label>
+            </div>
+            <div class="form-group" id="audio-volume-group">
+              <label for="audio-volume">Volume</label>
+              <div class="audio-volume-row">
+                <input type="range" id="audio-volume" min="0" max="200" value="100">
+                <span id="audio-volume-value">100%</span>
+              </div>
+              <p class="audio-volume-help">Adjust playback volume (0-200%)</p>
             </div>
             <div class="form-actions">
               <button type="submit" class="save-btn">Save</button>
@@ -304,6 +317,182 @@
     </div>
   </div>
 
+  <!-- Video Edit Modal -->
+  <div id="video-edit-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content video-edit-modal">
+      <div class="modal-header">
+        <h2>🎬 Edit Video</h2>
+        <button id="video-edit-close" class="modal-close-btn">&times;</button>
+      </div>
+      
+      <!-- Loading FFmpeg -->
+      <div id="ve-loading-ffmpeg" class="ve-state">
+        <div class="vg-loading">
+          <div class="vg-spinner"></div>
+          <h3>Loading FFmpeg...</h3>
+          <p id="ve-ffmpeg-status">Initializing video editor...</p>
+        </div>
+      </div>
+      
+      <!-- Editor State -->
+      <div id="ve-editor-state" class="ve-state" style="display: none;">
+        <div class="ve-preview-section">
+          <div class="ve-video-container">
+            <video id="ve-preview-video" controls></video>
+            <!-- Text overlay preview (draggable) -->
+            <div id="ve-text-overlay" class="ve-text-overlay" style="display: none;">
+              <span id="ve-text-overlay-content">Sample Text</span>
+            </div>
+          </div>
+          <p class="ve-drag-hint" id="ve-drag-hint" style="display: none;">Drag the text to position it</p>
+        </div>
+        
+        <div class="ve-controls">
+          <!-- Volume Control -->
+          <div class="ve-control-group">
+            <label>
+              <span class="ve-label-icon">🔊</span> Volume
+            </label>
+            <div class="ve-slider-row">
+              <input type="range" id="ve-volume" min="0" max="200" value="100">
+              <span id="ve-volume-value">100%</span>
+            </div>
+          </div>
+          
+          <!-- Text Overlay Section -->
+          <div class="ve-section-header">
+            <span class="ve-label-icon">✏️</span> Text Overlay
+            <label class="ve-toggle-label">
+              <input type="checkbox" id="ve-text-enabled">
+              <span>Enable</span>
+            </label>
+          </div>
+          
+          <div id="ve-text-options" class="ve-text-options" style="display: none;">
+            <div class="ve-control-group">
+              <label for="ve-text-input">Text</label>
+              <input type="text" id="ve-text-input" placeholder="Enter overlay text...">
+            </div>
+            
+            <div class="ve-control-group">
+              <label for="ve-font-family">Font</label>
+              <select id="ve-font-family">
+                <optgroup label="Sans-Serif">
+                  <option value="Roboto-Bold.ttf">Roboto Bold</option>
+                  <option value="Roboto-Regular.ttf">Roboto Regular</option>
+                  <option value="OpenSans-Bold.ttf">Open Sans Bold</option>
+                  <option value="Lato-Bold.ttf">Lato Bold</option>
+                  <option value="Montserrat-Bold.ttf">Montserrat Bold</option>
+                  <option value="Montserrat-Regular.ttf">Montserrat Regular</option>
+                  <option value="SourceSansPro-Bold.ttf">Source Sans Bold</option>
+                </optgroup>
+                <optgroup label="Display">
+                  <option value="Oswald-Bold.ttf">Oswald Bold</option>
+                </optgroup>
+                <optgroup label="Script">
+                  <option value="Pacifico-Regular.ttf">Pacifico</option>
+                </optgroup>
+              </select>
+            </div>
+            
+            <div class="ve-control-row ve-four-col">
+              <div class="ve-control-group">
+                <label for="ve-font-size">Size (px)</label>
+                <input type="number" id="ve-font-size" min="12" max="200" value="48" step="1">
+              </div>
+              
+              <div class="ve-control-group">
+                <label for="ve-font-color">Color</label>
+                <input type="color" id="ve-font-color" value="#ffffff">
+              </div>
+              
+              <div class="ve-control-group">
+                <label for="ve-border-size">Border</label>
+                <input type="number" id="ve-border-size" min="0" max="10" value="3" step="1">
+              </div>
+              
+              <div class="ve-control-group">
+                <label class="ve-checkbox-label">
+                  <input type="checkbox" id="ve-text-border" checked>
+                  <span>On</span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="ve-control-row">
+              <div class="ve-control-group">
+                <label for="ve-text-x">X Position</label>
+                <div class="ve-slider-row">
+                  <input type="range" id="ve-text-x" min="0" max="100" value="50">
+                  <span id="ve-text-x-value">50%</span>
+                </div>
+              </div>
+              <div class="ve-control-group">
+                <label for="ve-text-y">Y Position</label>
+                <div class="ve-slider-row">
+                  <input type="range" id="ve-text-y" min="0" max="100" value="50">
+                  <span id="ve-text-y-value">50%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button id="ve-cancel-btn" class="modal-btn cancel">Cancel</button>
+          <button id="ve-apply-btn" class="modal-btn primary">
+            <span class="btn-icon">⚙️</span> Apply & Download
+          </button>
+        </div>
+      </div>
+      
+      <!-- Processing State -->
+      <div id="ve-processing-state" class="ve-state" style="display: none;">
+        <div class="vg-loading">
+          <div class="vg-spinner"></div>
+          <h3>Processing Video...</h3>
+          <p id="ve-processing-status">This may take a few minutes depending on video length.</p>
+          <div class="ve-progress-bar">
+            <div id="ve-progress-fill" class="ve-progress-fill"></div>
+          </div>
+          <span id="ve-progress-text">0%</span>
+        </div>
+      </div>
+      
+      <!-- Complete State -->
+      <div id="ve-complete-state" class="ve-state" style="display: none;">
+        <div class="ve-complete">
+          <div class="modal-icon">✅</div>
+          <h3>Video Processed!</h3>
+          <p>Your edited video has been downloaded.</p>
+          <p class="ve-complete-instructions">Replace the original video file with the downloaded one to apply changes.</p>
+          <div class="vg-form-group">
+            <label>Original file location:</label>
+            <input type="text" id="ve-original-path" readonly>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button id="ve-done-btn" class="modal-btn primary">Done</button>
+        </div>
+      </div>
+      
+      <!-- Error State -->
+      <div id="ve-error-state" class="ve-state" style="display: none;">
+        <div class="vg-error">
+          <div class="vg-error-icon">❌</div>
+          <h3>Processing Failed</h3>
+          <p id="ve-error-message">An error occurred while processing the video.</p>
+        </div>
+        <div class="modal-actions">
+          <button id="ve-error-retry-btn" class="modal-btn primary">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FFmpeg.wasm for video/audio editing (local files) -->
+  <script src="lib/ffmpeg/ffmpeg.js"></script>
+  
   <script src="app.js"></script>
 </body>
 </html>

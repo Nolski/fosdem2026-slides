@@ -575,6 +575,12 @@ if (isPresenter) {
     placeholderGroup.style.display = type === "placeholder" ? "flex" : "none";
     loopGroup.style.display = type === "placeholder" ? "none" : "flex";
     zoompanGroup.style.display = type === "image" ? "flex" : "none";
+    
+    // Show Edit Video button only for video slides
+    var editVideoGroup = document.getElementById("edit-video-group");
+    if (editVideoGroup) {
+      editVideoGroup.style.display = type === "video" ? "flex" : "none";
+    }
   }
   
   slideTypeSelect.addEventListener("change", function() { updateFormVisibility(this.value); });
@@ -1350,7 +1356,694 @@ if (isPresenter) {
         hideVideoGenModal();
       } else if (addToDeckModal.style.display === "flex") {
         addToDeckModal.style.display = "none";
+      } else if (videoEditModal && videoEditModal.style.display === "flex") {
+        hideVideoEditModal();
       }
     }
   });
+
+  // ============================================
+  // VIDEO EDITING FEATURE (FFmpeg.wasm)
+  // ============================================
+  
+  var videoEditModal = document.getElementById("video-edit-modal");
+  var videoEditCloseBtn = document.getElementById("video-edit-close");
+  var veLoadingFFmpeg = document.getElementById("ve-loading-ffmpeg");
+  var veEditorState = document.getElementById("ve-editor-state");
+  var veProcessingState = document.getElementById("ve-processing-state");
+  var veCompleteState = document.getElementById("ve-complete-state");
+  var veErrorState = document.getElementById("ve-error-state");
+  var veFFmpegStatus = document.getElementById("ve-ffmpeg-status");
+  var veProcessingStatus = document.getElementById("ve-processing-status");
+  var veProgressFill = document.getElementById("ve-progress-fill");
+  var veProgressText = document.getElementById("ve-progress-text");
+  var veErrorMessage = document.getElementById("ve-error-message");
+  var veOriginalPath = document.getElementById("ve-original-path");
+  
+  var vePreviewVideo = document.getElementById("ve-preview-video");
+  var veVolumeSlider = document.getElementById("ve-volume");
+  var veVolumeValue = document.getElementById("ve-volume-value");
+  var veTextEnabled = document.getElementById("ve-text-enabled");
+  var veTextOptions = document.getElementById("ve-text-options");
+  var veTextInput = document.getElementById("ve-text-input");
+  var veFontFamily = document.getElementById("ve-font-family");
+  var veFontSize = document.getElementById("ve-font-size");
+  var veFontColor = document.getElementById("ve-font-color");
+  var veTextBorder = document.getElementById("ve-text-border");
+  var veBorderSize = document.getElementById("ve-border-size");
+  var veTextX = document.getElementById("ve-text-x");
+  var veTextY = document.getElementById("ve-text-y");
+  var veTextXValue = document.getElementById("ve-text-x-value");
+  var veTextYValue = document.getElementById("ve-text-y-value");
+  var veTextOverlay = document.getElementById("ve-text-overlay");
+  var veTextOverlayContent = document.getElementById("ve-text-overlay-content");
+  var veDragHint = document.getElementById("ve-drag-hint");
+  var veApplyBtn = document.getElementById("ve-apply-btn");
+  var veCancelBtn = document.getElementById("ve-cancel-btn");
+  var veDoneBtn = document.getElementById("ve-done-btn");
+  var veErrorRetryBtn = document.getElementById("ve-error-retry-btn");
+  var editVideoBtn = document.getElementById("editVideoBtn");
+  var editVideoGroup = document.getElementById("edit-video-group");
+  
+  var ffmpeg = null;
+  var ffmpegLoaded = false;
+  var fontLoaded = false;
+  var webFontsLoaded = false;
+  var currentEditVideoSrc = null;
+  var currentEditVideoBlob = null;
+  var textPositionX = 50; // percentage
+  var textPositionY = 50; // percentage
+  var videoWidth = 1920; // actual video width
+  var videoHeight = 1080; // actual video height
+  
+  // Map font filenames to CSS font-family names
+  var fontFamilyMap = {
+    "Roboto-Bold.ttf": "Roboto-Bold",
+    "Roboto-Regular.ttf": "Roboto-Regular",
+    "OpenSans-Bold.ttf": "OpenSans-Bold",
+    "Lato-Bold.ttf": "Lato-Bold",
+    "Montserrat-Bold.ttf": "Montserrat-Bold",
+    "Montserrat-Regular.ttf": "Montserrat-Regular",
+    "SourceSansPro-Bold.ttf": "SourceSansPro-Bold",
+    "Oswald-Bold.ttf": "Oswald-Bold",
+    "Pacifico-Regular.ttf": "Pacifico-Regular"
+  };
+  
+  // Load fonts for web preview
+  function loadWebFonts() {
+    if (webFontsLoaded) return;
+    
+    var style = document.createElement("style");
+    var css = "";
+    
+    for (var filename in fontFamilyMap) {
+      var familyName = fontFamilyMap[filename];
+      css += "@font-face { font-family: '" + familyName + "'; src: url('lib/fonts/" + filename + "'); }\n";
+    }
+    
+    style.textContent = css;
+    document.head.appendChild(style);
+    webFontsLoaded = true;
+    console.log("Web fonts loaded for preview");
+  }
+  
+  // Load web fonts immediately
+  loadWebFonts();
+  
+  // FFmpeg loading - uses local files
+  async function loadFFmpeg() {
+    if (ffmpegLoaded && ffmpeg) return ffmpeg;
+    
+    try {
+      veFFmpegStatus.textContent = "Loading FFmpeg library...";
+      
+      // FFmpeg.wasm UMD build exposes FFmpegWASM global with FFmpeg class
+      if (typeof FFmpegWASM === 'undefined' || !FFmpegWASM.FFmpeg) {
+        throw new Error("FFmpeg library not loaded. Please refresh the page and try again.");
+      }
+      
+      console.log("Creating FFmpeg instance...");
+      ffmpeg = new FFmpegWASM.FFmpeg();
+      
+      ffmpeg.on("log", function(info) {
+        console.log("FFmpeg log:", info.message);
+      });
+      
+      ffmpeg.on("progress", function(info) {
+        var progress = Math.round(info.progress * 100);
+        veProgressFill.style.width = progress + "%";
+        veProgressText.textContent = progress + "%";
+      });
+      
+      veFFmpegStatus.textContent = "Loading FFmpeg WebAssembly (~30MB)...";
+      
+      // Use absolute URLs for local files
+      var baseURL = new URL("lib/ffmpeg/", window.location.href).href;
+      
+      await ffmpeg.load({
+        coreURL: baseURL + "ffmpeg-core.js",
+        wasmURL: baseURL + "ffmpeg-core.wasm"
+      });
+      
+      ffmpegLoaded = true;
+      console.log("FFmpeg loaded successfully");
+      
+      // Load font files into FFmpeg's virtual filesystem
+      if (!fontLoaded) {
+        veFFmpegStatus.textContent = "Loading fonts...";
+        try {
+          // Create the fonts directory first
+          try {
+            await ffmpeg.createDir("/fonts");
+            console.log("Created /fonts directory");
+          } catch (dirError) {
+            console.log("Fonts directory may already exist:", dirError.message);
+          }
+          
+          // Load all available fonts
+          var fonts = [
+            { name: "Roboto-Bold.ttf", path: "lib/fonts/Roboto-Bold.ttf" },
+            { name: "Roboto-Regular.ttf", path: "lib/fonts/Roboto-Regular.ttf" },
+            { name: "OpenSans-Bold.ttf", path: "lib/fonts/OpenSans-Bold.ttf" },
+            { name: "Lato-Bold.ttf", path: "lib/fonts/Lato-Bold.ttf" },
+            { name: "Montserrat-Bold.ttf", path: "lib/fonts/Montserrat-Bold.ttf" },
+            { name: "Montserrat-Regular.ttf", path: "lib/fonts/Montserrat-Regular.ttf" },
+            { name: "SourceSansPro-Bold.ttf", path: "lib/fonts/SourceSansPro-Bold.ttf" },
+            { name: "Oswald-Bold.ttf", path: "lib/fonts/Oswald-Bold.ttf" },
+            { name: "Pacifico-Regular.ttf", path: "lib/fonts/Pacifico-Regular.ttf" }
+          ];
+          
+          var fontsLoadedCount = 0;
+          for (var i = 0; i < fonts.length; i++) {
+            var font = fonts[i];
+            try {
+              console.log("Fetching font: " + font.path);
+              var fontResponse = await fetch(font.path, { cache: "no-store" });
+              console.log("Font response status:", fontResponse.status, fontResponse.statusText);
+              
+              if (!fontResponse.ok) {
+                console.warn("Failed to fetch font " + font.name + ": " + fontResponse.statusText);
+                continue;
+              }
+              
+              // Clone the response to read it properly
+              var fontBlob = await fontResponse.blob();
+              console.log("Font blob size:", fontBlob.size, "type:", fontBlob.type);
+              
+              if (fontBlob.size === 0) {
+                console.warn("Font " + font.name + " returned empty blob");
+                continue;
+              }
+              
+              var fontData = await fontBlob.arrayBuffer();
+              console.log("Font arrayBuffer size:", fontData.byteLength);
+              
+              if (fontData.byteLength === 0) {
+                console.warn("Font " + font.name + " has 0 bytes after conversion");
+                continue;
+              }
+              
+              var fontUint8 = new Uint8Array(fontData);
+              console.log("Writing font to FFmpeg FS: /fonts/" + font.name, "size:", fontUint8.length);
+              
+              await ffmpeg.writeFile("/fonts/" + font.name, fontUint8);
+              
+              // Verify the file was written
+              try {
+                var written = await ffmpeg.readFile("/fonts/" + font.name);
+                console.log("Verified font in FFmpeg FS: " + font.name + " (" + written.length + " bytes)");
+                fontsLoadedCount++;
+              } catch (verifyError) {
+                console.warn("Could not verify font " + font.name + ":", verifyError);
+              }
+            } catch (fontError) {
+              console.warn("Failed to load font " + font.name + ":", fontError);
+            }
+          }
+          
+          fontLoaded = fontsLoadedCount > 0;
+          console.log("Fonts loaded: " + fontsLoadedCount + " of " + fonts.length);
+          
+          if (!fontLoaded) {
+            console.error("No fonts were loaded! Text overlay will not work.");
+          }
+        } catch (fontError) {
+          console.error("Failed to load fonts:", fontError);
+        }
+      }
+      
+      return ffmpeg;
+    } catch (error) {
+      console.error("Failed to load FFmpeg:", error);
+      throw error;
+    }
+  }
+  
+  // Show/hide video edit modal
+  function showVideoEditModal(videoSrc) {
+    currentEditVideoSrc = videoSrc;
+    videoEditModal.style.display = "flex";
+    setVideoEditState("loading");
+    
+    // Reset controls
+    veVolumeSlider.value = 100;
+    veVolumeValue.textContent = "100%";
+    veTextEnabled.checked = false;
+    veTextOptions.style.display = "none";
+    veTextOverlay.style.display = "none";
+    veDragHint.style.display = "none";
+    veTextInput.value = "";
+    veFontFamily.value = "Roboto-Bold.ttf";
+    veFontSize.value = "48";
+    veFontColor.value = "#ffffff";
+    veTextBorder.checked = true;
+    veBorderSize.value = "3";
+    textPositionX = 50;
+    textPositionY = 50;
+    veTextX.value = 50;
+    veTextY.value = 50;
+    veTextXValue.textContent = "50%";
+    veTextYValue.textContent = "50%";
+    
+    // Load video preview and get dimensions
+    vePreviewVideo.src = videoSrc;
+    vePreviewVideo.onloadedmetadata = function() {
+      videoWidth = vePreviewVideo.videoWidth || 1920;
+      videoHeight = vePreviewVideo.videoHeight || 1080;
+      console.log("Video dimensions:", videoWidth, "x", videoHeight);
+      updateTextOverlayPreview();
+    };
+    
+    // Load FFmpeg
+    loadFFmpeg().then(function() {
+      setVideoEditState("editor");
+    }).catch(function(error) {
+      veErrorMessage.textContent = "Failed to load FFmpeg: " + error.message;
+      setVideoEditState("error");
+    });
+  }
+  
+  function hideVideoEditModal() {
+    videoEditModal.style.display = "none";
+    vePreviewVideo.pause();
+    vePreviewVideo.src = "";
+    currentEditVideoSrc = null;
+    currentEditVideoBlob = null;
+  }
+  
+  function setVideoEditState(state) {
+    veLoadingFFmpeg.style.display = state === "loading" ? "block" : "none";
+    veEditorState.style.display = state === "editor" ? "block" : "none";
+    veProcessingState.style.display = state === "processing" ? "block" : "none";
+    veCompleteState.style.display = state === "complete" ? "block" : "none";
+    veErrorState.style.display = state === "error" ? "block" : "none";
+  }
+  
+  // Update text overlay preview
+  function updateTextOverlayPreview() {
+    var text = veTextInput.value || "Sample Text";
+    var fontFile = veFontFamily.value;
+    var fontSize = parseInt(veFontSize.value) || 48;
+    var color = veFontColor.value;
+    var hasBorder = veTextBorder.checked;
+    var borderWidth = parseInt(veBorderSize.value) || 3;
+    
+    // Calculate scale factor based on actual video vs preview size
+    var previewRect = vePreviewVideo.getBoundingClientRect();
+    var previewWidth = previewRect.width || 400;
+    var scaleFactor = previewWidth / videoWidth;
+    
+    // Scale font size for preview
+    var previewFontSize = Math.max(10, Math.round(fontSize * scaleFactor));
+    
+    // Get CSS font family name from the map
+    var cssFontFamily = fontFamilyMap[fontFile] || "sans-serif";
+    
+    veTextOverlayContent.textContent = text;
+    veTextOverlayContent.style.fontFamily = "'" + cssFontFamily + "', sans-serif";
+    veTextOverlayContent.style.fontSize = previewFontSize + "px";
+    veTextOverlayContent.style.color = color;
+    
+    // Apply or remove text shadow (border effect) - scale border with preview
+    if (hasBorder && borderWidth > 0) {
+      var scaledBorder = Math.max(1, Math.round(borderWidth * scaleFactor));
+      veTextOverlayContent.style.textShadow = 
+        scaledBorder + "px " + scaledBorder + "px 0 black, " +
+        (-scaledBorder) + "px " + (-scaledBorder) + "px 0 black, " +
+        scaledBorder + "px " + (-scaledBorder) + "px 0 black, " +
+        (-scaledBorder) + "px " + scaledBorder + "px 0 black, " +
+        "0 " + scaledBorder + "px 0 black, " +
+        "0 " + (-scaledBorder) + "px 0 black, " +
+        scaledBorder + "px 0 0 black, " +
+        (-scaledBorder) + "px 0 0 black";
+    } else {
+      veTextOverlayContent.style.textShadow = "none";
+    }
+    
+    // Position the overlay
+    veTextOverlay.style.left = textPositionX + "%";
+    veTextOverlay.style.top = textPositionY + "%";
+  }
+  
+  // Volume slider
+  veVolumeSlider.addEventListener("input", function() {
+    veVolumeValue.textContent = this.value + "%";
+  });
+  
+  // Text overlay toggle
+  veTextEnabled.addEventListener("change", function() {
+    veTextOptions.style.display = this.checked ? "block" : "none";
+    veTextOverlay.style.display = this.checked ? "block" : "none";
+    veDragHint.style.display = this.checked ? "block" : "none";
+    if (this.checked) {
+      updateTextOverlayPreview();
+    }
+  });
+  
+  // Text input changes - all trigger preview update
+  veTextInput.addEventListener("input", updateTextOverlayPreview);
+  veFontFamily.addEventListener("change", updateTextOverlayPreview);
+  veFontSize.addEventListener("input", updateTextOverlayPreview);
+  veFontColor.addEventListener("input", updateTextOverlayPreview);
+  veTextBorder.addEventListener("change", updateTextOverlayPreview);
+  veBorderSize.addEventListener("input", updateTextOverlayPreview);
+  
+  // Position sliders
+  veTextX.addEventListener("input", function() {
+    textPositionX = parseInt(this.value);
+    veTextXValue.textContent = textPositionX + "%";
+    updateTextOverlayPreview();
+  });
+  
+  veTextY.addEventListener("input", function() {
+    textPositionY = parseInt(this.value);
+    veTextYValue.textContent = textPositionY + "%";
+    updateTextOverlayPreview();
+  });
+  
+  // Draggable text overlay
+  var isDragging = false;
+  var dragStartX, dragStartY;
+  
+  veTextOverlay.addEventListener("mousedown", function(e) {
+    isDragging = true;
+    veTextOverlay.classList.add("dragging");
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    e.preventDefault();
+  });
+  
+  document.addEventListener("mousemove", function(e) {
+    if (!isDragging) return;
+    
+    var container = veTextOverlay.parentElement;
+    var rect = container.getBoundingClientRect();
+    
+    // Calculate new position as percentage
+    var newX = ((e.clientX - rect.left) / rect.width) * 100;
+    var newY = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Clamp to bounds
+    textPositionX = Math.max(5, Math.min(95, newX));
+    textPositionY = Math.max(5, Math.min(95, newY));
+    
+    // Update sliders and preview
+    veTextX.value = Math.round(textPositionX);
+    veTextY.value = Math.round(textPositionY);
+    veTextXValue.textContent = Math.round(textPositionX) + "%";
+    veTextYValue.textContent = Math.round(textPositionY) + "%";
+    updateTextOverlayPreview();
+  });
+  
+  document.addEventListener("mouseup", function() {
+    if (isDragging) {
+      isDragging = false;
+      veTextOverlay.classList.remove("dragging");
+    }
+  });
+  
+  // Close button
+  videoEditCloseBtn.addEventListener("click", hideVideoEditModal);
+  veCancelBtn.addEventListener("click", hideVideoEditModal);
+  veDoneBtn.addEventListener("click", hideVideoEditModal);
+  veErrorRetryBtn.addEventListener("click", function() {
+    setVideoEditState("editor");
+  });
+  
+  // Click outside to close
+  videoEditModal.addEventListener("click", function(e) {
+    if (e.target === videoEditModal) {
+      hideVideoEditModal();
+    }
+  });
+  
+  // Convert hex color to FFmpeg format
+  function hexToFFmpegColor(hex) {
+    // FFmpeg uses format like 0xRRGGBB or white, black, etc
+    return hex.replace("#", "0x");
+  }
+  
+  // Apply edits and download
+  veApplyBtn.addEventListener("click", async function() {
+    if (!ffmpeg || !currentEditVideoSrc) return;
+    
+    // Validate text overlay settings
+    if (veTextEnabled.checked) {
+      if (!veTextInput.value.trim()) {
+        alert("Please enter text for the overlay, or disable text overlay.");
+        veTextInput.focus();
+        return;
+      }
+      if (!fontLoaded) {
+        alert("Font file not loaded. Text overlay may not work correctly.");
+      }
+    }
+    
+    setVideoEditState("processing");
+    veProgressFill.style.width = "0%";
+    veProgressText.textContent = "0%";
+    veProcessingStatus.textContent = "Fetching video file...";
+    
+    var inputFile = null;
+    var outputFile = "output.mp4";
+    
+    try {
+      // Fetch the video file
+      var response = await fetch(currentEditVideoSrc);
+      if (!response.ok) {
+        throw new Error("Failed to fetch video file: " + response.statusText);
+      }
+      var videoData = await response.arrayBuffer();
+      
+      // Determine input file extension
+      var inputExt = currentEditVideoSrc.split('.').pop().toLowerCase();
+      if (inputExt === "m4v") inputExt = "mp4"; // Treat m4v as mp4
+      inputFile = "input." + inputExt;
+      
+      veProcessingStatus.textContent = "Writing video to FFmpeg...";
+      
+      // Write input file to FFmpeg
+      await ffmpeg.writeFile(inputFile, new Uint8Array(videoData));
+      
+      veProcessingStatus.textContent = "Processing video...";
+      
+      // Build FFmpeg command
+      var videoFilters = [];
+      var audioFilters = [];
+      
+      // Volume adjustment
+      var volume = parseInt(veVolumeSlider.value) / 100;
+      if (volume !== 1) {
+        audioFilters.push("volume=" + volume);
+      }
+      
+      // Text overlay
+      if (veTextEnabled.checked && veTextInput.value.trim()) {
+        // Escape special characters for FFmpeg
+        var text = veTextInput.value.trim()
+          .replace(/\\/g, "\\\\")
+          .replace(/'/g, "'\\''")
+          .replace(/:/g, "\\:")
+          .replace(/\[/g, "\\[")
+          .replace(/\]/g, "\\]");
+        
+        var fontFile = veFontFamily.value;
+        var fontSize = parseInt(veFontSize.value) || 48;
+        var fontColor = hexToFFmpegColor(veFontColor.value);
+        var hasBorder = veTextBorder.checked;
+        var borderWidth = parseInt(veBorderSize.value) || 3;
+        
+        // Calculate position based on percentage
+        // x and y are where to place the text, accounting for text dimensions
+        var xExpr = "(" + (textPositionX / 100) + "*w-text_w/2)";
+        var yExpr = "(" + (textPositionY / 100) + "*h-text_h/2)";
+        
+        // Build drawtext filter with font file
+        var drawtext = "drawtext=fontfile=/fonts/" + fontFile;
+        drawtext += ":text='" + text + "'";
+        drawtext += ":fontsize=" + fontSize;
+        drawtext += ":fontcolor=" + fontColor;
+        drawtext += ":x=" + xExpr;
+        drawtext += ":y=" + yExpr;
+        
+        // Add border if enabled
+        if (hasBorder && borderWidth > 0) {
+          drawtext += ":borderw=" + borderWidth + ":bordercolor=black";
+        }
+        
+        videoFilters.push(drawtext);
+      }
+      
+      // Build command arguments
+      var args = ["-i", inputFile];
+      
+      // Add video filter if any
+      if (videoFilters.length > 0) {
+        args.push("-vf", videoFilters.join(","));
+      }
+      
+      // Add audio filter if any
+      if (audioFilters.length > 0) {
+        args.push("-af", audioFilters.join(","));
+      }
+      
+      // Output settings
+      args.push("-c:v", "libx264");
+      args.push("-preset", "fast");
+      args.push("-crf", "23");
+      args.push("-c:a", "aac");
+      args.push("-b:a", "128k");
+      args.push("-movflags", "+faststart");
+      args.push("-y"); // Overwrite output
+      args.push(outputFile);
+      
+      console.log("FFmpeg command:", args.join(" "));
+      
+      // Run FFmpeg and capture return code
+      var returnCode = await ffmpeg.exec(args);
+      console.log("FFmpeg return code:", returnCode);
+      
+      if (returnCode !== 0) {
+        throw new Error("FFmpeg processing failed with code " + returnCode + ". Check console for details.");
+      }
+      
+      veProcessingStatus.textContent = "Reading output file...";
+      
+      // Check if output file exists and has content
+      var outputData;
+      try {
+        outputData = await ffmpeg.readFile(outputFile);
+      } catch (readError) {
+        throw new Error("Output file was not created. FFmpeg processing failed.");
+      }
+      
+      if (!outputData || outputData.length === 0) {
+        throw new Error("Output file is empty. FFmpeg processing failed.");
+      }
+      
+      console.log("Output file size:", outputData.length, "bytes");
+      
+      currentEditVideoBlob = new Blob([outputData.buffer], { type: "video/mp4" });
+      
+      // Create download
+      var timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      var originalFilename = currentEditVideoSrc.split('/').pop().replace(/\.[^/.]+$/, "");
+      var downloadFilename = originalFilename + "-edited-" + timestamp + ".mp4";
+      
+      var downloadUrl = URL.createObjectURL(currentEditVideoBlob);
+      var downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = downloadFilename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadUrl);
+      
+      // Clean up FFmpeg files
+      try {
+        await ffmpeg.deleteFile(inputFile);
+        await ffmpeg.deleteFile(outputFile);
+      } catch (cleanupError) {
+        console.warn("Cleanup error:", cleanupError);
+      }
+      
+      // Show complete state
+      veOriginalPath.value = currentEditVideoSrc;
+      setVideoEditState("complete");
+      
+    } catch (error) {
+      console.error("Video processing error:", error);
+      veErrorMessage.textContent = error.message || "An error occurred while processing the video.";
+      setVideoEditState("error");
+      
+      // Clean up on error
+      try {
+        if (inputFile) await ffmpeg.deleteFile(inputFile);
+        await ffmpeg.deleteFile(outputFile);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+    }
+  });
+  
+  // Edit Video button click
+  editVideoBtn.addEventListener("click", function() {
+    if (selectedSlideIndex < 0) return;
+    var slide = slides[selectedSlideIndex];
+    if (slide.type !== "video" || !slide.src) return;
+    showVideoEditModal(slide.src);
+  });
+
+  // ============================================
+  // AUDIO VOLUME CONTROL
+  // ============================================
+  
+  var audioVolumeSlider = document.getElementById("audio-volume");
+  var audioVolumeValue = document.getElementById("audio-volume-value");
+  
+  // Update volume display and preview playback volume
+  audioVolumeSlider.addEventListener("input", function() {
+    var volumePercent = parseInt(this.value);
+    audioVolumeValue.textContent = volumePercent + "%";
+    
+    // Update the audio preview player volume in real-time
+    // Volume is 0-1 for HTML audio, but our slider is 0-200%
+    // Cap at 1.0 (100%) since HTML audio can't go above that
+    if (audioPreview) {
+      audioPreview.volume = Math.min(1, volumePercent / 100);
+    }
+  });
+  
+  // Override selectAudioTrack to include volume
+  var originalSelectAudioTrack = selectAudioTrack;
+  selectAudioTrack = function(index) {
+    originalSelectAudioTrack(index);
+    
+    // Load volume setting
+    var track = audioTracks[index];
+    var volume = track.volume !== undefined ? track.volume : 100;
+    audioVolumeSlider.value = volume;
+    audioVolumeValue.textContent = volume + "%";
+    
+    // Set the audio preview player volume to match
+    if (audioPreview) {
+      audioPreview.volume = Math.min(1, volume / 100);
+    }
+  };
+  
+  // Override audio form submit to include volume
+  var originalAudioFormSubmit = audioForm.onsubmit;
+  audioForm.addEventListener("submit", function(e) {
+    // Save volume to track before the original handler
+    if (selectedAudioIndex >= 0) {
+      audioTracks[selectedAudioIndex].volume = parseInt(audioVolumeSlider.value);
+    }
+  });
+  
+  // Override updateAudio to apply volume during playback
+  var originalUpdateAudio = updateAudio;
+  updateAudio = function() {
+    for (var i = 0; i < audioTracks.length; i++) {
+      var track = audioTracks[i];
+      if (currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide) {
+        if (!activeAudioElements[i]) {
+          var el = new Audio(track.src);
+          el.loop = !!track.loop;
+          // Apply volume
+          var volume = track.volume !== undefined ? track.volume : 100;
+          el.volume = Math.min(1, volume / 100);
+          activeAudioElements[i] = el;
+          if (!paused) el.play().catch(function(){});
+        } else {
+          // Update volume if track settings changed
+          var volume = track.volume !== undefined ? track.volume : 100;
+          activeAudioElements[i].volume = Math.min(1, volume / 100);
+        }
+      } else if (activeAudioElements[i]) {
+        activeAudioElements[i].pause();
+        activeAudioElements[i].currentTime = 0;
+        delete activeAudioElements[i];
+      }
+    }
+  };
 }
