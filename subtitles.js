@@ -151,7 +151,7 @@ async function startListening() {
 
     // Create VAD instance with callbacks
     SubtitleState.vadInstance = await vad.MicVAD.new({
-      // Use local model files
+      // Use local model files (VAD model and worklet)
       modelURL: './lib/vad/silero_vad_legacy.onnx',
       workletURL: './lib/vad/vad.worklet.bundle.min.js',
       

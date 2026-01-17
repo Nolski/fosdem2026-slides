@@ -508,8 +508,8 @@
   <!-- FFmpeg.wasm for video/audio editing (local files) -->
   <script src="lib/ffmpeg/ffmpeg.js"></script>
   
-  <!-- ONNX Runtime for VAD and Whisper -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.js"></script>
+  <!-- ONNX Runtime for VAD (CDN - handles WASM paths automatically) -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
   
   <!-- Silero VAD for real-time voice activity detection (local files) -->
   <script src="lib/vad/vad.bundle.min.js"></script>
