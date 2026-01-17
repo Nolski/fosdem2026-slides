@@ -1409,8 +1409,6 @@ if (isPresenter) {
   var veOriginalPath = document.getElementById("ve-original-path");
   
   var vePreviewVideo = document.getElementById("ve-preview-video");
-  var veVolumeSlider = document.getElementById("ve-volume");
-  var veVolumeValue = document.getElementById("ve-volume-value");
   var veTextEnabled = document.getElementById("ve-text-enabled");
   var veTextOptions = document.getElementById("ve-text-options");
   var veTextInput = document.getElementById("ve-text-input");
@@ -1439,7 +1437,6 @@ if (isPresenter) {
   var webFontsLoaded = false;
   var currentEditVideoSrc = null;
   var currentEditVideoBlob = null;
-  var currentEditSlideIndex = -1; // Track which slide is being edited
   var textPositionX = 50; // percentage
   var textPositionY = 50; // percentage
   var videoWidth = 1920; // actual video width
@@ -1611,19 +1608,10 @@ if (isPresenter) {
   // Show/hide video edit modal
   function showVideoEditModal(videoSrc) {
     currentEditVideoSrc = videoSrc;
-    currentEditSlideIndex = selectedSlideIndex;
     videoEditModal.style.display = "flex";
     setVideoEditState("loading");
     
-    // Load volume from current slide's settings
-    var currentVolume = 100;
-    if (currentEditSlideIndex >= 0 && slides[currentEditSlideIndex]) {
-      currentVolume = slides[currentEditSlideIndex].volume !== undefined ? slides[currentEditSlideIndex].volume : 100;
-    }
-    
     // Reset controls
-    veVolumeSlider.value = currentVolume;
-    veVolumeValue.textContent = currentVolume + "%";
     veTextEnabled.checked = false;
     veTextOptions.style.display = "none";
     veTextOverlay.style.display = "none";
@@ -1665,7 +1653,6 @@ if (isPresenter) {
     vePreviewVideo.src = "";
     currentEditVideoSrc = null;
     currentEditVideoBlob = null;
-    currentEditSlideIndex = -1;
   }
   
   function setVideoEditState(state) {
@@ -1735,39 +1722,10 @@ if (isPresenter) {
     if (this.checked) {
       updateTextOverlayPreview();
     }
-    updateApplyButtonText();
   });
-  
-  // Update apply button text based on whether FFmpeg is needed
-  function updateApplyButtonText() {
-    var btnTextEl = document.getElementById("ve-apply-btn-text");
-    var helpTextEl = document.getElementById("ve-help-text");
-    var hasTextOverlay = veTextEnabled.checked && veTextInput.value.trim();
-    
-    if (btnTextEl) {
-      if (hasTextOverlay) {
-        btnTextEl.textContent = "Apply & Download";
-        veApplyBtn.querySelector(".btn-icon").textContent = "⚙️";
-      } else {
-        btnTextEl.textContent = "Save Volume";
-        veApplyBtn.querySelector(".btn-icon").textContent = "💾";
-      }
-    }
-    
-    if (helpTextEl) {
-      if (hasTextOverlay) {
-        helpTextEl.textContent = "Text overlay enabled - video will be processed with FFmpeg and downloaded.";
-      } else {
-        helpTextEl.textContent = "Volume changes are saved as settings (no re-encoding needed). Enable text overlay to process video with FFmpeg.";
-      }
-    }
-  }
   
   // Text input changes - all trigger preview update
-  veTextInput.addEventListener("input", function() {
-    updateTextOverlayPreview();
-    updateApplyButtonText();
-  });
+  veTextInput.addEventListener("input", updateTextOverlayPreview);
   veFontFamily.addEventListener("change", updateTextOverlayPreview);
   veFontSize.addEventListener("input", updateTextOverlayPreview);
   veFontColor.addEventListener("input", updateTextOverlayPreview);
@@ -1851,40 +1809,21 @@ if (isPresenter) {
   
   // Apply edits and download
   veApplyBtn.addEventListener("click", async function() {
-    var hasTextOverlay = veTextEnabled.checked && veTextInput.value.trim();
-    var newVolume = parseInt(veVolumeSlider.value);
-    
-    // Save volume to slide settings (regardless of FFmpeg usage)
-    if (currentEditSlideIndex >= 0 && slides[currentEditSlideIndex]) {
-      slides[currentEditSlideIndex].volume = newVolume;
-      // Update the main volume slider if we're on the same slide
-      if (selectedSlideIndex === currentEditSlideIndex && videoVolumeSlider) {
-        videoVolumeSlider.value = newVolume;
-        videoVolumeValue.textContent = newVolume + "%";
-      }
-    }
-    
-    // If only volume changed (no text overlay), just save and close
-    if (!hasTextOverlay) {
-      // Show a quick confirmation
-      alert("Volume setting saved! The new volume (" + newVolume + "%) will be applied during playback.");
-      hideVideoEditModal();
-      renderTimelines(); // Re-render to reflect changes
-      if (selectedSlideIndex >= 0) {
-        selectSlide(selectedSlideIndex); // Refresh the editor
-      }
-      return;
-    }
-    
-    // Text overlay is enabled - we need FFmpeg for that
-    if (!ffmpeg || !currentEditVideoSrc) {
-      alert("FFmpeg is not loaded. Please try again.");
-      return;
-    }
+    if (!ffmpeg || !currentEditVideoSrc) return;
     
     // Validate text overlay settings
-    if (!fontLoaded) {
-      alert("Font file not loaded. Text overlay may not work correctly.");
+    if (veTextEnabled.checked) {
+      if (!veTextInput.value.trim()) {
+        alert("Please enter text for the overlay, or disable text overlay.");
+        veTextInput.focus();
+        return;
+      }
+      if (!fontLoaded) {
+        alert("Font file not loaded. Text overlay may not work correctly.");
+      }
+    } else {
+      alert("Please enable text overlay and enter text to process the video. Volume can be adjusted in the slide editor without re-encoding.");
+      return;
     }
     
     setVideoEditState("processing");
@@ -1915,12 +1854,11 @@ if (isPresenter) {
       
       veProcessingStatus.textContent = "Processing video...";
       
-      // Build FFmpeg command - only for text overlay, NOT for volume
-      // Volume is handled via JSON settings now
+      // Build FFmpeg command for text overlay only
+      // Volume is handled via JSON settings in the slide editor
       var videoFilters = [];
       
-      // Text overlay
-      // Escape special characters for FFmpeg
+      // Text overlay - escape special characters for FFmpeg
       var text = veTextInput.value.trim()
         .replace(/\\/g, "\\\\")
         .replace(/'/g, "'\\''")
@@ -1935,7 +1873,6 @@ if (isPresenter) {
       var borderWidth = parseInt(veBorderSize.value) || 3;
       
       // Calculate position based on percentage
-      // x and y are where to place the text, accounting for text dimensions
       var xExpr = "(" + (textPositionX / 100) + "*w-text_w/2)";
       var yExpr = "(" + (textPositionY / 100) + "*h-text_h/2)";
       
@@ -1954,7 +1891,7 @@ if (isPresenter) {
       
       videoFilters.push(drawtext);
       
-      // Build command arguments - NO audio filters for volume since it's now a setting
+      // Build command arguments
       var args = ["-i", inputFile];
       
       // Add video filter for text overlay
