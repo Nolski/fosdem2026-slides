@@ -114,7 +114,7 @@ async function initializeWhisper() {
   try {
     const { pipeline } = await loadTransformers();
     
-    // Check WebGPU availability properly
+    // Check WebGPU availability
     let device = 'wasm';
     let useWebGPU = false;
     
@@ -122,18 +122,17 @@ async function initializeWhisper() {
       try {
         const adapter = await navigator.gpu.requestAdapter();
         if (adapter) {
-          const adapterInfo = await adapter.requestAdapterInfo();
-          console.log('[Subtitles] WebGPU adapter:', adapterInfo);
+          console.log('[Subtitles] WebGPU adapter found');
           device = 'webgpu';
           useWebGPU = true;
         }
       } catch (e) {
-        console.warn('[Subtitles] WebGPU adapter request failed:', e);
+        console.warn('[Subtitles] WebGPU not usable:', e.message);
       }
     }
     
     if (!useWebGPU) {
-      console.warn('[Subtitles] WebGPU not available, using WASM (will be slower)');
+      console.log('[Subtitles] Using WASM backend (WebGPU not available)');
     }
 
     console.log(`[Subtitles] Loading ${CONFIG.modelName} on ${device}...`);
@@ -305,23 +304,25 @@ async function processAudioWindow() {
   try {
     const startTime = performance.now();
     
-    // Transcribe with timestamps for deduplication
+    // Transcribe the audio window
     const result = await SubtitleState.transcriber(audioWindow, {
-      return_timestamps: 'word',
+      return_timestamps: true,
       chunk_length_s: 30,
       stride_length_s: 5,
-      language: 'english',
+      language: 'en',
       task: 'transcribe'
     });
 
     const processingTime = performance.now() - startTime;
     
     if (CONFIG.debug) {
-      console.log(`[Subtitles] Processed in ${Math.round(processingTime)}ms`);
+      console.log(`[Subtitles] Processed in ${Math.round(processingTime)}ms, result:`, result);
     }
 
     if (result) {
       handleTranscriptionResult(result, processingTime);
+    } else {
+      console.log('[Subtitles] No result returned');
     }
   } catch (error) {
     console.error('[Subtitles] Transcription error:', error);
@@ -334,38 +335,34 @@ async function processAudioWindow() {
  * Handle transcription result with deduplication
  */
 function handleTranscriptionResult(result, processingTime) {
-  let text = '';
+  // Get the text from result
+  let text = result.text || '';
   
-  // Handle different result formats
-  if (result.chunks && result.chunks.length > 0) {
-    // Word-level timestamps available
-    // Only keep words from recent audio (last few seconds)
-    const recentChunks = result.chunks.filter(chunk => {
-      // Keep words that end in the last 5 seconds of the window
-      return chunk.timestamp && chunk.timestamp[1] > (CONFIG.windowSeconds - 5);
-    });
-    text = recentChunks.map(c => c.text).join('').trim();
-  } else if (result.text) {
-    text = result.text.trim();
+  if (CONFIG.debug && result.chunks) {
+    console.log(`[Subtitles] Chunks:`, result.chunks);
   }
-
+  
+  // Clean the text
   text = cleanTranscription(text);
   
+  if (CONFIG.debug) {
+    console.log(`[Subtitles] Cleaned text: "${text}"`);
+  }
+  
   if (!text || text.length < 2) {
+    if (CONFIG.debug) console.log('[Subtitles] Text too short, skipping');
     return;
   }
 
-  // Simple deduplication: check if this is substantially new
-  const isNew = !SubtitleState.lastTranscribedText || 
-                !text.startsWith(SubtitleState.lastTranscribedText.substring(0, 10));
-  
-  if (isNew || text.length > SubtitleState.lastTranscribedText.length + 5) {
-    if (CONFIG.debug) {
-      console.log(`[Subtitles] (${Math.round(processingTime)}ms) "${text}"`);
-    }
-    SubtitleState.lastTranscribedText = text;
-    displaySubtitle(text);
+  // Simple deduplication: don't show exact same text
+  if (text === SubtitleState.lastTranscribedText) {
+    if (CONFIG.debug) console.log('[Subtitles] Duplicate, skipping');
+    return;
   }
+  
+  console.log(`[Subtitles] (${Math.round(processingTime)}ms) "${text}"`);
+  SubtitleState.lastTranscribedText = text;
+  displaySubtitle(text);
 }
 
 /**
@@ -423,27 +420,26 @@ function stopListening() {
  * Clean transcription text
  */
 function cleanTranscription(text) {
+  if (!text) return '';
+  
   let clean = text
-    .replace(/\[.*?\]/g, '')
-    .replace(/\(.*?\)/g, '')
-    .replace(/<\|.*?\|>/g, '')
+    .replace(/\[.*?\]/g, '')      // [MUSIC] etc
+    .replace(/\(.*?\)/g, '')      // (inaudible) etc
+    .replace(/<\|.*?\|>/g, '')    // Whisper tokens
     .replace(/♪/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Filter common hallucinations
+  // Only filter very specific hallucinations (keep most text)
   const hallucinations = [
-    'thank you', 'thanks for watching', 'subscribe', 'like and subscribe',
-    'see you', 'bye', 'goodbye', 'the end', 'thanks',
-    'you', 'i', 'so', 'and', 'the', 'a', 'to', 'it', 'is'
+    'thank you for watching',
+    'thanks for watching', 
+    'please subscribe',
+    'like and subscribe'
   ];
   
   if (hallucinations.includes(clean.toLowerCase())) {
     return '';
-  }
-  
-  if (clean.length > 0) {
-    clean = clean.charAt(0).toUpperCase() + clean.slice(1);
   }
   
   return clean;
