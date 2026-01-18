@@ -95,9 +95,38 @@
     },
     {
       "type": "video",
-      "notes": "To really understand why any of this is legal, we have to go back.... all the way back, to the world's first copyright law",
+      "notes": "For thousands of years the only way to make a copy of a book was to manually copy it, one character at a time, the process took months. This gave books a finite shelf life, as long as monks were willing to recopy them, we lost so much information to time, because the original books just weren't copied.\n\nIt's hard to underscore just how different this world was, everyone in this room has read the exact same books as one another, for thousands of years books only existed as individual works, other than a very small select few like Homer's Odyssey, there were no widely distributed books.",
+      "src": "media/video/Medieval_Scribe_Transcribing_Ancient_Book.mp4",
+      "loop": true,
+      "volume": 10
+    },
+    {
+      "type": "video",
+      "notes": "In 1440 the printing press changed everything, while it used to take months to make a single duplicate copy, now you could pull THOUSANDS of copies in the same time span.\n\nWe live in a world were its easy to express something and distribute that expression, prior to 1440 there wasn't a pratical way to do that.\n\nCopyright didn't exist before the printing press, because the effort to make a single copy of a book, was almost the same effort it took to make the book in th first place.\n\nNo longer true. The effort to make the first book copy of a book is now orders of magnitude higher than it is to make the next 10,000 copies.",
+      "src": "media/video/Early_Printing_Press_Creates_Concrete_Book.mp4",
+      "loop": false,
+      "volume": 8
+    },
+    {
+      "type": "video",
+      "notes": "And when we talk about copyright, for hundreds of years it ONLY applied to books, imagine someone recreating a marble statue",
+      "src": "media/video/Video_Shows_Man_Copying_Statue.mp4",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "notes": "Or recreating a painting, there was no lithography, the effort to recreate the painting was just as high as the effort to make the painting in the first place...\n\nCopyright really just centered around books, for hundreds of years, at least until the cost of reproducing those other types of expression also fell...\n\nAnd by the way, book copyright wasn't immediate either, the first printing presses were state controlled, heavily driven by censorship, and not widespread in private hands",
+      "src": "media/video/Slow_Painting_Copy_Year_.mp4",
+      "loop": false,
+      "volume": 17
+    },
+    {
+      "type": "video",
+      "notes": "At least not until the 1700's when this question of book piracy really started to blow up",
       "src": "media/video/14.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
