@@ -442,8 +442,15 @@
     },
     {
       "type": "video",
+      "notes": "Okay first let's start with an example.\n\nPicture this, it's the holidays and you're a SWE at BoringCorp. You are the lead dev on the encabulation system that sits at the core of Boring's very important software solution. You're about to cut into your juicy christmas ham and BAM. Your pager starts going off.\n\nSome transient dependency for pretty much every software service Boring runs has released a massive CVE and there's already expoits out in the wild scanning the internet and ruining people's day. Your ham is getting cold buddy because you have a lot of work to do.\n\nIf you're lucky, maybe the maintainer of this dependency has already released a fix but even then, how easy is it to update? What if it's vendor code that's effected? And if it isn't? Do you email the maintainer? Either way you're going to spend the next few weeks in meeting getting talked down to by people who 24 hours prior, didn't even know you existed. This isn't an anomoly, this is a way of life for those relying on open source software.",
+      "src": "media/video/ham.mp4",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
       "src": "media/video/log4j.mp4",
-      "notes": "",
+      "notes": "And this is pretty much a real story. \n\nIn December 2021, the software world discovered a critical vulnerability in Apache Log4j, a Java logging library that sat quietly underneath an enormous portion of the global software stack.\n\nt was everywhere — embedded in enterprise applications, cloud platforms, vendor products, government systems, and internal services. If you were running Java at scale, you were almost certainly using it — often without knowing.\nThe vulnerability, later called Log4Shell, allowed remote code execution by getting a system to log a specially crafted string. No authentication. No exploit chain. Just logging user-controlled data could lead to full system compromise.\n\nEven after fixes were released, real-world systems remained vulnerable because patches had to flow through vendors, rebuild pipelines, and downstream consumers.\n\nLog4J wasn't just an issue of a terrible vulnerability that caused a lot of damage, it was an issue of the inherent structural risk that exists by interconnecting so much of our software in the way that open source does.",
       "loop": false,
       "volume": 0
     }
