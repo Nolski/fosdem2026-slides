@@ -482,6 +482,13 @@
       "notes": "And this is pretty much a real story. \n\nIn December 2021, the software world discovered a critical vulnerability in Apache Log4j, a Java logging library that sat quietly underneath an enormous portion of the global software stack.\n\nt was everywhere — embedded in enterprise applications, cloud platforms, vendor products, government systems, and internal services. If you were running Java at scale, you were almost certainly using it — often without knowing.\nThe vulnerability, later called Log4Shell, allowed remote code execution by getting a system to log a specially crafted string. No authentication. No exploit chain. Just logging user-controlled data could lead to full system compromise.\n\nEven after fixes were released, real-world systems remained vulnerable because patches had to flow through vendors, rebuild pipelines, and downstream consumers.\n\nLog4J wasn't just an issue of a terrible vulnerability that caused a lot of damage, it was an issue of the inherent structural risk that exists by interconnecting so much of our software in the way that open source does.",
       "loop": false,
       "volume": 0
+    },
+    {
+      "type": "video",
+      "src": "media/video/wedding-ruined.mp4",
+      "notes": "So... Imagine now you're a maintainer of a popular javascript package. You're at your best friends wedding, a historic and beautiful moment. As this lovely couple looks into each other's eyes, your phone starts going off. You have half the internet jumping on you because a worm has made its way into your package, not just infecting yours but many other open source maintainers works!\n\nYou don't make a cent off of this damn thing but still, you have engineers at companies around the planet angrily emailing you to fix this immediately. \n\nThe wedding would be absolutely ruined!",
+      "loop": false,
+      "volume": 100
     }
   ],
   "audio": [
