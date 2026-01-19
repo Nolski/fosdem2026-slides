@@ -88,6 +88,13 @@
     },
     {
       "type": "video",
+      "notes": "This has got to have some companies wondering... can we use AI to extract all the things we like from open source, but leave behind all the parts that don't serve us?",
+      "src": "media/video/takegoodbits.mp4",
+      "loop": false,
+      "volume": 22
+    },
+    {
+      "type": "video",
       "notes": "You have to understand, copyright and opensource have been fundamentally inseparable since the 70's. You can't think of one without the other.\n\nAnd we now have machines that almost instantly can completely circumvent any possible benefit copyright brings to open source.\n\nAnd for large businesses, these machines can circumvent a lot of headache too. \n\nTo really wrap your mind around this though we need to go back in time... ",
       "src": "media/video/output_1080p_smooth.mp4",
       "loop": true,
