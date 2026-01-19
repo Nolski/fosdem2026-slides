@@ -87,52 +87,67 @@
       "loop": false
     },
     {
-      "type": "placeholder",
-      "notes": "",
-      "title": "Go back to the monks transcribing stuff",
-      "backgroundColor": "#333333",
-      "text": ""
+      "type": "video",
+      "notes": "You have to understand, copyright and opensource have been fundamentally inseparable since the 70's. You can't think of one without the other.\n\nAnd we now have machines that almost instantly can completely circumvent any possible benefit copyright brings to open source.\n\nAnd for large businesses, these machines can circumvent a lot of headache too. \n\nTo really wrap your mind around this though we need to go back in time... ",
+      "src": "media/video/output_1080p_smooth.mp4",
+      "loop": true,
+      "volume": 0
     },
     {
       "type": "video",
-      "notes": "For thousands of years the only way to make a copy of a book was to manually copy it, one character at a time, the process took months. This gave books a finite shelf life, as long as monks were willing to recopy them, we lost so much information to time, because the original books just weren't copied.\n\nIt's hard to underscore just how different this world was, everyone in this room has read the exact same books as one another, for thousands of years books only existed as individual works, other than a very small select few like Homer's Odyssey, there were no widely distributed books.",
+      "notes": "All the way back to the 1400's, before any copyright existed.\n\nWe have to know how copyright got to the place it's at now, to understand what our 2026 language models are about to do to the entire system",
+      "src": "media/video/rewind1400.mp4",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "notes": "For thousands of years the only way to make a copy of a book was to manually copy it, one character at a time, the process took months. This gave books a finite shelf life. The shelf life was as long as monks were willing to recopy them. We lost so much information to time, because the original books just weren't copied.\n\nIt's hard to underscore just how different this world was, everyone in this room has read the exact same books as one another, for thousands of years books only existed as individual works, other than a very small select few like Homer's Odyssey, there were no widely distributed books.\n\nThink about if you were a king, how you would distribute a message to all your subjects?",
       "src": "media/video/Medieval_Scribe_Transcribing_Ancient_Book.mp4",
       "loop": true,
       "volume": 10
     },
     {
       "type": "video",
-      "notes": "In 1440 the printing press changed everything, while it used to take months to make a single duplicate copy, now you could pull THOUSANDS of copies in the same time span.\n\nWe live in a world were its easy to express something and distribute that expression, prior to 1440 there wasn't a pratical way to do that.\n\nCopyright didn't exist before the printing press, because the effort to make a single copy of a book, was almost the same effort it took to make the book in th first place.\n\nNo longer true. The effort to make the first book copy of a book is now orders of magnitude higher than it is to make the next 10,000 copies.",
+      "notes": "In 1440 the printing press changed everything, while it used to take months to make a single duplicate copy, now you could pull THOUSANDS of copies in the same time span.\n\nWe live in a world were its easy to express something and distribute that expression, prior to 1440 there wasn't a pratical way to do that.\n\nBut more importantly, when there was only a small number of machines, they became tools for propaganda. The crown could massively distribute whatever message they wanted.",
       "src": "media/video/Early_Printing_Press_Creates_Concrete_Book.mp4",
       "loop": false,
       "volume": 8
     },
     {
       "type": "video",
-      "notes": "And when we talk about copyright, for hundreds of years it ONLY applied to books, imagine someone recreating a marble statue",
+      "notes": "when we think about copyright, for hundreds of years it ONLY applied to books, imagine someone recreating a marble statue",
       "src": "media/video/Video_Shows_Man_Copying_Statue.mp4",
       "loop": false,
       "volume": 100
     },
     {
       "type": "video",
-      "notes": "Or recreating a painting, there was no lithography, the effort to recreate the painting was just as high as the effort to make the painting in the first place...\n\nCopyright really just centered around books, for hundreds of years, at least until the cost of reproducing those other types of expression also fell...\n\nAnd by the way, book copyright wasn't immediate either, the first printing presses were state controlled, heavily driven by censorship, and not widespread in private hands",
+      "notes": "Or recreating a painting, there was no lithography, the effort to recreate the painting was just as high as the effort to make the painting in the first place...\n\nCopyright really just centered around books, at least until the cost of reproducing those other types of expression also fell...\n\nAnd by the way, book copyright wasn't immediate either, the first printing presses were state controlled, heavily driven by censorship, and not widespread in private hands",
       "src": "media/video/Slow_Painting_Copy_Year_.mp4",
       "loop": false,
       "volume": 17
     },
     {
       "type": "video",
-      "notes": "At least not until the 1700's when this question of book piracy really started to blow up",
+      "notes": "Copyright in the 1400's wouldn't have made any sense, the monarchy just controlled all the presses and used it to advance the crowns narrative.\n\n\nBut over the centuries we went from one printing press, to ten thousand in the 1700's, many of which fell into private hands, and the crowns grasp on what got printed weakened",
+      "src": "media/video/20260119_1338_01kfc2yzpme0ravdd0ksb3cj8x.mp4",
+      "loop": true,
+      "volume": 0
+    },
+    {
+      "type": "video",
+      "notes": "We have to travel to the 1700's when the question of book piracy between competing printing monopolies really started to blow up",
       "src": "media/video/14.m4v",
       "loop": false,
       "volume": 100
     },
     {
       "type": "video",
-      "notes": "Before copyright authors didn't really own their works, they'd just sell their physical manuscripts to publishers",
+      "notes": "In the 1700's authors didn't really own their works, they'd just sell their physical manuscripts to publishers",
       "src": "media/video/15.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
@@ -142,27 +157,31 @@
     },
     {
       "type": "video",
-      "notes": "If the book did REALLY well, other publishers could just take the book, and letter by letter recreate it, and sell it themselves without permission from the first publisher or the author...\n\nAt least that's how the law worked, some guilds banded together to make agreements with one another about republishing but these weren't legally binding agreements",
+      "notes": "The private publishers were getting insanely wealthy though, large monopolies in a time when people were starting to question monopolies.\n\nAlso other publishers can and would just take the book, and letter by letter recreate it, and sell it themselves without permission from the first publisher or the author...\n\nAt least that's how the law worked, some guilds banded together to make agreements with one another about republishing but these weren't legally binding agreements",
       "src": "media/video/17.m4v",
-      "loop": true
+      "loop": true,
+      "volume": 100
     },
     {
       "type": "video",
-      "notes": "I actually brought in an example of this you can all check out after the talk, these were both printed in 1708, one was from the original publisher the author sold his manuscript to, the other from a random publisher that saw the success and reprinted the book.\n\nVery early example of piracy...\n\nWhy are we talking about books? Well it turns out all of copyright was established for books...",
+      "notes": "I actually brought in an example of this you can all check out after the talk, these were both printed in 1708, one was from the original publisher the author sold his manuscript to, the other from a random publisher that saw the success and reprinted the book.\n\nVery early example of piracy...",
       "src": "media/video/18.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
-      "notes": "So 2 years after these books were published, the british parlement says, hey, we can encourage more learning if the authors participate in the upside, and they pass the statute of anne, the world's first copyright law, which gave authors a monopoly on the publishing of their works for 15 years, shifting who controlled what got printed from the publishers to the authors...\n\nThis was the theory anyway.",
+      "notes": "So 2 years after these books were published, the british parlement says, hey, we have to break up these publisher monopolies, and maybe we can encourage more learning if the authors participate in the upside, and they pass the statute of anne, the world's first copyright law, which gave authors a monopoly on the publishing of their works for 15 years, shifting who controlled what got printed from the publishers to the authors...\n\nThis was the theory anyway.",
       "src": "media/video/19.m4v",
-      "loop": true
+      "loop": true,
+      "volume": 100
     },
     {
       "type": "video",
-      "notes": "Here's a copy of the statute of Anne, the actual name of the law is \"An act for the encouragment of learning\"\n\nTHey really thought this was gonna promote more authors and books and stuff...\n\nWe actually have a little bit of footage of the original signing. You wouldn't have thought a video from back then survived but...",
+      "notes": "Here's a copy of the statute of Anne, the actual name of the law is \"An act for the encouragment of learning\"\n\nTHey really thought this was gonna promote more authors and books and stuff...",
       "src": "media/video/20.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
@@ -178,9 +197,10 @@
     },
     {
       "type": "video",
-      "notes": "Let's skip ahead a little bit to the 1800's",
+      "notes": "Let's skip ahead a little bit to the 1800's when we finally got some resolution to some of these open questions",
       "src": "media/video/23.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
@@ -189,11 +209,11 @@
       "loop": true
     },
     {
-      "type": "placeholder",
+      "type": "video",
       "notes": "A few years later, a man named Baker, ripped him off. He made a book that used the talked about the same accounting system, and also contained ledgers. But the text was different, and the fonts and tables were all different",
-      "title": "Baker slide?",
-      "backgroundColor": "#333333",
-      "text": ""
+      "src": "media/video/baker_book.mp4",
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
@@ -233,9 +253,10 @@
     },
     {
       "type": "video",
-      "notes": "Which is exactly what we did do, and it took us about 10 minutes and 8 dollars to fully recreate what baker did using modern AI tools. I'm holding up a copy of our cleanroom'd book",
+      "notes": "Which is exactly what we did do, and it took us about 10 minutes and 8 dollars to fully recreate what baker did using modern AI tools. I'm holding up a copy of our cleanroom'd book..\n\n\nYou can almost imagine back in the 1700's when they made that first copyright law... you can smell the iron ink, the cotton paper.. what would they have thought about this?",
       "src": "media/video/32.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100
     },
     {
       "type": "video",
@@ -245,9 +266,17 @@
     },
     {
       "type": "video",
-      "notes": "Just a small aside, we talked about the US supreme court, but we're standing in Brussels right now... we do have to briefly touch on how copyright became international.\n\nIt turns out Brussels was at the heart of it, french authors like Victor Hugo, kept getting pirated in Brussels, and then the books flowed back into france. Because copyright wasn't international this was actually legal...\n\nAgain strangely we have surviving footage of this",
+      "src": "media/video/ai-video-2026-01-19T22-28-34.mp4",
+      "notes": "You can start to think about how all this is going to apply to software, no one cares about expression of code, very few even read the source code of the programs they run, they only care about the function, the idea the part that's not protected.\n\nIn a book you care deeply about the expression, but source code?\n\nIs the selden vs baker ruling maybe protected the labor it took to express the software, the time? But how's that work when LLM's drop that labor to zero?\n\nWe're getting ahead of ourselves though.",
+      "loop": true,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "notes": "We talked about the US supreme court, but we're standing in Brussels right now... we do have to briefly touch on how copyright became international.\n\nIt turns out Brussels was at the heart of it, french authors like Victor Hugo, kept getting pirated in Brussels, and then the books flowed back into france. Because copyright wasn't international this was actually legal...\n\nYou can almost picture how upset Victor was...",
       "src": "media/video/33.m4v",
-      "loop": true
+      "loop": true,
+      "volume": 100
     },
     {
       "type": "video",
@@ -263,11 +292,10 @@
       "loop": true
     },
     {
-      "type": "placeholder",
+      "type": "image",
       "notes": "Funny enough I also have one of those original victor hugo pirated books, printed right here in belguim and you can check it out after the talk",
-      "title": "HOlds up victo hugo book",
-      "backgroundColor": "#333333",
-      "text": ""
+      "src": "media/img/victorhugobook.webp",
+      "zoompan": true
     },
     {
       "type": "video",
@@ -338,9 +366,10 @@
     },
     {
       "type": "video",
-      "notes": "At this point the ideas of cleanrooming existed for 100 years, established in seldon vs baker\n\nBut Franklin computer corp thought they could take a shortcut...\n\nThey thought maybe if they extracted the compiled machine code from teh apple 2, the original C code would be covered under copyright but not the compiled code and they thought they could sell computers running the same compiled code",
+      "notes": "At this point the ideas of cleanrooming existed for 100 years, established in seldon vs baker\n\nWe started to think about how it might apply to software..\n\nFranklin computer corp thought they could take a shortcut...\n\nThey thought maybe if they extracted the compiled machine code from teh apple 2, the original C code would be covered under copyright but not the compiled code and they thought they could sell computers running the same compiled code",
       "src": "media/video/47.m4v",
-      "loop": true
+      "loop": true,
+      "volume": 100
     },
     {
       "type": "video",
@@ -362,7 +391,7 @@
     },
     {
       "type": "video",
-      "notes": "By the 80's some crazy open source people had figured out how to circomnavigate the legal complexities of giving code away for free..",
+      "notes": "By the 80's some crazy open source people had figured out how to circomnavigate the legal complexities of giving code away for free..\n\nThey also started to reason through how they might use copyright to their advantage to help promote more open source software",
       "src": "media/video/ai-video-2026-01-17T05-33-11.mp4",
       "loop": false,
       "volume": 0
@@ -383,7 +412,7 @@
     {
       "type": "video",
       "src": "media/video/59.mp4",
-      "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... They hired Dave to try and skirt copyright law.",
+      "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... they knew full well users didn't care about the expression of source code.. they knew if the code functioned the same but the source code was totally different, they'd have just as compelling of a motherboard as IBM had.\n\nSo they hired a guy named Dave to write up the specification",
       "loop": false,
       "volume": 0
     },
@@ -436,7 +465,7 @@
     {
       "type": "video",
       "src": "media/video/killos.mp4",
-      "notes": "Dylan: Did we just spend the last 30 minutes talking about the origin of copyright and whether this is legal?\n\nMike: Yes, and we've shown how this entire system could be and has been circumvented through labor intensive processes such as clean room software design.\n\nDylan: But is that even ethical? It's essentially just recreating other peoples work!\n\nMike: You're asking the wrong question Dylan, the question you should be asking is, can we get rich off of this?\n\nDylan: Get rich? What do you mean?\n\nMike: Imagine if we could just cleanroom all of the OS software we use today and not ever have to deal with the annoying community problems ever again! \n\nDylan: Wait, wouldn't that essentially kill open source? Why would we ever want to do that?\n\nMike: Well, first we have to show why large corporations have so many problems with open source today and how we can solve that.",
+      "notes": "Dylan: Did we just spend the last 30 minutes talking about the origin of copyright?\n\nMike: Yes, centuries of law designed for books... retroactively applied to software... the entire system now circumvented through labor instant cleanroom processes with purpose built AI tools designed to do this.\n\nDylan: Okay... so a company can take the ideas from open source, and now instantly recreate them without worrying about copyright, without crediting the author, without any restrictions what so ever... I buy that it's legal but is it ethical?\n\nMike: You're asking the wrong question Dylan, the question you should be asking is, can we get rich off of this?\n\nDylan: Get rich? What do you mean?\n\nMike: Imagine if we could just cleanroom all of the OS software we use today and not ever have to deal with the annoying community problems ever again! \n\nDylan: Wait, wouldn't that essentially starve open source communities? Why would we ever want to do that?\n\nMike: Well, first let's talk about why large corporations depend so heavily on open source but have so many problems with it",
       "loop": false,
       "volume": 0
     },
