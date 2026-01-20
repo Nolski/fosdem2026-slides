@@ -74,13 +74,6 @@
       "loop": false
     },
     {
-      "type": "placeholder",
-      "notes": "",
-      "title": "What's the p. nchline of the cleanroom of leftpad?",
-      "backgroundColor": "#333333",
-      "text": ""
-    },
-    {
       "type": "video",
       "notes": "And in principle it's actually been around for a very long time. But why does it work? And why does AI kind of break everything?",
       "src": "media/video/13.m4v",
@@ -90,7 +83,7 @@
       "type": "video",
       "notes": "This has got to have some companies wondering... can we use AI to extract all the things we like from open source, but leave behind all the parts that don't serve us?",
       "src": "media/video/takegoodbits.mp4",
-      "loop": false,
+      "loop": true,
       "volume": 22
     },
     {
