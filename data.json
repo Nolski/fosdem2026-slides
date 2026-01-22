@@ -384,10 +384,10 @@
       "loop": false
     },
     {
-      "type": "video",
+      "type": "image",
       "notes": "Once again we tasked AI tools with doing this... this one took us about an hour, it wasn't nearly as easy as the other examples",
-      "src": "media/video/50.m4v",
-      "loop": false
+      "src": "media/img/demo.gif",
+      "zoompan": false
     },
     {
       "type": "video",
@@ -487,6 +487,62 @@
       "type": "video",
       "src": "media/video/wedding-ruined.mp4",
       "notes": "So... Imagine now you're a maintainer of a popular javascript package. You're at your best friends wedding, a historic and beautiful moment. As this lovely couple looks into each other's eyes, your phone starts going off. You have half the internet jumping on you because a worm has made its way into your package, not just infecting yours but many other open source maintainers works!\n\nYou don't make a cent off of this damn thing but still, you have engineers at companies around the planet angrily emailing you to fix this immediately. \n\nThe wedding would be absolutely ruined!",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/worm.mp4",
+      "notes": "This isn't too far from what actually happened. The worm Shai Hulud 2.0 affected hundereds of NPM packages, beginning with compromising the accounts of just a few average javascript developers. From there, it allowed RCE on thousands of systems. Compromising the systems of new javascript developers and spreading onward.\n\nThese package maintainers didn't have support contracts, relationships, or even necessarily care about their down stream users. I don't envy those effected, do you Dylan?\n\nDylan: I sure don't!",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/slop-dump.mp4",
+      "notes": "And here we are only talking about our down stream consumers, but of course we wouldn't forget to talk about the troubles faced by FOSS maintainers here at FOSDEM. \n\nImagine waking up to an AI dump of CVEs and panicked emails and calls from every single one of your users! You barely get paid to maintain this pillar of the world's digital infrastructure and suddenly the whole world is counting on you working overtime to fix their problems. How is that fair? Sharing hurts in both directions.\n\nThis is exactly what happened to FFMPEG, which had a great many of pointless CVEs opened that, even if they didn't effect anyone, meant maintainers being constantly harrassed by panicked corporations whose reputation are on the line as downstreamm users",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/agpl.mp4",
+      "notes": "The logistical issues associated with open source aren't only relegated to code. Licensing regimes within officially open source packages (those licensed by OSI approved licenses) are not all the same. For instance, the copyleft provisions in the AGPL can have serious implications on SaaS providers creating proprietary solutions. AGPLs viral licensing techniques can be seriously dangerous depending on how it's utilised, leading to many companies banning this license.",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/cla.mp4",
+      "notes": "And even then, when producing open source software, managing the actual copyright and enforcement is an absolute nightmare. The best tool organizations have is to have to physically and contractually sign over copyright from all the contributors to an organization. Without that, enforcement becomes significantly more difficult. This is used by foundations who hopefully, if they have the money, can represent the interests of those contributors, or more often, by corporations who can then use that copyright power to relicense the software at a later date. Tools such as CLAs create leverage for corporations to modify open source into something that works for them, that is a tool they can use to leverage workers and competition.",
+      "loop": true,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/scanners.mp4",
+      "notes": "And so how do companies deal with it? Well first they spend a load of money on software solutions like Snyk and Black Duck\n\nDylan: AND I HAVE opinions about them!",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "notes": "And then hey hire entire teams of people to manage these contracts and supposedly make the company \"benefit\" more from open source. But do they have any legitimate ways of showing ROI Dylan?\n\nDylan: Uh... well they're working on that I hear.\n\nOf course they are Dylan, of course they are.",
+      "src": "media/video/ospo.mp4",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/sabotage.mp4",
+      "notes": "If all of those costs and pains are bad enough, we also realize that this open source software is also created by people who aren’t always looking out for our best interests. For instance, look at node IPC. A JavaScript package where the maintainer introduce a file wiping payload targeting Russian and Bella Russian IP addresses the protests Ukraine invasion we’re lucky we aren’t in Russia officially! Imagine if one of our downstream maintainers suddenly disliked us we could be attacked. This is unacceptable risk.\n",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/commie-sabotage.mp4",
+      "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This terrorist Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon like a great company would be targeted by open source developers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger right\n",
       "loop": false,
       "volume": 100
     }
