@@ -545,6 +545,27 @@
       "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This terrorist Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon like a great company would be targeted by open source developers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger right\n",
       "loop": false,
       "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/greedy-fossers.mp4",
+      "notes": "Dylan: wow mike, that's a lot of things for a company just to use open source. I mean, I get the benefits of it, it's better than hiring people to recreate that same software, even if that would give the company more control.\n\nMike: I mean is it? Look at all of this money being taken by the FOSS ecosystem. That's profits Dylan! If we don't get those profits, someone else will!",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/foss-slop.mp4",
+      "notes": "And it's so easy. We can use open source and avoid these issues!\n\nWith our special Evil Corp technology, we can convert entire open source SBOMs into 100% CVE free packages for a low recurring free.\n\nFurthermore, you'll have total AI mediated control over this software. It will be specially tailored to your work. \n\nYou're already encouraging your workers to utilize AI coding agents. This ineffective method of having millions of dependencies that you don't know about with varying levels of maintainership is just not sustainable. ",
+      "loop": false,
+      "volume": 100
+    },
+    {
+      "type": "video",
+      "src": "media/video/evilcorp-way.mp4",
+      "notes": "The EvilCorp Way! A one stop solution for using FOSS without the problems. No OSPOs, no employees, no communities, no fuss.\n\nThe math works out on the profits. It aligns with your new engineering philosophy. One small subscription fee versus tons of risk, additional costs.\n\nIt's a no brainer. Be smart, kill your open source, buy evilcorp.",
+      "loop": false,
+      "volume": 100
     }
   ],
   "audio": [
