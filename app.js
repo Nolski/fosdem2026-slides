@@ -895,7 +895,8 @@ if (isPresenter) {
     track.loop = audioLoopInput.checked;
     
     renderAudioTimeline();
-    saveToLocalStorage();
+    // NOTE: saveToLocalStorage() is called in the override handler below
+    // after volume/pauseSlides/fade settings are saved
     
     var btn = audioForm.querySelector(".save-btn");
     btn.innerText = "✓ Saved";
@@ -2302,7 +2303,7 @@ if (isPresenter) {
   // Override audio form submit to include volume, pause slides, and fade settings
   var originalAudioFormSubmit = audioForm.onsubmit;
   audioForm.addEventListener("submit", function(e) {
-    // Save volume, pause slides, and fade settings to track before the original handler
+    // Save volume, pause slides, and fade settings to track
     if (selectedAudioIndex >= 0) {
       audioTracks[selectedAudioIndex].volume = parseInt(audioVolumeSlider.value);
       audioTracks[selectedAudioIndex].pauseSlides = parsePauseSlides(audioPauseSlidesInput.value);
@@ -2310,6 +2311,8 @@ if (isPresenter) {
       audioTracks[selectedAudioIndex].fadeIn = parseFloat(audioFadeInInput.value) || 0.5;
       audioTracks[selectedAudioIndex].fadeOut = parseFloat(audioFadeOutInput.value) || 0.5;
     }
+    // Save to localStorage AFTER all fields are updated
+    saveToLocalStorage();
   });
   
   // Fade audio volume over a duration
