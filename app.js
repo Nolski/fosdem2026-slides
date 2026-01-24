@@ -351,7 +351,6 @@ if (isPresenter) {
   // ============================================
   
   var LOCAL_STORAGE_KEY = "presentation_local_data";
-  var SERVER_HASH_KEY = "presentation_server_hash";
   
   // Simple hash function for comparing data versions
   function hashData(data) {
@@ -390,16 +389,6 @@ if (isPresenter) {
     localStorage.removeItem(LOCAL_STORAGE_KEY);
   }
   
-  // Get stored server hash
-  function getStoredServerHash() {
-    return localStorage.getItem(SERVER_HASH_KEY);
-  }
-  
-  // Save server hash
-  function saveServerHash(hash) {
-    localStorage.setItem(SERVER_HASH_KEY, hash);
-  }
-  
   // Version conflict modal elements
   var versionConflictModal = document.getElementById("version-conflict-modal");
   var serverVersionInfo = document.getElementById("server-version-info");
@@ -433,9 +422,8 @@ if (isPresenter) {
     if (pendingServerData) {
       slides = pendingServerData.slides || pendingServerData || [];
       audioTracks = pendingServerData.audio || [];
-      // Clear local storage and save server hash
+      // Clear local storage so we start fresh from server
       clearLocalStorage();
-      saveServerHash(hashData(pendingServerData));
       renderTimelines();
     }
     hideVersionConflictModal();
@@ -460,16 +448,14 @@ if (isPresenter) {
     .then(function(r) { return r.json(); })
     .then(function(serverData) {
       var serverHash = hashData(serverData);
-      var storedServerHash = getStoredServerHash();
       var localData = loadFromLocalStorage();
       
-      // If we have local data
+      // If we have local data that differs from server
       if (localData) {
         var localHash = hashData(localData);
         
-        // Check if server has changed since we last saw it
-        if (storedServerHash && storedServerHash !== serverHash) {
-          // Server has changed - show conflict modal
+        if (localHash !== serverHash) {
+          // Local differs from server - show conflict modal
           pendingServerData = serverData;
           pendingLocalData = localData;
           // Load server data initially (user can switch to local)
@@ -477,26 +463,18 @@ if (isPresenter) {
           audioTracks = serverData.audio || [];
           renderTimelines();
           showVersionConflictModal(serverData, localData);
-        } else if (localHash !== serverHash) {
-          // Local has changes but server hasn't changed - use local
-          slides = localData.slides || [];
-          audioTracks = localData.audio || [];
-          renderTimelines();
-          // Update server hash in case it's new
-          saveServerHash(serverHash);
         } else {
-          // No changes - use server data
+          // Local matches server - use server data, clear local
           slides = serverData.slides || serverData || [];
           audioTracks = serverData.audio || [];
           renderTimelines();
-          saveServerHash(serverHash);
+          clearLocalStorage();
         }
       } else {
         // No local data - just use server
         slides = serverData.slides || serverData || [];
         audioTracks = serverData.audio || [];
         renderTimelines();
-        saveServerHash(serverHash);
       }
     })
     .catch(function(e) {
@@ -1022,8 +1000,6 @@ if (isPresenter) {
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide</p>';
         renderTimelines();
         saveToLocalStorage();
-        // Clear server hash since we're importing new data
-        localStorage.removeItem(SERVER_HASH_KEY);
         alert("Imported!");
       } catch (err) { alert("Error: " + err.message); }
     };
