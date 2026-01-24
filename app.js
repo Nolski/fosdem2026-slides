@@ -2308,8 +2308,11 @@ if (isPresenter) {
       audioTracks[selectedAudioIndex].volume = parseInt(audioVolumeSlider.value);
       audioTracks[selectedAudioIndex].pauseSlides = parsePauseSlides(audioPauseSlidesInput.value);
       audioTracks[selectedAudioIndex].fadeEnabled = audioFadeEnabledInput.checked;
-      audioTracks[selectedAudioIndex].fadeIn = parseFloat(audioFadeInInput.value) || 0.5;
-      audioTracks[selectedAudioIndex].fadeOut = parseFloat(audioFadeOutInput.value) || 0.5;
+      // Use isNaN check instead of || to allow 0 as a valid value
+      var fadeInVal = parseFloat(audioFadeInInput.value);
+      var fadeOutVal = parseFloat(audioFadeOutInput.value);
+      audioTracks[selectedAudioIndex].fadeIn = isNaN(fadeInVal) ? 0.5 : fadeInVal;
+      audioTracks[selectedAudioIndex].fadeOut = isNaN(fadeOutVal) ? 0.5 : fadeOutVal;
     }
     // Save to localStorage AFTER all fields are updated
     saveToLocalStorage();
