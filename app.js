@@ -268,7 +268,12 @@ if (isPresenter) {
   var activeAudioElements = {};
   var canChangeSlide = true;
 
-  var BLOCK_WIDTH = 76; // 70px + 6px gap
+  // Slide layout: each slide block is 70px wide, with 6px gaps between all flex items
+  // The slides timeline has drop indicators (0px effective width due to -2px margins) between slides
+  // So each slide "slot" is: 70px slide + 6px gap + 0px drop + 6px gap = 82px
+  // First slide starts at: 0px (initial drop) + 6px gap = 6px offset
+  var BLOCK_WIDTH = 82;
+  var TIMELINE_INITIAL_OFFSET = 6;
 
   // DOM elements
   var editModeBtn = document.getElementById("editModeBtn");
@@ -312,6 +317,7 @@ if (isPresenter) {
   var slideNotesInput = document.getElementById("slide-notes");
   var slideLoopInput = document.getElementById("slide-loop");
   var slideZoompanInput = document.getElementById("slide-zoompan");
+  var slideAutoAdvanceInput = document.getElementById("slide-auto-advance");
   var placeholderTitleInput = document.getElementById("placeholder-title");
   var placeholderTextInput = document.getElementById("placeholder-text");
   var placeholderColorInput = document.getElementById("placeholder-color");
@@ -319,6 +325,7 @@ if (isPresenter) {
   var placeholderGroup = document.getElementById("placeholder-group");
   var loopGroup = document.getElementById("loop-group");
   var zoompanGroup = document.getElementById("zoompan-group");
+  var autoAdvanceGroup = document.getElementById("auto-advance-group");
   var videoVolumeGroup = document.getElementById("video-volume-group");
   var videoVolumeSlider = document.getElementById("video-volume");
   var videoVolumeValue = document.getElementById("video-volume-value");
@@ -339,17 +346,148 @@ if (isPresenter) {
     }
   }
 
-  // Load data
+  // ============================================
+  // LOCAL STORAGE VERSIONING
+  // ============================================
+  
+  var LOCAL_STORAGE_KEY = "presentation_local_data";
+  
+  // Simple hash function for comparing data versions
+  function hashData(data) {
+    var str = JSON.stringify(data);
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+      var char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString();
+  }
+  
+  // Save current data to localStorage
+  function saveToLocalStorage() {
+    var data = { slides: slides, audio: audioTracks };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  }
+  
+  // Load data from localStorage
+  function loadFromLocalStorage() {
+    var stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error("Error parsing local storage data:", e);
+        return null;
+      }
+    }
+    return null;
+  }
+  
+  // Clear local storage data
+  function clearLocalStorage() {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+  }
+  
+  // Version conflict modal elements
+  var versionConflictModal = document.getElementById("version-conflict-modal");
+  var serverVersionInfo = document.getElementById("server-version-info");
+  var localVersionInfo = document.getElementById("local-version-info");
+  var versionUseServerBtn = document.getElementById("version-use-server");
+  var versionUseLocalBtn = document.getElementById("version-use-local");
+  
+  // Show version conflict modal
+  function showVersionConflictModal(serverData, localData) {
+    var serverSlides = (serverData.slides || serverData || []).length;
+    var serverAudio = (serverData.audio || []).length;
+    var localSlides = (localData.slides || []).length;
+    var localAudio = (localData.audio || []).length;
+    
+    serverVersionInfo.textContent = serverSlides + " slides, " + serverAudio + " audio";
+    localVersionInfo.textContent = localSlides + " slides, " + localAudio + " audio";
+    
+    versionConflictModal.style.display = "flex";
+  }
+  
+  function hideVersionConflictModal() {
+    versionConflictModal.style.display = "none";
+  }
+  
+  // Pending data for conflict resolution
+  var pendingServerData = null;
+  var pendingLocalData = null;
+  
+  // Handle "Use Server Version" click
+  versionUseServerBtn.addEventListener("click", function() {
+    if (pendingServerData) {
+      slides = pendingServerData.slides || pendingServerData || [];
+      audioTracks = pendingServerData.audio || [];
+      // Clear local storage so we start fresh from server
+      clearLocalStorage();
+      renderTimelines();
+    }
+    hideVersionConflictModal();
+    pendingServerData = null;
+    pendingLocalData = null;
+  });
+  
+  // Handle "Restore Local Copy" click
+  versionUseLocalBtn.addEventListener("click", function() {
+    if (pendingLocalData) {
+      slides = pendingLocalData.slides || [];
+      audioTracks = pendingLocalData.audio || [];
+      renderTimelines();
+    }
+    hideVersionConflictModal();
+    pendingServerData = null;
+    pendingLocalData = null;
+  });
+  
+  // Load data with version checking
   fetch('data.json')
     .then(function(r) { return r.json(); })
-    .then(function(data) {
-      slides = data.slides || data;
-      audioTracks = data.audio || [];
-      renderTimelines();
+    .then(function(serverData) {
+      var serverHash = hashData(serverData);
+      var localData = loadFromLocalStorage();
+      
+      // If we have local data that differs from server
+      if (localData) {
+        var localHash = hashData(localData);
+        
+        if (localHash !== serverHash) {
+          // Local differs from server - show conflict modal
+          pendingServerData = serverData;
+          pendingLocalData = localData;
+          // Load server data initially (user can switch to local)
+          slides = serverData.slides || serverData || [];
+          audioTracks = serverData.audio || [];
+          renderTimelines();
+          showVersionConflictModal(serverData, localData);
+        } else {
+          // Local matches server - use server data, clear local
+          slides = serverData.slides || serverData || [];
+          audioTracks = serverData.audio || [];
+          renderTimelines();
+          clearLocalStorage();
+        }
+      } else {
+        // No local data - just use server
+        slides = serverData.slides || serverData || [];
+        audioTracks = serverData.audio || [];
+        renderTimelines();
+      }
     })
     .catch(function(e) {
       console.error("Error loading data:", e);
-      slides = [];
+      // Try to load from local storage as fallback
+      var localData = loadFromLocalStorage();
+      if (localData) {
+        slides = localData.slides || [];
+        audioTracks = localData.audio || [];
+      } else {
+        slides = [];
+        audioTracks = [];
+      }
       renderTimelines();
     });
 
@@ -528,8 +666,12 @@ if (isPresenter) {
       
       var start = Math.max(0, track.startSlide);
       var end = Math.min(slides.length - 1, track.endSlide);
-      el.style.left = (start * BLOCK_WIDTH + 4) + "px";
-      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 8) + "px";
+      // Position: initial offset + (start slide * block width) + 4px padding
+      el.style.left = (TIMELINE_INITIAL_OFFSET + start * BLOCK_WIDTH + 4) + "px";
+      // Width: spans from start slide to end slide (inclusive), minus padding on both sides
+      // Each slide is 82px apart, but we want to end at the right edge of the last slide (70px wide)
+      // So: (count * 82) - 12 (extra gap+drop at end) - 8 (4px padding each side) = count * 82 - 20
+      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 20) + "px";
       
       var filename = track.src.split('/').pop();
       el.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>';
@@ -538,7 +680,7 @@ if (isPresenter) {
     });
     
     var wrapper = document.getElementById("audio-timeline-wrapper");
-    if (wrapper) wrapper.style.minWidth = (slides.length * BLOCK_WIDTH) + "px";
+    if (wrapper) wrapper.style.minWidth = (TIMELINE_INITIAL_OFFSET + slides.length * BLOCK_WIDTH) + "px";
   }
   
   // Navigation controls
@@ -556,6 +698,7 @@ if (isPresenter) {
     selectedSlideIndex = to;
     renderTimelines();
     scrollToSlide(to);
+    saveToLocalStorage();
   }
   
   navFirstBtn.addEventListener("click", function() { if (slides.length) selectSlide(0); });
@@ -594,11 +737,16 @@ if (isPresenter) {
     placeholderTextInput.value = slide.text || "";
     placeholderColorInput.value = slide.backgroundColor || "#333333";
     
-    // Load video volume setting
-    if (slide.type === "video" && videoVolumeSlider && videoVolumeValue) {
-      var volume = slide.volume !== undefined ? slide.volume : 100;
-      videoVolumeSlider.value = volume;
-      videoVolumeValue.textContent = volume + "%";
+    // Load video-specific settings
+    if (slide.type === "video") {
+      if (videoVolumeSlider && videoVolumeValue) {
+        var volume = slide.volume !== undefined ? slide.volume : 100;
+        videoVolumeSlider.value = volume;
+        videoVolumeValue.textContent = volume + "%";
+      }
+      if (slideAutoAdvanceInput) {
+        slideAutoAdvanceInput.checked = !!slide.autoAdvance;
+      }
     }
     
     updateFormVisibility(slide.type);
@@ -650,6 +798,9 @@ if (isPresenter) {
     if (videoVolumeGroup) {
       videoVolumeGroup.style.display = type === "video" ? "flex" : "none";
     }
+    if (autoAdvanceGroup) {
+      autoAdvanceGroup.style.display = type === "video" ? "flex" : "none";
+    }
     var editVideoGroup = document.getElementById("edit-video-group");
     if (editVideoGroup) {
       editVideoGroup.style.display = type === "video" ? "flex" : "none";
@@ -700,11 +851,11 @@ if (isPresenter) {
       slide.title = placeholderTitleInput.value;
       slide.text = placeholderTextInput.value;
       slide.backgroundColor = placeholderColorInput.value;
-      delete slide.src; delete slide.loop; delete slide.zoompan; delete slide.volume;
+      delete slide.src; delete slide.loop; delete slide.zoompan; delete slide.volume; delete slide.autoAdvance;
     } else if (slide.type === "image") {
       slide.src = slideSrcInput.value;
       slide.zoompan = slideZoompanInput.checked;
-      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume; delete slide.autoAdvance;
     } else {
       // Video slide
       slide.src = slideSrcInput.value;
@@ -713,6 +864,10 @@ if (isPresenter) {
       if (videoVolumeSlider) {
         slide.volume = parseInt(videoVolumeSlider.value);
       }
+      // Save auto-advance setting
+      if (slideAutoAdvanceInput) {
+        slide.autoAdvance = slideAutoAdvanceInput.checked;
+      }
       delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.zoompan;
     }
     slide.notes = slideNotesInput.value;
@@ -720,6 +875,7 @@ if (isPresenter) {
     renderTimelines();
     updatePreview(slide);
     selectSlide(selectedSlideIndex);
+    saveToLocalStorage();
     
     var btn = slideForm.querySelector(".save-btn");
     btn.innerText = "✓ Saved";
@@ -739,6 +895,8 @@ if (isPresenter) {
     track.loop = audioLoopInput.checked;
     
     renderAudioTimeline();
+    // NOTE: saveToLocalStorage() is called in the override handler below
+    // after volume/pauseSlides/fade settings are saved
     
     var btn = audioForm.querySelector(".save-btn");
     btn.innerText = "✓ Saved";
@@ -757,6 +915,7 @@ if (isPresenter) {
     slides.splice(idx, 0, slide);
     renderTimelines();
     selectSlide(idx);
+    saveToLocalStorage();
     setTimeout(function() { scrollToSlide(idx); }, 50);
   }
   
@@ -770,10 +929,16 @@ if (isPresenter) {
       src: "media/audio/",
       startSlide: start,
       endSlide: Math.min(start + 5, slides.length - 1),
-      loop: false
+      loop: false,
+      volume: 100,
+      pauseSlides: [],
+      fadeEnabled: false,
+      fadeIn: 0.5,
+      fadeOut: 0.5
     });
     renderAudioTimeline();
     selectAudioTrack(audioTracks.length - 1);
+    saveToLocalStorage();
   });
   
   // Delete
@@ -791,6 +956,7 @@ if (isPresenter) {
       selectSlide(selectedSlideIndex);
     }
     renderTimelines();
+    saveToLocalStorage();
   });
   
   deleteAudioBtn.addEventListener("click", function() {
@@ -802,6 +968,7 @@ if (isPresenter) {
     editorPlaceholder.style.display = "block";
     slideForm.style.display = "none";
     renderAudioTimeline();
+    saveToLocalStorage();
   });
 
   // Import/Export
@@ -833,6 +1000,7 @@ if (isPresenter) {
         slidePositionBadge.style.display = "none";
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide</p>';
         renderTimelines();
+        saveToLocalStorage();
         alert("Imported!");
       } catch (err) { alert("Error: " + err.message); }
     };
@@ -899,6 +1067,16 @@ if (isPresenter) {
       container.appendChild(video);
       window.currentMedia = video;
       video.addEventListener("loadeddata", function() { video.play().catch(function(){}); });
+      
+      // Auto-advance to next slide when video ends (if enabled and not looping)
+      if (slide.autoAdvance && !slide.loop) {
+        video.addEventListener("ended", function() {
+          // Only advance if we're still on this slide and presentation is running
+          if (window.presentationStarted && !paused && currentSlideIndex === index) {
+            advanceSlide();
+          }
+        });
+      }
     } else {
       var div = document.createElement("div");
       div.className = "placeholder-slide";
@@ -2048,11 +2226,28 @@ if (isPresenter) {
   });
 
   // ============================================
-  // AUDIO VOLUME CONTROL
+  // AUDIO VOLUME CONTROL & FADE SETTINGS
   // ============================================
   
   var audioVolumeSlider = document.getElementById("audio-volume");
   var audioVolumeValue = document.getElementById("audio-volume-value");
+  var audioPauseSlidesInput = document.getElementById("audio-pause-slides");
+  var audioFadeEnabledInput = document.getElementById("audio-fade-enabled");
+  var audioFadeOptions = document.getElementById("audio-fade-options");
+  var audioFadeInInput = document.getElementById("audio-fade-in");
+  var audioFadeOutInput = document.getElementById("audio-fade-out");
+  
+  // Track which audio elements are paused due to pause slides
+  var pausedForSlide = {};
+  
+  // Toggle fade options visibility
+  audioFadeEnabledInput.addEventListener("change", function() {
+    audioFadeOptions.style.display = this.checked ? "block" : "none";
+  });
+  
+  // Track active fade animations and elements being faded out
+  var activeFadeIntervals = {};
+  var fadingOutElements = {};
   
   // Update volume display and preview playback volume
   audioVolumeSlider.addEventListener("input", function() {
@@ -2067,7 +2262,7 @@ if (isPresenter) {
     }
   });
   
-  // Override selectAudioTrack to include volume
+  // Override selectAudioTrack to include volume, pause slides, and fade settings
   var originalSelectAudioTrack = selectAudioTrack;
   selectAudioTrack = function(index) {
     originalSelectAudioTrack(index);
@@ -2078,44 +2273,205 @@ if (isPresenter) {
     audioVolumeSlider.value = volume;
     audioVolumeValue.textContent = volume + "%";
     
+    // Load pause slides (convert array to comma-separated string, using 1-based slide numbers)
+    var pauseSlides = track.pauseSlides || [];
+    audioPauseSlidesInput.value = pauseSlides.map(function(s) { return s + 1; }).join(", ");
+    
+    // Load fade settings (default to disabled with 0.5 second durations)
+    var fadeEnabled = !!track.fadeEnabled;
+    var fadeIn = track.fadeIn !== undefined ? track.fadeIn : 0.5;
+    var fadeOut = track.fadeOut !== undefined ? track.fadeOut : 0.5;
+    audioFadeEnabledInput.checked = fadeEnabled;
+    audioFadeOptions.style.display = fadeEnabled ? "block" : "none";
+    audioFadeInInput.value = fadeIn;
+    audioFadeOutInput.value = fadeOut;
+    
     // Set the audio preview player volume to match
     if (audioPreview) {
       audioPreview.volume = Math.min(1, volume / 100);
     }
   };
   
-  // Override audio form submit to include volume
+  // Parse pause slides input (comma-separated 1-based slide numbers) to array of 0-based indices
+  function parsePauseSlides(inputValue) {
+    if (!inputValue || !inputValue.trim()) return [];
+    return inputValue.split(",")
+      .map(function(s) { return parseInt(s.trim()) - 1; }) // Convert to 0-based
+      .filter(function(n) { return !isNaN(n) && n >= 0; }); // Filter out invalid values
+  }
+  
+  // Override audio form submit to include volume, pause slides, and fade settings
   var originalAudioFormSubmit = audioForm.onsubmit;
   audioForm.addEventListener("submit", function(e) {
-    // Save volume to track before the original handler
+    // Save volume, pause slides, and fade settings to track
     if (selectedAudioIndex >= 0) {
       audioTracks[selectedAudioIndex].volume = parseInt(audioVolumeSlider.value);
+      audioTracks[selectedAudioIndex].pauseSlides = parsePauseSlides(audioPauseSlidesInput.value);
+      audioTracks[selectedAudioIndex].fadeEnabled = audioFadeEnabledInput.checked;
+      // Use isNaN check instead of || to allow 0 as a valid value
+      var fadeInVal = parseFloat(audioFadeInInput.value);
+      var fadeOutVal = parseFloat(audioFadeOutInput.value);
+      audioTracks[selectedAudioIndex].fadeIn = isNaN(fadeInVal) ? 0.5 : fadeInVal;
+      audioTracks[selectedAudioIndex].fadeOut = isNaN(fadeOutVal) ? 0.5 : fadeOutVal;
     }
+    // Save to localStorage AFTER all fields are updated
+    saveToLocalStorage();
   });
   
-  // Override updateAudio to apply volume during playback
+  // Fade audio volume over a duration
+  function fadeAudioVolume(audioElement, trackIndex, startVolume, endVolume, duration, onComplete) {
+    // Clear any existing fade for this track
+    if (activeFadeIntervals[trackIndex]) {
+      clearInterval(activeFadeIntervals[trackIndex]);
+      delete activeFadeIntervals[trackIndex];
+    }
+    
+    // If duration is 0 or very small, just set the volume directly
+    if (duration <= 0.01) {
+      audioElement.volume = Math.min(1, endVolume);
+      if (onComplete) onComplete();
+      return;
+    }
+    
+    var steps = Math.max(1, Math.round(duration * 50)); // 50 steps per second
+    var stepDuration = (duration * 1000) / steps;
+    var volumeStep = (endVolume - startVolume) / steps;
+    var currentStep = 0;
+    
+    audioElement.volume = Math.min(1, Math.max(0, startVolume));
+    
+    activeFadeIntervals[trackIndex] = setInterval(function() {
+      currentStep++;
+      var newVolume = startVolume + (volumeStep * currentStep);
+      audioElement.volume = Math.min(1, Math.max(0, newVolume));
+      
+      if (currentStep >= steps) {
+        clearInterval(activeFadeIntervals[trackIndex]);
+        delete activeFadeIntervals[trackIndex];
+        audioElement.volume = Math.min(1, Math.max(0, endVolume));
+        if (onComplete) onComplete();
+      }
+    }, stepDuration);
+  }
+  
+  // Override updateAudio to apply volume, pause slides, and fade effects during playback
   var originalUpdateAudio = updateAudio;
   updateAudio = function() {
     for (var i = 0; i < audioTracks.length; i++) {
       var track = audioTracks[i];
-      if (currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide) {
+      var isInRange = currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide;
+      var fadeEnabled = !!track.fadeEnabled;
+      var pauseSlides = track.pauseSlides || [];
+      var shouldPauseForSlide = pauseSlides.indexOf(currentSlideIndex) !== -1;
+      
+      if (isInRange) {
+        // Cancel any pending fade out for this track
+        if (fadingOutElements[i]) {
+          clearInterval(activeFadeIntervals[i]);
+          delete activeFadeIntervals[i];
+          // Restore the element that was fading out
+          activeAudioElements[i] = fadingOutElements[i];
+          delete fadingOutElements[i];
+          
+          // Get target volume
+          var targetVolume = (track.volume !== undefined ? track.volume : 100) / 100;
+          
+          // Fade back in if fades are enabled, otherwise set volume immediately
+          if (fadeEnabled) {
+            var fadeInDuration = track.fadeIn !== undefined ? track.fadeIn : 0.5;
+            fadeAudioVolume(activeAudioElements[i], i, activeAudioElements[i].volume, targetVolume, fadeInDuration, null);
+          } else {
+            activeAudioElements[i].volume = Math.min(1, targetVolume);
+          }
+        }
+        
         if (!activeAudioElements[i]) {
+          // Audio should start playing
           var el = new Audio(track.src);
           el.loop = !!track.loop;
-          // Apply volume
-          var volume = track.volume !== undefined ? track.volume : 100;
-          el.volume = Math.min(1, volume / 100);
+          
+          // Get volume and fade settings
+          var targetVolume = (track.volume !== undefined ? track.volume : 100) / 100;
+          
           activeAudioElements[i] = el;
-          if (!paused) el.play().catch(function(){});
+          
+          if (fadeEnabled) {
+            // Start at volume 0 for fade in
+            var fadeInDuration = track.fadeIn !== undefined ? track.fadeIn : 0.5;
+            el.volume = 0;
+            
+            // Start playback then fade in (unless on a pause slide)
+            if (!paused && !shouldPauseForSlide) {
+              el.play().catch(function(){});
+              fadeAudioVolume(el, i, 0, targetVolume, fadeInDuration, null);
+            } else if (shouldPauseForSlide) {
+              // On a pause slide - don't start playing, mark as paused for slide
+              pausedForSlide[i] = true;
+            }
+          } else {
+            // No fade - start at target volume immediately (unless on a pause slide)
+            el.volume = Math.min(1, targetVolume);
+            if (!paused && !shouldPauseForSlide) {
+              el.play().catch(function(){});
+            } else if (shouldPauseForSlide) {
+              pausedForSlide[i] = true;
+            }
+          }
         } else {
-          // Update volume if track settings changed
-          var volume = track.volume !== undefined ? track.volume : 100;
-          activeAudioElements[i].volume = Math.min(1, volume / 100);
+          // Audio element exists - handle pause slides
+          if (shouldPauseForSlide) {
+            // Should be paused for this slide
+            if (!pausedForSlide[i] && !activeAudioElements[i].paused) {
+              activeAudioElements[i].pause();
+              pausedForSlide[i] = true;
+            }
+          } else {
+            // Not a pause slide - resume if was paused for slide
+            if (pausedForSlide[i]) {
+              delete pausedForSlide[i];
+              if (!paused) {
+                activeAudioElements[i].play().catch(function(){});
+              }
+            }
+            // Update target volume (no fade for mid-track changes)
+            // Only update if not currently fading
+            if (!activeFadeIntervals[i]) {
+              var targetVolume = (track.volume !== undefined ? track.volume : 100) / 100;
+              activeAudioElements[i].volume = Math.min(1, targetVolume);
+            }
+          }
         }
-      } else if (activeAudioElements[i]) {
-        activeAudioElements[i].pause();
-        activeAudioElements[i].currentTime = 0;
-        delete activeAudioElements[i];
+      } else if (activeAudioElements[i] && !fadingOutElements[i]) {
+        // Audio should stop (leaving range)
+        var audioEl = activeAudioElements[i];
+        var trackIndexToRemove = i;
+        
+        // Clear pause state
+        delete pausedForSlide[i];
+        
+        if (fadeEnabled) {
+          // Apply fade out
+          var fadeOutDuration = track.fadeOut !== undefined ? track.fadeOut : 0.5;
+          
+          // Move to fading out state
+          fadingOutElements[i] = audioEl;
+          delete activeAudioElements[i];
+          
+          // Fade out then stop
+          fadeAudioVolume(audioEl, i, audioEl.volume, 0, fadeOutDuration, function() {
+            // Only stop if still in fading out state (not restored)
+            if (fadingOutElements[trackIndexToRemove] === audioEl) {
+              audioEl.pause();
+              audioEl.currentTime = 0;
+              delete fadingOutElements[trackIndexToRemove];
+            }
+          });
+        } else {
+          // No fade - stop immediately
+          audioEl.pause();
+          audioEl.currentTime = 0;
+          delete activeAudioElements[i];
+        }
       }
     }
   };

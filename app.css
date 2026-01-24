@@ -514,6 +514,13 @@ body {
   cursor: pointer;
 }
 
+.form-help-text {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
 /* Audio preview in main preview area */
 #audio-preview-container {
   padding: 20px;
@@ -1571,6 +1578,63 @@ body.present-mode #controls {
   margin: 4px 0 0 0;
 }
 
+/* Audio Fade Controls */
+.audio-fade-options {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  border-left: 3px solid rgba(39, 174, 96, 0.5);
+}
+
+.audio-fade-row {
+  display: flex;
+  gap: 16px;
+}
+
+.audio-fade-control {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audio-fade-control label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.audio-fade-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audio-fade-input-row input[type="number"] {
+  width: 70px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: white;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.audio-fade-input-row input[type="number"]:focus {
+  outline: none;
+  border-color: #27ae60;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+}
+
+.audio-fade-unit {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 /* ============================================
    Video Editor Help Text
    ============================================ */
@@ -1967,4 +2031,73 @@ body:not(.present-mode) .subtitle-overlay {
 .presenter-status.error {
   color: #dc2626;
   background: #fee2e2;
+}
+
+/* ============================================
+   Version Conflict Modal
+   ============================================ */
+.version-conflict-modal {
+  padding: 32px;
+  text-align: center;
+  max-width: 500px;
+}
+
+.version-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 24px 0;
+}
+
+.version-box {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.version-box.server-version {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.version-box.local-version {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.version-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+
+.version-detail {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.version-vs {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+}
+
+.version-question {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.version-actions {
+  justify-content: center;
+  gap: 16px;
+}
+
+.version-actions .modal-btn {
+  min-width: 160px;
 }
