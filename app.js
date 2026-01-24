@@ -268,7 +268,12 @@ if (isPresenter) {
   var activeAudioElements = {};
   var canChangeSlide = true;
 
-  var BLOCK_WIDTH = 76; // 70px + 6px gap
+  // Slide layout: each slide block is 70px wide, with 6px gaps between all flex items
+  // The slides timeline has drop indicators (0px effective width due to -2px margins) between slides
+  // So each slide "slot" is: 70px slide + 6px gap + 0px drop + 6px gap = 82px
+  // First slide starts at: 0px (initial drop) + 6px gap = 6px offset
+  var BLOCK_WIDTH = 82;
+  var TIMELINE_INITIAL_OFFSET = 6;
 
   // DOM elements
   var editModeBtn = document.getElementById("editModeBtn");
@@ -530,8 +535,12 @@ if (isPresenter) {
       
       var start = Math.max(0, track.startSlide);
       var end = Math.min(slides.length - 1, track.endSlide);
-      el.style.left = (start * BLOCK_WIDTH + 4) + "px";
-      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 8) + "px";
+      // Position: initial offset + (start slide * block width) + 4px padding
+      el.style.left = (TIMELINE_INITIAL_OFFSET + start * BLOCK_WIDTH + 4) + "px";
+      // Width: spans from start slide to end slide (inclusive), minus padding on both sides
+      // Each slide is 82px apart, but we want to end at the right edge of the last slide (70px wide)
+      // So: (count * 82) - 12 (extra gap+drop at end) - 8 (4px padding each side) = count * 82 - 20
+      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 20) + "px";
       
       var filename = track.src.split('/').pop();
       el.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>';
@@ -540,7 +549,7 @@ if (isPresenter) {
     });
     
     var wrapper = document.getElementById("audio-timeline-wrapper");
-    if (wrapper) wrapper.style.minWidth = (slides.length * BLOCK_WIDTH) + "px";
+    if (wrapper) wrapper.style.minWidth = (TIMELINE_INITIAL_OFFSET + slides.length * BLOCK_WIDTH) + "px";
   }
   
   // Navigation controls
