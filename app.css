@@ -514,6 +514,13 @@ body {
   cursor: pointer;
 }
 
+.form-help-text {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
 /* Audio preview in main preview area */
 #audio-preview-container {
   padding: 20px;

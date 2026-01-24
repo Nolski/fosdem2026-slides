@@ -312,6 +312,7 @@ if (isPresenter) {
   var slideNotesInput = document.getElementById("slide-notes");
   var slideLoopInput = document.getElementById("slide-loop");
   var slideZoompanInput = document.getElementById("slide-zoompan");
+  var slideAutoAdvanceInput = document.getElementById("slide-auto-advance");
   var placeholderTitleInput = document.getElementById("placeholder-title");
   var placeholderTextInput = document.getElementById("placeholder-text");
   var placeholderColorInput = document.getElementById("placeholder-color");
@@ -319,6 +320,7 @@ if (isPresenter) {
   var placeholderGroup = document.getElementById("placeholder-group");
   var loopGroup = document.getElementById("loop-group");
   var zoompanGroup = document.getElementById("zoompan-group");
+  var autoAdvanceGroup = document.getElementById("auto-advance-group");
   var videoVolumeGroup = document.getElementById("video-volume-group");
   var videoVolumeSlider = document.getElementById("video-volume");
   var videoVolumeValue = document.getElementById("video-volume-value");
@@ -594,11 +596,16 @@ if (isPresenter) {
     placeholderTextInput.value = slide.text || "";
     placeholderColorInput.value = slide.backgroundColor || "#333333";
     
-    // Load video volume setting
-    if (slide.type === "video" && videoVolumeSlider && videoVolumeValue) {
-      var volume = slide.volume !== undefined ? slide.volume : 100;
-      videoVolumeSlider.value = volume;
-      videoVolumeValue.textContent = volume + "%";
+    // Load video-specific settings
+    if (slide.type === "video") {
+      if (videoVolumeSlider && videoVolumeValue) {
+        var volume = slide.volume !== undefined ? slide.volume : 100;
+        videoVolumeSlider.value = volume;
+        videoVolumeValue.textContent = volume + "%";
+      }
+      if (slideAutoAdvanceInput) {
+        slideAutoAdvanceInput.checked = !!slide.autoAdvance;
+      }
     }
     
     updateFormVisibility(slide.type);
@@ -650,6 +657,9 @@ if (isPresenter) {
     if (videoVolumeGroup) {
       videoVolumeGroup.style.display = type === "video" ? "flex" : "none";
     }
+    if (autoAdvanceGroup) {
+      autoAdvanceGroup.style.display = type === "video" ? "flex" : "none";
+    }
     var editVideoGroup = document.getElementById("edit-video-group");
     if (editVideoGroup) {
       editVideoGroup.style.display = type === "video" ? "flex" : "none";
@@ -700,11 +710,11 @@ if (isPresenter) {
       slide.title = placeholderTitleInput.value;
       slide.text = placeholderTextInput.value;
       slide.backgroundColor = placeholderColorInput.value;
-      delete slide.src; delete slide.loop; delete slide.zoompan; delete slide.volume;
+      delete slide.src; delete slide.loop; delete slide.zoompan; delete slide.volume; delete slide.autoAdvance;
     } else if (slide.type === "image") {
       slide.src = slideSrcInput.value;
       slide.zoompan = slideZoompanInput.checked;
-      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume; delete slide.autoAdvance;
     } else {
       // Video slide
       slide.src = slideSrcInput.value;
@@ -712,6 +722,10 @@ if (isPresenter) {
       // Save volume setting
       if (videoVolumeSlider) {
         slide.volume = parseInt(videoVolumeSlider.value);
+      }
+      // Save auto-advance setting
+      if (slideAutoAdvanceInput) {
+        slide.autoAdvance = slideAutoAdvanceInput.checked;
       }
       delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.zoompan;
     }
@@ -902,6 +916,16 @@ if (isPresenter) {
       container.appendChild(video);
       window.currentMedia = video;
       video.addEventListener("loadeddata", function() { video.play().catch(function(){}); });
+      
+      // Auto-advance to next slide when video ends (if enabled and not looping)
+      if (slide.autoAdvance && !slide.loop) {
+        video.addEventListener("ended", function() {
+          // Only advance if we're still on this slide and presentation is running
+          if (window.presentationStarted && !paused && currentSlideIndex === index) {
+            advanceSlide();
+          }
+        });
+      }
     } else {
       var div = document.createElement("div");
       div.className = "placeholder-slide";
