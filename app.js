@@ -770,7 +770,10 @@ if (isPresenter) {
       src: "media/audio/",
       startSlide: start,
       endSlide: Math.min(start + 5, slides.length - 1),
-      loop: false
+      loop: false,
+      volume: 100,
+      fadeIn: 0.5,
+      fadeOut: 0.5
     });
     renderAudioTimeline();
     selectAudioTrack(audioTracks.length - 1);
@@ -2048,11 +2051,17 @@ if (isPresenter) {
   });
 
   // ============================================
-  // AUDIO VOLUME CONTROL
+  // AUDIO VOLUME CONTROL & FADE SETTINGS
   // ============================================
   
   var audioVolumeSlider = document.getElementById("audio-volume");
   var audioVolumeValue = document.getElementById("audio-volume-value");
+  var audioFadeInInput = document.getElementById("audio-fade-in");
+  var audioFadeOutInput = document.getElementById("audio-fade-out");
+  
+  // Track active fade animations and elements being faded out
+  var activeFadeIntervals = {};
+  var fadingOutElements = {};
   
   // Update volume display and preview playback volume
   audioVolumeSlider.addEventListener("input", function() {
@@ -2067,7 +2076,7 @@ if (isPresenter) {
     }
   });
   
-  // Override selectAudioTrack to include volume
+  // Override selectAudioTrack to include volume and fade settings
   var originalSelectAudioTrack = selectAudioTrack;
   selectAudioTrack = function(index) {
     originalSelectAudioTrack(index);
@@ -2078,44 +2087,131 @@ if (isPresenter) {
     audioVolumeSlider.value = volume;
     audioVolumeValue.textContent = volume + "%";
     
+    // Load fade settings (default to 0.5 seconds)
+    var fadeIn = track.fadeIn !== undefined ? track.fadeIn : 0.5;
+    var fadeOut = track.fadeOut !== undefined ? track.fadeOut : 0.5;
+    audioFadeInInput.value = fadeIn;
+    audioFadeOutInput.value = fadeOut;
+    
     // Set the audio preview player volume to match
     if (audioPreview) {
       audioPreview.volume = Math.min(1, volume / 100);
     }
   };
   
-  // Override audio form submit to include volume
+  // Override audio form submit to include volume and fade settings
   var originalAudioFormSubmit = audioForm.onsubmit;
   audioForm.addEventListener("submit", function(e) {
-    // Save volume to track before the original handler
+    // Save volume and fade settings to track before the original handler
     if (selectedAudioIndex >= 0) {
       audioTracks[selectedAudioIndex].volume = parseInt(audioVolumeSlider.value);
+      audioTracks[selectedAudioIndex].fadeIn = parseFloat(audioFadeInInput.value) || 0;
+      audioTracks[selectedAudioIndex].fadeOut = parseFloat(audioFadeOutInput.value) || 0;
     }
   });
   
-  // Override updateAudio to apply volume during playback
+  // Fade audio volume over a duration
+  function fadeAudioVolume(audioElement, trackIndex, startVolume, endVolume, duration, onComplete) {
+    // Clear any existing fade for this track
+    if (activeFadeIntervals[trackIndex]) {
+      clearInterval(activeFadeIntervals[trackIndex]);
+      delete activeFadeIntervals[trackIndex];
+    }
+    
+    // If duration is 0 or very small, just set the volume directly
+    if (duration <= 0.01) {
+      audioElement.volume = Math.min(1, endVolume);
+      if (onComplete) onComplete();
+      return;
+    }
+    
+    var steps = Math.max(1, Math.round(duration * 50)); // 50 steps per second
+    var stepDuration = (duration * 1000) / steps;
+    var volumeStep = (endVolume - startVolume) / steps;
+    var currentStep = 0;
+    
+    audioElement.volume = Math.min(1, Math.max(0, startVolume));
+    
+    activeFadeIntervals[trackIndex] = setInterval(function() {
+      currentStep++;
+      var newVolume = startVolume + (volumeStep * currentStep);
+      audioElement.volume = Math.min(1, Math.max(0, newVolume));
+      
+      if (currentStep >= steps) {
+        clearInterval(activeFadeIntervals[trackIndex]);
+        delete activeFadeIntervals[trackIndex];
+        audioElement.volume = Math.min(1, Math.max(0, endVolume));
+        if (onComplete) onComplete();
+      }
+    }, stepDuration);
+  }
+  
+  // Override updateAudio to apply volume and fade effects during playback
   var originalUpdateAudio = updateAudio;
   updateAudio = function() {
     for (var i = 0; i < audioTracks.length; i++) {
       var track = audioTracks[i];
-      if (currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide) {
+      var isInRange = currentSlideIndex >= track.startSlide && currentSlideIndex <= track.endSlide;
+      
+      if (isInRange) {
+        // Cancel any pending fade out for this track
+        if (fadingOutElements[i]) {
+          clearInterval(activeFadeIntervals[i]);
+          delete activeFadeIntervals[i];
+          // Restore the element that was fading out
+          activeAudioElements[i] = fadingOutElements[i];
+          delete fadingOutElements[i];
+          // Fade back in if needed
+          var targetVolume = (track.volume !== undefined ? track.volume : 100) / 100;
+          var fadeInDuration = track.fadeIn !== undefined ? track.fadeIn : 0.5;
+          fadeAudioVolume(activeAudioElements[i], i, activeAudioElements[i].volume, targetVolume, fadeInDuration, null);
+        }
+        
         if (!activeAudioElements[i]) {
+          // Audio should start playing
           var el = new Audio(track.src);
           el.loop = !!track.loop;
-          // Apply volume
-          var volume = track.volume !== undefined ? track.volume : 100;
-          el.volume = Math.min(1, volume / 100);
+          
+          // Get volume and fade settings
+          var targetVolume = (track.volume !== undefined ? track.volume : 100) / 100;
+          var fadeInDuration = track.fadeIn !== undefined ? track.fadeIn : 0.5;
+          
+          // Start at volume 0 for fade in
+          el.volume = 0;
           activeAudioElements[i] = el;
-          if (!paused) el.play().catch(function(){});
+          
+          // Start playback then fade in
+          if (!paused) {
+            el.play().catch(function(){});
+            fadeAudioVolume(el, i, 0, targetVolume, fadeInDuration, null);
+          }
         } else {
-          // Update volume if track settings changed
-          var volume = track.volume !== undefined ? track.volume : 100;
-          activeAudioElements[i].volume = Math.min(1, volume / 100);
+          // Audio is already playing - just update target volume (no fade for mid-track changes)
+          // Only update if not currently fading
+          if (!activeFadeIntervals[i]) {
+            var targetVolume = (track.volume !== undefined ? track.volume : 100) / 100;
+            activeAudioElements[i].volume = Math.min(1, targetVolume);
+          }
         }
-      } else if (activeAudioElements[i]) {
-        activeAudioElements[i].pause();
-        activeAudioElements[i].currentTime = 0;
+      } else if (activeAudioElements[i] && !fadingOutElements[i]) {
+        // Audio should stop - apply fade out (only if not already fading out)
+        var fadeOutDuration = track.fadeOut !== undefined ? track.fadeOut : 0.5;
+        var audioEl = activeAudioElements[i];
+        var trackIndexToRemove = i;
+        
+        // Move to fading out state
+        fadingOutElements[i] = audioEl;
         delete activeAudioElements[i];
+        
+        // Fade out then stop
+        fadeAudioVolume(audioEl, i, audioEl.volume, 0, fadeOutDuration, function() {
+          // Only stop if still in fading out state (not restored)
+          if (fadingOutElements[trackIndexToRemove] === audioEl) {
+            audioEl.pause();
+            audioEl.currentTime = 0;
+            delete fadingOutElements[trackIndexToRemove];
+          }
+        });
       }
     }
   };
