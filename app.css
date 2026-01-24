@@ -2032,3 +2032,72 @@ body:not(.present-mode) .subtitle-overlay {
   color: #dc2626;
   background: #fee2e2;
 }
+
+/* ============================================
+   Version Conflict Modal
+   ============================================ */
+.version-conflict-modal {
+  padding: 32px;
+  text-align: center;
+  max-width: 500px;
+}
+
+.version-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 24px 0;
+}
+
+.version-box {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.version-box.server-version {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.version-box.local-version {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.version-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+
+.version-detail {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.version-vs {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+}
+
+.version-question {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.version-actions {
+  justify-content: center;
+  gap: 16px;
+}
+
+.version-actions .modal-btn {
+  min-width: 160px;
+}

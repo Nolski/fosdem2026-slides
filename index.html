@@ -545,6 +545,35 @@
     </div>
   </div>
 
+  <!-- Version Conflict Modal -->
+  <div id="version-conflict-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content version-conflict-modal">
+      <div class="modal-icon">⚠️</div>
+      <h2>Version Conflict Detected</h2>
+      <p>The server has a different version than your last local edit.</p>
+      <div class="version-comparison">
+        <div class="version-box server-version">
+          <div class="version-label">Server Version</div>
+          <div class="version-detail" id="server-version-info">-- slides</div>
+        </div>
+        <div class="version-vs">vs</div>
+        <div class="version-box local-version">
+          <div class="version-label">Your Local Copy</div>
+          <div class="version-detail" id="local-version-info">-- slides</div>
+        </div>
+      </div>
+      <p class="version-question">Which version would you like to use?</p>
+      <div class="modal-actions version-actions">
+        <button id="version-use-server" class="modal-btn secondary">
+          <span class="btn-icon">🌐</span> Use Server Version
+        </button>
+        <button id="version-use-local" class="modal-btn primary">
+          <span class="btn-icon">💾</span> Restore Local Copy
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- FFmpeg.wasm for video/audio editing (local files) -->
   <script src="lib/ffmpeg/ffmpeg.js"></script>
   

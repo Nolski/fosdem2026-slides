@@ -346,17 +346,170 @@ if (isPresenter) {
     }
   }
 
-  // Load data
+  // ============================================
+  // LOCAL STORAGE VERSIONING
+  // ============================================
+  
+  var LOCAL_STORAGE_KEY = "presentation_local_data";
+  var SERVER_HASH_KEY = "presentation_server_hash";
+  
+  // Simple hash function for comparing data versions
+  function hashData(data) {
+    var str = JSON.stringify(data);
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+      var char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString();
+  }
+  
+  // Save current data to localStorage
+  function saveToLocalStorage() {
+    var data = { slides: slides, audio: audioTracks };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  }
+  
+  // Load data from localStorage
+  function loadFromLocalStorage() {
+    var stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error("Error parsing local storage data:", e);
+        return null;
+      }
+    }
+    return null;
+  }
+  
+  // Clear local storage data
+  function clearLocalStorage() {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+  }
+  
+  // Get stored server hash
+  function getStoredServerHash() {
+    return localStorage.getItem(SERVER_HASH_KEY);
+  }
+  
+  // Save server hash
+  function saveServerHash(hash) {
+    localStorage.setItem(SERVER_HASH_KEY, hash);
+  }
+  
+  // Version conflict modal elements
+  var versionConflictModal = document.getElementById("version-conflict-modal");
+  var serverVersionInfo = document.getElementById("server-version-info");
+  var localVersionInfo = document.getElementById("local-version-info");
+  var versionUseServerBtn = document.getElementById("version-use-server");
+  var versionUseLocalBtn = document.getElementById("version-use-local");
+  
+  // Show version conflict modal
+  function showVersionConflictModal(serverData, localData) {
+    var serverSlides = (serverData.slides || serverData || []).length;
+    var serverAudio = (serverData.audio || []).length;
+    var localSlides = (localData.slides || []).length;
+    var localAudio = (localData.audio || []).length;
+    
+    serverVersionInfo.textContent = serverSlides + " slides, " + serverAudio + " audio";
+    localVersionInfo.textContent = localSlides + " slides, " + localAudio + " audio";
+    
+    versionConflictModal.style.display = "flex";
+  }
+  
+  function hideVersionConflictModal() {
+    versionConflictModal.style.display = "none";
+  }
+  
+  // Pending data for conflict resolution
+  var pendingServerData = null;
+  var pendingLocalData = null;
+  
+  // Handle "Use Server Version" click
+  versionUseServerBtn.addEventListener("click", function() {
+    if (pendingServerData) {
+      slides = pendingServerData.slides || pendingServerData || [];
+      audioTracks = pendingServerData.audio || [];
+      // Clear local storage and save server hash
+      clearLocalStorage();
+      saveServerHash(hashData(pendingServerData));
+      renderTimelines();
+    }
+    hideVersionConflictModal();
+    pendingServerData = null;
+    pendingLocalData = null;
+  });
+  
+  // Handle "Restore Local Copy" click
+  versionUseLocalBtn.addEventListener("click", function() {
+    if (pendingLocalData) {
+      slides = pendingLocalData.slides || [];
+      audioTracks = pendingLocalData.audio || [];
+      renderTimelines();
+    }
+    hideVersionConflictModal();
+    pendingServerData = null;
+    pendingLocalData = null;
+  });
+  
+  // Load data with version checking
   fetch('data.json')
     .then(function(r) { return r.json(); })
-    .then(function(data) {
-      slides = data.slides || data;
-      audioTracks = data.audio || [];
-      renderTimelines();
+    .then(function(serverData) {
+      var serverHash = hashData(serverData);
+      var storedServerHash = getStoredServerHash();
+      var localData = loadFromLocalStorage();
+      
+      // If we have local data
+      if (localData) {
+        var localHash = hashData(localData);
+        
+        // Check if server has changed since we last saw it
+        if (storedServerHash && storedServerHash !== serverHash) {
+          // Server has changed - show conflict modal
+          pendingServerData = serverData;
+          pendingLocalData = localData;
+          // Load server data initially (user can switch to local)
+          slides = serverData.slides || serverData || [];
+          audioTracks = serverData.audio || [];
+          renderTimelines();
+          showVersionConflictModal(serverData, localData);
+        } else if (localHash !== serverHash) {
+          // Local has changes but server hasn't changed - use local
+          slides = localData.slides || [];
+          audioTracks = localData.audio || [];
+          renderTimelines();
+          // Update server hash in case it's new
+          saveServerHash(serverHash);
+        } else {
+          // No changes - use server data
+          slides = serverData.slides || serverData || [];
+          audioTracks = serverData.audio || [];
+          renderTimelines();
+          saveServerHash(serverHash);
+        }
+      } else {
+        // No local data - just use server
+        slides = serverData.slides || serverData || [];
+        audioTracks = serverData.audio || [];
+        renderTimelines();
+        saveServerHash(serverHash);
+      }
     })
     .catch(function(e) {
       console.error("Error loading data:", e);
-      slides = [];
+      // Try to load from local storage as fallback
+      var localData = loadFromLocalStorage();
+      if (localData) {
+        slides = localData.slides || [];
+        audioTracks = localData.audio || [];
+      } else {
+        slides = [];
+        audioTracks = [];
+      }
       renderTimelines();
     });
 
@@ -567,6 +720,7 @@ if (isPresenter) {
     selectedSlideIndex = to;
     renderTimelines();
     scrollToSlide(to);
+    saveToLocalStorage();
   }
   
   navFirstBtn.addEventListener("click", function() { if (slides.length) selectSlide(0); });
@@ -743,6 +897,7 @@ if (isPresenter) {
     renderTimelines();
     updatePreview(slide);
     selectSlide(selectedSlideIndex);
+    saveToLocalStorage();
     
     var btn = slideForm.querySelector(".save-btn");
     btn.innerText = "✓ Saved";
@@ -762,6 +917,7 @@ if (isPresenter) {
     track.loop = audioLoopInput.checked;
     
     renderAudioTimeline();
+    saveToLocalStorage();
     
     var btn = audioForm.querySelector(".save-btn");
     btn.innerText = "✓ Saved";
@@ -780,6 +936,7 @@ if (isPresenter) {
     slides.splice(idx, 0, slide);
     renderTimelines();
     selectSlide(idx);
+    saveToLocalStorage();
     setTimeout(function() { scrollToSlide(idx); }, 50);
   }
   
@@ -802,6 +959,7 @@ if (isPresenter) {
     });
     renderAudioTimeline();
     selectAudioTrack(audioTracks.length - 1);
+    saveToLocalStorage();
   });
   
   // Delete
@@ -819,6 +977,7 @@ if (isPresenter) {
       selectSlide(selectedSlideIndex);
     }
     renderTimelines();
+    saveToLocalStorage();
   });
   
   deleteAudioBtn.addEventListener("click", function() {
@@ -830,6 +989,7 @@ if (isPresenter) {
     editorPlaceholder.style.display = "block";
     slideForm.style.display = "none";
     renderAudioTimeline();
+    saveToLocalStorage();
   });
 
   // Import/Export
@@ -861,6 +1021,9 @@ if (isPresenter) {
         slidePositionBadge.style.display = "none";
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide</p>';
         renderTimelines();
+        saveToLocalStorage();
+        // Clear server hash since we're importing new data
+        localStorage.removeItem(SERVER_HASH_KEY);
         alert("Imported!");
       } catch (err) { alert("Error: " + err.message); }
     };
