@@ -542,6 +542,14 @@
     },
     {
       "type": "video",
+      "notes": "BAM! Cleanroomed, we don't have to worry about log4j anymore",
+      "src": "media/video/20260124_2356_01kft2db27eesrjmf5zz09xsz6.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
       "src": "media/video/wedding-ruined.mp4",
       "notes": "So... Imagine now you're a maintainer of a popular javascript package. You're at your best friends wedding, a historic and beautiful moment. As this lovely couple looks into each other's eyes, your phone starts going off. You have half the internet jumping on you because a worm has made its way into your package, not just infecting yours but many other open source maintainers works!\n\nYou don't make a cent off of this damn thing but still, you have engineers at companies around the planet angrily emailing you to fix this immediately. \n\nThe wedding would be absolutely ruined!",
       "loop": true,
@@ -606,9 +614,25 @@
     },
     {
       "type": "video",
-      "src": "media/video/commie-sabotage.mp4",
-      "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This terrorist Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon like a great company would be targeted by open source developers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger right\n",
+      "notes": "BAM! Cleanroomed, no more node-IPC problems",
+      "src": "media/video/20260124_2356_01kft2ca21e1ja70tmpv7pd943.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "src": "media/video/ai-video-2026-01-25T07-45-55.mp4",
+      "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This fella Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon would be targeted by open source hactivist maintainers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger right? Why would you run their code on your computer?\n",
       "loop": true,
+      "volume": 0,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "BAM!! Cleanroomed!! No more color.js backdoors",
+      "src": "media/video/20260124_2356_01kft2bszjfzkv54c4b5w65vhx.mp4",
+      "loop": false,
       "volume": 0,
       "autoAdvance": false
     },
@@ -622,9 +646,9 @@
     },
     {
       "type": "video",
-      "src": "media/video/foss-slop.mp4",
+      "src": "media/video/b44ffc4b-3656-4494-963b-11c213c9cf70.mp4",
       "notes": "And it's so easy. We can use open source and avoid these issues!\n\nWith our special Evil Corp technology, we can convert entire open source SBOMs into 100% CVE free packages for a low recurring free.\n\nFurthermore, you'll have total AI mediated control over this software. It will be specially tailored to your work. \n\nYou're already encouraging your workers to utilize AI coding agents. This ineffective method of having millions of dependencies that you don't know about with varying levels of maintainership is just not sustainable. \n\nDylan: Uhh.. look that all sounds exciting but will this actually work? Like is the AI actually there? Capable of what you're saying?",
-      "loop": false,
+      "loop": true,
       "volume": 0,
       "autoAdvance": false
     },
@@ -725,8 +749,8 @@
     },
     {
       "src": "media/audio/outro.mp3",
-      "startSlide": 92,
-      "endSlide": 92,
+      "startSlide": 95,
+      "endSlide": 95,
       "loop": false,
       "volume": 100,
       "pauseSlides": [],
@@ -737,7 +761,7 @@
     {
       "src": "media/audio/2020s.mp3",
       "startSlide": 74,
-      "endSlide": 91,
+      "endSlide": 94,
       "loop": false,
       "volume": 12,
       "pauseSlides": [],
@@ -745,8 +769,5 @@
       "fadeIn": 0.5,
       "fadeOut": 0.5
     }
-  ],
-  "settings": {
-    "subtitleSize": 50
-  }
+  ]
 }
