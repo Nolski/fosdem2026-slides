@@ -590,8 +590,8 @@
     },
     {
       "type": "video",
-      "src": "media/video/scanners.mp4",
-      "notes": "And so how do companies deal with it? Well first they spend a load of money on software solutions like Snyk and Black Duck\n\nDylan: AND I HAVE opinions about them!",
+      "src": "media/video/20260125_0009_01kft33z05ebxa1yygv0h0hrsy.mp4",
+      "notes": "And so how do companies deal with it? Well first they spend a load of money on software solutions like Snyk and Black Duck\n\nDylan: Yeah... those are expensive... some companies spend millions on them",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -647,7 +647,7 @@
     {
       "type": "video",
       "src": "media/video/b44ffc4b-3656-4494-963b-11c213c9cf70.mp4",
-      "notes": "And it's so easy. We can use open source and avoid these issues!\n\nWith our special Evil Corp technology, we can convert entire open source SBOMs into 100% CVE free packages for a low recurring free.\n\nFurthermore, you'll have total AI mediated control over this software. It will be specially tailored to your work. \n\nYou're already encouraging your workers to utilize AI coding agents. This ineffective method of having millions of dependencies that you don't know about with varying levels of maintainership is just not sustainable. \n\nDylan: Uhh.. look that all sounds exciting but will this actually work? Like is the AI actually there? Capable of what you're saying?",
+      "notes": "And it's so easy. We can use open source and avoid these issues!\n\nDylan there's a real opportunity here, we can convert entire open source SBOMs into 100% CVE free packages for a low recurring free.\n\nFurthermore, you'll have total AI mediated control over this software. It will be specially tailored to your work. \n\nYou're already encouraging your workers to utilize AI coding agents. This ineffective method of having millions of dependencies that you don't know about with varying levels of maintainership is just not sustainable. \n\nDylan: Uhh.. look that all sounds exciting but will this actually work? Like is the AI actually there? Capable of what you're saying?",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
