@@ -2129,13 +2129,15 @@ if (isPresenter) {
       // Volume is handled via JSON settings in the slide editor
       var videoFilters = [];
       
-      // Text overlay - escape special characters for FFmpeg
+      // Text overlay - escape special characters for FFmpeg drawtext filter
+      // FFmpeg.wasm exec() passes args directly without shell, so we only need
+      // FFmpeg filter-level escaping (not shell escaping)
       var text = veTextInput.value.trim()
-        .replace(/\\/g, "\\\\")
-        .replace(/'/g, "'\\''")
-        .replace(/:/g, "\\:")
-        .replace(/\[/g, "\\[")
-        .replace(/\]/g, "\\]");
+        .replace(/\\/g, "\\\\\\\\")  // \ -> \\\\ (double escape: once for filter, once for drawtext)
+        .replace(/'/g, "\\'")         // ' -> \' (escape single quote within single-quoted text)
+        .replace(/:/g, "\\:")         // : -> \: (escape colon, the option separator)
+        .replace(/\[/g, "\\[")        // [ -> \[ (escape bracket for text expansion)
+        .replace(/\]/g, "\\]");       // ] -> \] (escape bracket for text expansion)
       
       var fontFile = veFontFamily.value;
       var fontSize = parseInt(veFontSize.value) || 48;
