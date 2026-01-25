@@ -311,7 +311,8 @@
       "notes": "",
       "src": "media/video/34-edited-2026-01-17T19-36-47.mp4",
       "loop": false,
-      "volume": 100
+      "volume": 100,
+      "autoAdvance": true
     },
     {
       "type": "video",
@@ -716,5 +717,8 @@
       "fadeIn": 0.5,
       "fadeOut": 0.5
     }
-  ]
+  ],
+  "settings": {
+    "subtitleSize": 50
+  }
 }
