@@ -61,6 +61,9 @@ const CONFIG = {
   debug: false
 };
 
+// Base font size in vw units (at 100% scale)
+const BASE_FONT_SIZE_VW = 3;
+
 // ============================================================================
 // WEB SPEECH API IMPLEMENTATION
 // ============================================================================
@@ -529,9 +532,6 @@ function setOfflineMode(offline) {
 // ============================================================================
 // SUBTITLE SIZE CONFIGURATION
 // ============================================================================
-
-// Base font size in vw units (at 100%)
-const BASE_FONT_SIZE_VW = 3;
 
 function setSubtitleSize(sizePercent) {
   // Clamp value between 50 and 150
