@@ -426,10 +426,11 @@
     },
     {
       "type": "video",
-      "notes": "By the 80's some crazy open source people had figured out how to circomnavigate the legal complexities of giving code away for free..\n\nThey also started to reason through how they might use copyright to their advantage to help promote more open source software",
+      "notes": "By the 80's some crazy free software people had figured out how to circomnavigate the legal complexities of giving code away for free..\n\nThey also started to reason through how they might use copyright to their advantage to help promote more open source software",
       "src": "media/video/ai-video-2026-01-17T05-33-11.mp4",
       "loop": false,
-      "volume": 0
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -763,15 +764,12 @@
       "src": "media/audio/2020s.mp3",
       "startSlide": 74,
       "endSlide": 94,
-      "loop": false,
+      "loop": true,
       "volume": 12,
       "pauseSlides": [],
       "fadeEnabled": false,
       "fadeIn": 0.5,
       "fadeOut": 0.5
     }
-  ],
-  "settings": {
-    "subtitleSize": 100
-  }
+  ]
 }
