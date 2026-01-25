@@ -38,7 +38,10 @@ const SubtitleState = {
   
   // Display state
   displayTimeout: null,
-  lastText: ''
+  lastText: '',
+  
+  // Size configuration (percentage, 50-150)
+  sizeScale: 100
 };
 
 // ============================================================================
@@ -392,6 +395,9 @@ function displaySubtitleWithHighlight(text, isInterim) {
   
   if (!overlay || !container || !text.trim()) return;
   
+  // Apply current size scale
+  container.style.setProperty('--subtitle-scale', SubtitleState.sizeScale / 100);
+  
   const words = text.split(' ').filter(w => w.length > 0);
   const maxWords = CONFIG.maxWordsPerLine * 2;
   const displayWords = words.slice(-maxWords);
@@ -418,6 +424,9 @@ function displaySubtitle(text) {
   const container = document.getElementById('subtitle-text');
   
   if (!overlay || !container || !text.trim()) return;
+  
+  // Apply current size scale
+  container.style.setProperty('--subtitle-scale', SubtitleState.sizeScale / 100);
   
   const words = text.split(' ').filter(w => w.length > 0);
   const maxWords = CONFIG.maxWordsPerLine * 2;
@@ -516,10 +525,63 @@ function setOfflineMode(offline) {
 }
 
 // ============================================================================
+// SUBTITLE SIZE CONFIGURATION
+// ============================================================================
+
+const SUBTITLE_SIZE_STORAGE_KEY = 'subtitle_size_scale';
+
+function loadSubtitleSize() {
+  const stored = localStorage.getItem(SUBTITLE_SIZE_STORAGE_KEY);
+  if (stored) {
+    const size = parseInt(stored, 10);
+    if (!isNaN(size) && size >= 50 && size <= 150) {
+      SubtitleState.sizeScale = size;
+      return size;
+    }
+  }
+  return 100; // Default
+}
+
+function saveSubtitleSize(size) {
+  localStorage.setItem(SUBTITLE_SIZE_STORAGE_KEY, size.toString());
+}
+
+function setSubtitleSize(sizePercent) {
+  // Clamp value between 50 and 150
+  const size = Math.max(50, Math.min(150, parseInt(sizePercent, 10) || 100));
+  SubtitleState.sizeScale = size;
+  
+  // Apply the scale as a CSS variable
+  const container = document.getElementById('subtitle-text');
+  if (container) {
+    container.style.setProperty('--subtitle-scale', size / 100);
+  }
+  
+  // Save to localStorage
+  saveSubtitleSize(size);
+  
+  console.log(`[Subtitles] Size set to ${size}%`);
+}
+
+function getSubtitleSize() {
+  return SubtitleState.sizeScale;
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
 function initSubtitles() {
+  // Load saved subtitle size
+  const savedSize = loadSubtitleSize();
+  SubtitleState.sizeScale = savedSize;
+  
+  // Apply the saved size to the subtitle text element
+  const subtitleText = document.getElementById('subtitle-text');
+  if (subtitleText) {
+    subtitleText.style.setProperty('--subtitle-scale', savedSize / 100);
+  }
+  
   // Main subtitles toggle
   const toggle = document.getElementById('subtitlesEnabled');
   if (toggle) {
@@ -530,6 +592,26 @@ function initSubtitles() {
   const offlineToggle = document.getElementById('offlineModeEnabled');
   if (offlineToggle) {
     offlineToggle.addEventListener('change', (e) => setOfflineMode(e.target.checked));
+  }
+  
+  // Subtitle size slider
+  const sizeSlider = document.getElementById('subtitleSize');
+  const sizeValue = document.getElementById('subtitleSizeValue');
+  if (sizeSlider) {
+    // Set initial value from saved state
+    sizeSlider.value = savedSize;
+    if (sizeValue) {
+      sizeValue.textContent = savedSize + '%';
+    }
+    
+    // Listen for changes
+    sizeSlider.addEventListener('input', (e) => {
+      const size = parseInt(e.target.value, 10);
+      setSubtitleSize(size);
+      if (sizeValue) {
+        sizeValue.textContent = size + '%';
+      }
+    });
   }
   
   // Expose API for app.js
@@ -545,12 +627,14 @@ function initSubtitles() {
     isEnabled: () => SubtitleState.enabled,
     isOfflineMode: () => SubtitleState.offlineMode,
     toggle: toggleSubtitles,
-    setOfflineMode: setOfflineMode
+    setOfflineMode: setOfflineMode,
+    setSize: setSubtitleSize,
+    getSize: getSubtitleSize
   };
   
   const hasWebSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const hasWebGPU = !!navigator.gpu;
-  console.log(`[Subtitles] Initialized (Web Speech: ${hasWebSpeech}, WebGPU: ${hasWebGPU})`);
+  console.log(`[Subtitles] Initialized (Web Speech: ${hasWebSpeech}, WebGPU: ${hasWebGPU}, Size: ${savedSize}%)`);
 }
 
 if (document.readyState === 'loading') {
