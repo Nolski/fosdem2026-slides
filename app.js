@@ -145,7 +145,17 @@ if (isPresenter) {
     if (event.data.type === "update") {
       var currentIndex = event.data.currentSlideIndex;
       var slides = event.data.slides;
-      var curSlide = slides[currentIndex];
+      var slideOffset = event.data.slideOffset || 0;  // Offset of buffered slides array
+      var totalSlides = event.data.totalSlides || slides.length;
+      
+      // Calculate index within the buffered array
+      var bufferedIndex = currentIndex - slideOffset;
+      var curSlide = slides[bufferedIndex];
+      
+      if (!curSlide) {
+        console.warn("Current slide not in buffer");
+        return;
+      }
       
       renderSlidePreview(curSlide, document.getElementById("current-preview"), true);
       
@@ -153,13 +163,18 @@ if (isPresenter) {
       document.getElementById("current-notes").innerText = "[Slide " + (currentIndex + 1) + "] " + notes;
 
       var nextPreview = document.getElementById("next-preview");
-      if (currentIndex + 1 < slides.length) {
-        var nextSlide = slides[currentIndex + 1];
+      var nextBufferedIndex = bufferedIndex + 1;
+      
+      if (currentIndex + 1 < totalSlides && nextBufferedIndex < slides.length) {
+        var nextSlide = slides[nextBufferedIndex];
         renderSlidePreview(nextSlide, nextPreview, false);
         var nextNotes = (nextSlide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
         document.getElementById("next-notes").innerText = "[Slide " + (currentIndex + 2) + "] " + nextNotes;
-      } else {
+      } else if (currentIndex + 1 >= totalSlides) {
         nextPreview.innerHTML = "<em>End of presentation</em>";
+        document.getElementById("next-notes").innerText = "";
+      } else {
+        nextPreview.innerHTML = "<em>Loading next slide...</em>";
         document.getElementById("next-notes").innerText = "";
       }
 
@@ -277,6 +292,19 @@ if (isPresenter) {
   // First slide starts at: 0px (initial drop) + 6px gap = 6px offset
   var BLOCK_WIDTH = 82;
   var TIMELINE_INITIAL_OFFSET = 6;
+  
+  // ============================================
+  // SLIDE BUFFERING CONFIGURATION
+  // ============================================
+  // Only render slides within this many positions of the visible area
+  var SLIDE_BUFFER_SIZE = 10;
+  // Number of slides to send to presenter view (before and after current)
+  var PRESENTER_BUFFER_SIZE = 3;
+  // Track currently rendered slide range for virtualization
+  var renderedSlideRange = { start: 0, end: 0 };
+  // Track scroll position for debounced updates
+  var scrollUpdatePending = false;
+  var lastScrollLeft = 0;
 
   // DOM elements
   var editModeBtn = document.getElementById("editModeBtn");
@@ -539,6 +567,21 @@ if (isPresenter) {
   
   editModeBtn.addEventListener("click", switchToEditMode);
   presentModeBtn.addEventListener("click", switchToPresentMode);
+  
+  // Scroll event handler for virtualized slide rendering
+  var timelineScrollArea = document.getElementById("timeline-scroll-area");
+  if (timelineScrollArea) {
+    timelineScrollArea.addEventListener("scroll", function() {
+      // Debounce scroll updates for performance
+      if (!scrollUpdatePending) {
+        scrollUpdatePending = true;
+        requestAnimationFrame(function() {
+          updateVisibleSlides();
+          scrollUpdatePending = false;
+        });
+      }
+    });
+  }
 
   // Timeline rendering
   function renderTimelines() {
@@ -548,54 +591,159 @@ if (isPresenter) {
     updateNavButtons();
   }
   
+  // Calculate which slides should be rendered based on scroll position
+  function calculateVisibleSlideRange() {
+    var scrollArea = document.getElementById("timeline-scroll-area");
+    if (!scrollArea || slides.length === 0) {
+      return { start: 0, end: Math.min(SLIDE_BUFFER_SIZE * 2, slides.length - 1) };
+    }
+    
+    var scrollLeft = scrollArea.scrollLeft;
+    var containerWidth = scrollArea.clientWidth;
+    
+    // Calculate visible range based on scroll position
+    var firstVisible = Math.floor((scrollLeft - TIMELINE_INITIAL_OFFSET) / BLOCK_WIDTH);
+    var lastVisible = Math.ceil((scrollLeft + containerWidth - TIMELINE_INITIAL_OFFSET) / BLOCK_WIDTH);
+    
+    // Add buffer on both sides
+    var start = Math.max(0, firstVisible - SLIDE_BUFFER_SIZE);
+    var end = Math.min(slides.length - 1, lastVisible + SLIDE_BUFFER_SIZE);
+    
+    return { start: start, end: end };
+  }
+  
+  // Create a slide block element (extracted for reuse)
+  function createSlideBlock(slide, index) {
+    var block = document.createElement("div");
+    block.className = "slide-block" + (index === selectedSlideIndex ? " selected" : "");
+    block.dataset.index = index;
+    block.draggable = true;
+    
+    // Set thumbnail background
+    if (slide.type === "video" && slide.src) {
+      // For video, we'll capture a frame using a hidden video element
+      generateVideoThumbnail(slide.src, function(dataUrl) {
+        if (dataUrl) block.style.backgroundImage = "url(" + dataUrl + ")";
+      });
+    } else if (slide.type === "image" && slide.src) {
+      block.style.backgroundImage = "url(" + slide.src + ")";
+    } else if (slide.type === "placeholder") {
+      block.style.background = slide.backgroundColor || "#333";
+    }
+    
+    var icon = slide.type === "video" ? "🎬" : slide.type === "image" ? "🖼️" : "⏳";
+    block.innerHTML = '<div class="block-overlay"><div class="block-number">' + (index + 1) + '</div><div class="block-icon">' + icon + '</div></div>';
+    
+    block.addEventListener("click", function() { selectSlide(index); });
+    
+    // Drag events on slide blocks
+    block.addEventListener("dragstart", function(e) {
+      draggedIndex = index;
+      setTimeout(function() { block.classList.add("dragging"); }, 0);
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", index);
+    });
+    
+    block.addEventListener("dragend", function() {
+      block.classList.remove("dragging");
+      clearAllDropIndicators();
+      draggedIndex = null;
+    });
+    
+    return block;
+  }
+  
+  // Create a placeholder element for slides outside the buffer
+  function createSlidePlaceholder(index) {
+    var placeholder = document.createElement("div");
+    placeholder.className = "slide-block slide-placeholder";
+    placeholder.dataset.index = index;
+    placeholder.dataset.placeholder = "true";
+    // Minimal content - just the number
+    placeholder.innerHTML = '<div class="block-overlay"><div class="block-number">' + (index + 1) + '</div></div>';
+    placeholder.addEventListener("click", function() { selectSlide(index); });
+    return placeholder;
+  }
+  
   function renderSlidesTimeline() {
     slidesTimeline.innerHTML = "";
+    
+    // Calculate total width needed for all slides
+    var totalWidth = TIMELINE_INITIAL_OFFSET + (slides.length * BLOCK_WIDTH);
+    slidesTimeline.style.minWidth = totalWidth + "px";
+    
+    // Calculate which slides to fully render
+    var visibleRange = calculateVisibleSlideRange();
+    renderedSlideRange = visibleRange;
     
     // Add initial drop indicator
     slidesTimeline.appendChild(createDropIndicator(0));
     
     slides.forEach(function(slide, i) {
-      var block = document.createElement("div");
-      block.className = "slide-block" + (i === selectedSlideIndex ? " selected" : "");
-      block.dataset.index = i;
-      block.draggable = true;
+      var isInBuffer = i >= visibleRange.start && i <= visibleRange.end;
+      var block;
       
-      // Set thumbnail background
-      if (slide.type === "video" && slide.src) {
-        // For video, we'll capture a frame using a hidden video element
-        generateVideoThumbnail(slide.src, function(dataUrl) {
-          if (dataUrl) block.style.backgroundImage = "url(" + dataUrl + ")";
-        });
-      } else if (slide.type === "image" && slide.src) {
-        block.style.backgroundImage = "url(" + slide.src + ")";
-      } else if (slide.type === "placeholder") {
-        block.style.background = slide.backgroundColor || "#333";
+      if (isInBuffer) {
+        // Fully render slides within the buffer
+        block = createSlideBlock(slide, i);
+      } else {
+        // Use lightweight placeholder for slides outside the buffer
+        block = createSlidePlaceholder(i);
       }
-      
-      var icon = slide.type === "video" ? "🎬" : slide.type === "image" ? "🖼️" : "⏳";
-      block.innerHTML = '<div class="block-overlay"><div class="block-number">' + (i + 1) + '</div><div class="block-icon">' + icon + '</div></div>';
-      
-      block.addEventListener("click", function() { selectSlide(i); });
-      
-      // Drag events on slide blocks
-      block.addEventListener("dragstart", function(e) {
-        draggedIndex = i;
-        setTimeout(function() { block.classList.add("dragging"); }, 0);
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", i);
-      });
-      
-      block.addEventListener("dragend", function() {
-        block.classList.remove("dragging");
-        clearAllDropIndicators();
-        draggedIndex = null;
-      });
       
       slidesTimeline.appendChild(block);
       
       // Add drop indicator after each slide
       slidesTimeline.appendChild(createDropIndicator(i + 1));
     });
+  }
+  
+  // Update only the slides that need to change when scrolling
+  function updateVisibleSlides() {
+    if (slides.length === 0) return;
+    
+    var newRange = calculateVisibleSlideRange();
+    
+    // Skip if range hasn't changed significantly
+    if (newRange.start === renderedSlideRange.start && newRange.end === renderedSlideRange.end) {
+      return;
+    }
+    
+    // Find slides that need to be upgraded (placeholder -> full)
+    var slidesToUpgrade = [];
+    for (var i = newRange.start; i <= newRange.end; i++) {
+      if (i < renderedSlideRange.start || i > renderedSlideRange.end) {
+        slidesToUpgrade.push(i);
+      }
+    }
+    
+    // Find slides that can be downgraded (full -> placeholder)
+    var slidesToDowngrade = [];
+    for (var j = renderedSlideRange.start; j <= renderedSlideRange.end; j++) {
+      if (j < newRange.start || j > newRange.end) {
+        slidesToDowngrade.push(j);
+      }
+    }
+    
+    // Perform upgrades
+    slidesToUpgrade.forEach(function(index) {
+      var placeholder = slidesTimeline.querySelector('.slide-block[data-index="' + index + '"][data-placeholder="true"]');
+      if (placeholder && slides[index]) {
+        var fullBlock = createSlideBlock(slides[index], index);
+        placeholder.parentNode.replaceChild(fullBlock, placeholder);
+      }
+    });
+    
+    // Perform downgrades
+    slidesToDowngrade.forEach(function(index) {
+      var fullBlock = slidesTimeline.querySelector('.slide-block[data-index="' + index + '"]:not([data-placeholder="true"])');
+      if (fullBlock) {
+        var placeholder = createSlidePlaceholder(index);
+        fullBlock.parentNode.replaceChild(placeholder, fullBlock);
+      }
+    });
+    
+    renderedSlideRange = newRange;
   }
   
   // Generate thumbnail from video's first frame
@@ -732,8 +880,20 @@ if (isPresenter) {
     selectedSlideIndex = index;
     selectedAudioIndex = -1;
     
-    document.querySelectorAll(".slide-block").forEach(function(b, i) { b.classList.toggle("selected", i === index); });
+    // Update selection using data-index (works correctly with virtualized rendering)
+    document.querySelectorAll(".slide-block").forEach(function(b) {
+      var blockIndex = parseInt(b.dataset.index, 10);
+      b.classList.toggle("selected", blockIndex === index);
+    });
     document.querySelectorAll(".audio-track").forEach(function(t) { t.classList.remove("selected"); });
+    
+    // If the selected slide is a placeholder, upgrade it to a full slide block
+    var selectedBlock = slidesTimeline.querySelector('.slide-block[data-index="' + index + '"]');
+    if (selectedBlock && selectedBlock.dataset.placeholder === "true" && slides[index]) {
+      var fullBlock = createSlideBlock(slides[index], index);
+      fullBlock.classList.add("selected");
+      selectedBlock.parentNode.replaceChild(fullBlock, selectedBlock);
+    }
     
     slideEditor.style.display = "block";
     audioEditor.style.display = "none";
@@ -1155,7 +1315,19 @@ if (isPresenter) {
 
   function updatePresenterView() {
     if (presenterWindow && !presenterWindow.closed) {
-      presenterWindow.postMessage({ type: "update", currentSlideIndex: currentSlideIndex, slides: slides, paused: paused }, "*");
+      // Only send slides within the presenter buffer to reduce memory usage
+      var bufferStart = Math.max(0, currentSlideIndex - PRESENTER_BUFFER_SIZE);
+      var bufferEnd = Math.min(slides.length - 1, currentSlideIndex + PRESENTER_BUFFER_SIZE);
+      var bufferedSlides = slides.slice(bufferStart, bufferEnd + 1);
+      
+      presenterWindow.postMessage({
+        type: "update",
+        currentSlideIndex: currentSlideIndex,
+        slides: bufferedSlides,
+        slideOffset: bufferStart,  // Tell presenter which index the buffer starts at
+        totalSlides: slides.length,
+        paused: paused
+      }, "*");
     }
   }
 
