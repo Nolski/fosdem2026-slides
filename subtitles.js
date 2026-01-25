@@ -38,7 +38,10 @@ const SubtitleState = {
   
   // Display state
   displayTimeout: null,
-  lastText: ''
+  lastText: '',
+  
+  // Size configuration (percentage, 50-150, default 100)
+  sizePercent: 100
 };
 
 // ============================================================================
@@ -57,6 +60,9 @@ const CONFIG = {
   maxWordsPerLine: 12,
   debug: false
 };
+
+// Base font size in vw units (at 100% scale)
+const BASE_FONT_SIZE_VW = 3;
 
 // ============================================================================
 // WEB SPEECH API IMPLEMENTATION
@@ -392,6 +398,10 @@ function displaySubtitleWithHighlight(text, isInterim) {
   
   if (!overlay || !container || !text.trim()) return;
   
+  // Apply current font size
+  const fontSizeVw = (BASE_FONT_SIZE_VW * SubtitleState.sizePercent) / 100;
+  container.style.fontSize = fontSizeVw + 'vw';
+  
   const words = text.split(' ').filter(w => w.length > 0);
   const maxWords = CONFIG.maxWordsPerLine * 2;
   const displayWords = words.slice(-maxWords);
@@ -418,6 +428,10 @@ function displaySubtitle(text) {
   const container = document.getElementById('subtitle-text');
   
   if (!overlay || !container || !text.trim()) return;
+  
+  // Apply current font size
+  const fontSizeVw = (BASE_FONT_SIZE_VW * SubtitleState.sizePercent) / 100;
+  container.style.fontSize = fontSizeVw + 'vw';
   
   const words = text.split(' ').filter(w => w.length > 0);
   const maxWords = CONFIG.maxWordsPerLine * 2;
@@ -516,6 +530,31 @@ function setOfflineMode(offline) {
 }
 
 // ============================================================================
+// SUBTITLE SIZE CONFIGURATION
+// ============================================================================
+
+function setSubtitleSize(sizePercent) {
+  // Clamp value between 50 and 150
+  const size = Math.max(50, Math.min(150, parseInt(sizePercent, 10) || 100));
+  SubtitleState.sizePercent = size;
+  
+  // Calculate the actual font size
+  const fontSizeVw = (BASE_FONT_SIZE_VW * size) / 100;
+  
+  // Apply to the subtitle text element
+  const container = document.getElementById('subtitle-text');
+  if (container) {
+    container.style.fontSize = fontSizeVw + 'vw';
+  }
+  
+  console.log(`[Subtitles] Size set to ${size}% (${fontSizeVw}vw)`);
+}
+
+function getSubtitleSize() {
+  return SubtitleState.sizePercent;
+}
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 
@@ -545,7 +584,9 @@ function initSubtitles() {
     isEnabled: () => SubtitleState.enabled,
     isOfflineMode: () => SubtitleState.offlineMode,
     toggle: toggleSubtitles,
-    setOfflineMode: setOfflineMode
+    setOfflineMode: setOfflineMode,
+    setSize: setSubtitleSize,
+    getSize: getSubtitleSize
   };
   
   const hasWebSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);

@@ -258,6 +258,9 @@ if (isPresenter) {
   
   var slides = [];
   var audioTracks = [];
+  var presentationSettings = {
+    subtitleSize: 100  // Default 100%
+  };
   var currentSlideIndex = 0;
   var selectedSlideIndex = -1;
   var selectedAudioIndex = -1;
@@ -366,7 +369,7 @@ if (isPresenter) {
   
   // Save current data to localStorage
   function saveToLocalStorage() {
-    var data = { slides: slides, audio: audioTracks };
+    var data = { slides: slides, audio: audioTracks, settings: presentationSettings };
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
   }
   
@@ -422,9 +425,11 @@ if (isPresenter) {
     if (pendingServerData) {
       slides = pendingServerData.slides || pendingServerData || [];
       audioTracks = pendingServerData.audio || [];
+      presentationSettings = pendingServerData.settings || { subtitleSize: 100 };
       // Clear local storage so we start fresh from server
       clearLocalStorage();
       renderTimelines();
+      applySubtitleSettings();
     }
     hideVersionConflictModal();
     pendingServerData = null;
@@ -436,7 +441,9 @@ if (isPresenter) {
     if (pendingLocalData) {
       slides = pendingLocalData.slides || [];
       audioTracks = pendingLocalData.audio || [];
+      presentationSettings = pendingLocalData.settings || { subtitleSize: 100 };
       renderTimelines();
+      applySubtitleSettings();
     }
     hideVersionConflictModal();
     pendingServerData = null;
@@ -461,20 +468,26 @@ if (isPresenter) {
           // Load server data initially (user can switch to local)
           slides = serverData.slides || serverData || [];
           audioTracks = serverData.audio || [];
+          presentationSettings = serverData.settings || { subtitleSize: 100 };
           renderTimelines();
+          applySubtitleSettings();
           showVersionConflictModal(serverData, localData);
         } else {
           // Local matches server - use server data, clear local
           slides = serverData.slides || serverData || [];
           audioTracks = serverData.audio || [];
+          presentationSettings = serverData.settings || { subtitleSize: 100 };
           renderTimelines();
+          applySubtitleSettings();
           clearLocalStorage();
         }
       } else {
         // No local data - just use server
         slides = serverData.slides || serverData || [];
         audioTracks = serverData.audio || [];
+        presentationSettings = serverData.settings || { subtitleSize: 100 };
         renderTimelines();
+        applySubtitleSettings();
       }
     })
     .catch(function(e) {
@@ -484,11 +497,14 @@ if (isPresenter) {
       if (localData) {
         slides = localData.slides || [];
         audioTracks = localData.audio || [];
+        presentationSettings = localData.settings || { subtitleSize: 100 };
       } else {
         slides = [];
         audioTracks = [];
+        presentationSettings = { subtitleSize: 100 };
       }
       renderTimelines();
+      applySubtitleSettings();
     });
 
   // Mode switching
@@ -724,6 +740,10 @@ if (isPresenter) {
     editorPlaceholder.style.display = "none";
     slideForm.style.display = "flex";
     
+    // Hide subtitle settings if open
+    var subtitleSettingsEditor = document.getElementById("subtitle-settings-editor");
+    if (subtitleSettingsEditor) subtitleSettingsEditor.style.display = "none";
+    
     slidePositionBadge.textContent = "Slide " + (index + 1) + " of " + slides.length;
     slidePositionBadge.style.display = "inline-block";
     
@@ -765,6 +785,11 @@ if (isPresenter) {
     slideEditor.style.display = "none";
     audioEditor.style.display = "block";
     slidePositionBadge.style.display = "none";
+    
+    // Hide subtitle settings if open
+    var subtitleSettingsEditor = document.getElementById("subtitle-settings-editor");
+    if (subtitleSettingsEditor) subtitleSettingsEditor.style.display = "none";
+    
     updateNavButtons();
     
     var track = audioTracks[index];
@@ -991,6 +1016,7 @@ if (isPresenter) {
         var data = JSON.parse(ev.target.result);
         slides = data.slides || data;
         audioTracks = data.audio || [];
+        presentationSettings = data.settings || { subtitleSize: 100 };
         selectedSlideIndex = -1;
         selectedAudioIndex = -1;
         editorPlaceholder.style.display = "block";
@@ -998,8 +1024,11 @@ if (isPresenter) {
         audioEditor.style.display = "none";
         slideEditor.style.display = "block";
         slidePositionBadge.style.display = "none";
+        var subtitleSettingsEditor = document.getElementById("subtitle-settings-editor");
+        if (subtitleSettingsEditor) subtitleSettingsEditor.style.display = "none";
         previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide</p>';
         renderTimelines();
+        applySubtitleSettings();
         saveToLocalStorage();
         alert("Imported!");
       } catch (err) { alert("Error: " + err.message); }
@@ -2475,4 +2504,129 @@ if (isPresenter) {
       }
     }
   };
+
+  // ============================================
+  // SUBTITLE SETTINGS
+  // ============================================
+  
+  var subtitleSettingsBtn = document.getElementById("subtitleSettingsBtn");
+  var subtitleSettingsEditor = document.getElementById("subtitle-settings-editor");
+  var subtitleSizeSlider = document.getElementById("subtitleSizeSlider");
+  var subtitleSizeDisplay = document.getElementById("subtitleSizeDisplay");
+  var subtitlePreviewText = document.getElementById("subtitlePreviewText");
+  var saveSubtitleSettingsBtn = document.getElementById("saveSubtitleSettings");
+  
+  // Base font size for preview (in px, scaled to match vw on a typical screen)
+  var PREVIEW_BASE_SIZE = 24;
+  
+  // Apply settings to subtitle system and preview
+  function applySubtitleSettings() {
+    var size = presentationSettings.subtitleSize || 100;
+    
+    // Update subtitle system
+    if (window.subtitleSystem && window.subtitleSystem.setSize) {
+      window.subtitleSystem.setSize(size);
+    }
+    
+    // Update slider if visible
+    if (subtitleSizeSlider) {
+      subtitleSizeSlider.value = size;
+    }
+    if (subtitleSizeDisplay) {
+      subtitleSizeDisplay.textContent = size + "%";
+    }
+    
+    // Update preview
+    updateSubtitlePreview(size);
+  }
+  
+  // Update the preview text size
+  function updateSubtitlePreview(sizePercent) {
+    if (subtitlePreviewText) {
+      var fontSize = (PREVIEW_BASE_SIZE * sizePercent) / 100;
+      subtitlePreviewText.style.fontSize = fontSize + "px";
+    }
+  }
+  
+  // Show subtitle settings panel
+  function showSubtitleSettings() {
+    // Hide other editors
+    slideEditor.style.display = "none";
+    audioEditor.style.display = "none";
+    slideForm.style.display = "none";
+    editorPlaceholder.style.display = "none";
+    slidePositionBadge.style.display = "none";
+    
+    // Deselect other items
+    selectedSlideIndex = -1;
+    selectedAudioIndex = -1;
+    document.querySelectorAll(".slide-block").forEach(function(b) { b.classList.remove("selected"); });
+    document.querySelectorAll(".audio-track").forEach(function(t) { t.classList.remove("selected"); });
+    
+    // Show subtitle settings
+    subtitleSettingsEditor.style.display = "block";
+    
+    // Load current values
+    var size = presentationSettings.subtitleSize || 100;
+    subtitleSizeSlider.value = size;
+    subtitleSizeDisplay.textContent = size + "%";
+    updateSubtitlePreview(size);
+    
+    // Update preview container
+    previewContainer.innerHTML = '<p class="preview-placeholder">Adjust subtitle settings</p>';
+    hideAudioPreview();
+    updateNavButtons();
+  }
+  
+  // Subtitle settings button click
+  if (subtitleSettingsBtn) {
+    subtitleSettingsBtn.addEventListener("click", showSubtitleSettings);
+  }
+  
+  // Slider input - update display and preview in real-time
+  if (subtitleSizeSlider) {
+    subtitleSizeSlider.addEventListener("input", function() {
+      var size = parseInt(this.value, 10);
+      subtitleSizeDisplay.textContent = size + "%";
+      updateSubtitlePreview(size);
+    });
+  }
+  
+  // Save button
+  if (saveSubtitleSettingsBtn) {
+    saveSubtitleSettingsBtn.addEventListener("click", function() {
+      var size = parseInt(subtitleSizeSlider.value, 10);
+      presentationSettings.subtitleSize = size;
+      
+      // Apply to subtitle system
+      if (window.subtitleSystem && window.subtitleSystem.setSize) {
+        window.subtitleSystem.setSize(size);
+      }
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Visual feedback
+      var btn = saveSubtitleSettingsBtn;
+      btn.innerText = "✓ Saved";
+      btn.style.background = "#27ae60";
+      setTimeout(function() { 
+        btn.innerText = "Save Settings"; 
+        btn.style.background = ""; 
+      }, 1200);
+    });
+  }
+  
+  // Also update export to include settings
+  var originalExportHandler = exportBtn.onclick;
+  exportBtn.addEventListener("click", function() {
+    var data = JSON.stringify({ slides: slides, audio: audioTracks, settings: presentationSettings }, null, 2);
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    a.download = "data.json";
+    a.click();
+  }, true);
+  
+  // Remove the old export handler since we need to replace it
+  exportBtn.onclick = null;
 }
