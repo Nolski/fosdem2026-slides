@@ -449,7 +449,7 @@
     {
       "type": "video",
       "src": "media/video/59.mp4",
-      "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... they knew full well users didn't care about the expression of source code.. they knew if the code functioned the same but the source code was totally different, they'd have just as compelling of a motherboard as IBM had.\n\nSo they hired a guy named Dave to write up the specification",
+      "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... they didn't give a shit about innovation or cutting edge product features. They knew their customers would have just as compelling of a motherboard as IBM had if it could run all the same software.\n\nSo they hired a guy named Dave to write up the specification",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -497,7 +497,7 @@
     },
     {
       "type": "video",
-      "notes": "",
+      "notes": "We didn't just get the whole cleanrooming story from Dave, but we showed him our work. How we've done the same process on countless of books, works, and applications. Things that took years and months, took us minutes. \n\nWe asked him about how he viewed this copyright as a moral right vs an economic tool, and this is what he told us.",
       "src": "media/video/20260124_1814_01kfsetdq0evkv4yv6ajrtvjqm.mp4",
       "loop": false,
       "volume": 0,
@@ -512,7 +512,7 @@
     },
     {
       "type": "placeholder",
-      "notes": "Luckily for us, it only took the robot a few minutes.\n",
+      "notes": "Unfortunately for dave, not even his work that he and his colleagues put a lot of time into was safe from our cleanrooming machine. And here it is, reimplemented in full glory. ",
       "title": "IBM BIOS Example",
       "backgroundColor": "#333333",
       "text": ""
@@ -520,9 +520,10 @@
     {
       "type": "video",
       "src": "media/video/killos.mp4",
-      "notes": "Dylan: Did we just spend the last 30 minutes talking about the origin of copyright?\n\nMike: Yes, centuries of law designed for books... retroactively applied to software... the entire system now circumvented through labor instant cleanroom processes with purpose built AI tools designed to do this.\n\nDylan: Okay... so a company can take the ideas from open source, and now instantly recreate them without worrying about copyright, without crediting the author, without any restrictions what so ever... I buy that it's legal but is it ethical?\n\nMike: You're asking the wrong question Dylan, the question you should be asking is, can we get rich off of this?\n\nDylan: Get rich? What do you mean?\n\nMike: Imagine if we could just cleanroom all of the OS software we use today and not ever have to deal with the annoying community problems ever again! \n\nDylan: Wait, wouldn't that essentially starve open source communities? Why would we ever want to do that?\n\nMike: Well, first let's talk about why large corporations depend so heavily on open source but have so many problems with it",
-      "loop": false,
-      "volume": 0
+      "notes": "Dylan: Did we just spend the last 30 minutes talking about the origin of copyright?\n\nMike: Yes, centuries of law designed for books... retroactively applied to software... the entire system now circumvented through labor instant cleanroom processes with purpose built AI tools designed to do this.\n\nDylan: Okay... so a company can take the ideas from open source, and now instantly recreate them without worrying about copyright, without crediting the author, without any restrictions what so ever... I buy that it's legal but is it ethical?\n\nMike: You're asking the wrong question Dylan, the question you should be asking is, can we get rich off of this?\n\nDylan: Get rich? What do you mean?\n\nMike: Imagine if we could just cleanroom all of the OS software we use today and not ever have to deal with the annoying community problems ever again! \n\nDylan: Wait, but open source software is already free, and it brings together so many people in this great way. Look all around us at these amazing people coming together to share their work. Why would a company want to kill all of that?\n\nMike: Well, first let's talk about why large corporations depend so heavily on open source yet have so many problems with it",
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -566,8 +567,8 @@
     },
     {
       "type": "video",
-      "src": "media/video/slop-dump.mp4",
-      "notes": "And here we are only talking about our down stream consumers, but of course we wouldn't forget to talk about the troubles faced by FOSS maintainers here at FOSDEM. \n\nImagine waking up to an AI dump of CVEs and panicked emails and calls from every single one of your users! You barely get paid to maintain this pillar of the world's digital infrastructure and suddenly the whole world is counting on you working overtime to fix their problems. How is that fair? Sharing hurts in both directions.\n\nThis is exactly what happened to FFMPEG, which had a great many of pointless CVEs opened that, even if they didn't effect anyone, meant maintainers being constantly harrassed by panicked corporations whose reputation are on the line as downstreamm users",
+      "src": "media/video/slop-dump2.mp4",
+      "notes": "And here we are only talking about our down stream consumers, but of course we wouldn't forget to talk about the troubles faced by FOSS maintainers here at FOSDEM. \n\nImagine waking up to an AI dump of CVEs and panicked emails and calls from every single one of your users! You barely get paid to maintain this pillar of the world's digital infrastructure and suddenly the whole world is counting on you working overtime to fix their problems. How is that fair? Sharing hurts in both directions.\n\nThis is exactly what happened to FFMPEG, which had a great many of CVEs opened by a Google AI. \n\nOne of them, in particular only affected a codec used in only a single video game released decades earlier. Thes maintainers were still harrassed, even for this pointless CVE, because it was filed by Google. There was no escaping these panicked corporations whose reputation are on the line as downstreamm users",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -583,7 +584,7 @@
     {
       "type": "video",
       "src": "media/video/cla.mp4",
-      "notes": "And even then, when producing open source software, managing the actual copyright and enforcement is an absolute nightmare. The best tool organizations have is to have to physically and contractually sign over copyright from all the contributors to an organization. Without that, enforcement becomes significantly more difficult. This is used by foundations who hopefully, if they have the money, can represent the interests of those contributors, or more often, by corporations who can then use that copyright power to relicense the software at a later date. Tools such as CLAs create leverage for corporations to modify open source into something that works for them, that is a tool they can use to leverage workers and competition.",
+      "notes": "And even then, when PRODUCING open source software, managing the actual copyright and enforcement is an absolute nightmare. The best tool organizations have is to have to physically and contractually sign over copyright from all the contributors to an organization. Without that, enforcement becomes significantly more difficult. This is used by foundations who hopefully, if they have the money, can represent the interests of those contributors, or more often, by corporations who can then use that copyright power to relicense the software at a later date. Tools such as CLAs create leverage for corporations to modify open source into something that works for them, that is a tool they can use to leverage workers and competition.",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -598,7 +599,7 @@
     },
     {
       "type": "video",
-      "notes": "And then hey hire entire teams of people to manage these contracts and supposedly make the company \"benefit\" more from open source. But do they have any legitimate ways of showing ROI Dylan?\n\nDylan: Uh... well they're working on that I hear.\n\nOf course they are Dylan, of course they are.",
+      "notes": "And then hey hire entire teams of people to manage these contracts and supposedly make the company \"benefit\" more from open source. But these people sit on the edge of the company, trying to find ways to convince leadership that, despite their spending of money on sharing, and losing control, that it's actually profitable.\n\nAnd frankly, a lot of these people really struggle to make that justification, and the research is showing that today.",
       "src": "media/video/ospo.mp4",
       "loop": true,
       "volume": 0,
@@ -607,7 +608,7 @@
     {
       "type": "video",
       "src": "media/video/sabotage.mp4",
-      "notes": "If all of those costs and pains are bad enough, we also realize that this open source software is also created by people who aren’t always looking out for our best interests. For instance, look at node IPC. A JavaScript package where the maintainer introduce a file wiping payload targeting Russian and Bella Russian IP addresses the protests Ukraine invasion we’re lucky we aren’t in Russia officially! Imagine if one of our downstream maintainers suddenly disliked us we could be attacked. This is unacceptable risk.\n",
+      "notes": "If all of those costs and pains are bad enough, we also realize that not all open source software creators are looking out for all of their downstream consumers.\n\n\nFor instance, look at node IPC. A JavaScript package where the maintainer introduce a file wiping payload targeting Russian and BellaRussian IP addresses to protest the Ukraine invasion.\n\nwe’re lucky we aren’t in Russia officially! But still, Imagine if one of our downstream maintainers suddenly disliked us we could be attacked. This is unacceptable risk.\n",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -623,7 +624,7 @@
     {
       "type": "video",
       "src": "media/video/ai-video-2026-01-25T07-45-55.mp4",
-      "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This fella Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon would be targeted by open source hactivist maintainers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger right? Why would you run their code on your computer?\n",
+      "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This  Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon like a great company would be targeted by open source developers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger why would you run their code on your computer\n",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -769,5 +770,8 @@
       "fadeIn": 0.5,
       "fadeOut": 0.5
     }
-  ]
+  ],
+  "settings": {
+    "subtitleSize": 100
+  }
 }
