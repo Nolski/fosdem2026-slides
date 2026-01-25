@@ -1780,69 +1780,119 @@ body.present-mode #controls {
   color: rgba(255, 255, 255, 0.6);
 }
 
-/* Subtitle size control */
-.subtitle-size-control {
+/* Subtitle settings button in toolbar */
+.toolbar-btn.subtitle-settings-btn {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.toolbar-btn.subtitle-settings-btn:hover {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+/* Subtitle Settings Editor Panel */
+#subtitle-settings-editor {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.subtitle-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subtitle-size-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 15px;
-  padding-left: 15px;
-  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 12px;
 }
 
-.subtitle-size-control .size-label {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.subtitle-size-slider {
-  width: 80px;
+.subtitle-size-row input[type="range"] {
+  flex: 1;
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
   cursor: pointer;
 }
 
-.subtitle-size-slider::-webkit-slider-thumb {
+.subtitle-size-row input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   background: #10b981;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.subtitle-size-slider::-webkit-slider-thumb:hover {
+.subtitle-size-row input[type="range"]::-webkit-slider-thumb:hover {
   background: #34d399;
   transform: scale(1.1);
 }
 
-.subtitle-size-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+.subtitle-size-row input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
   background: #10b981;
   border-radius: 50%;
   cursor: pointer;
   border: none;
-  transition: all 0.15s ease;
 }
 
-.subtitle-size-slider::-moz-range-thumb:hover {
-  background: #34d399;
-  transform: scale(1.1);
-}
-
-.subtitle-size-control .size-value {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
-  min-width: 35px;
+.subtitle-size-row span {
+  min-width: 50px;
   text-align: right;
+  font-size: 0.9rem;
+  color: white;
+  font-weight: 600;
+}
+
+/* Subtitle Preview Container */
+.subtitle-preview-container {
+  margin-top: 8px;
+}
+
+.subtitle-preview-bg {
+  background: linear-gradient(to bottom, #1a1a2e 0%, #000 100%);
+  border-radius: 8px;
+  padding: 30px 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.subtitle-preview-bg::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.subtitle-preview-text {
+  font-family: 'Montserrat', 'Segoe UI', -apple-system, sans-serif;
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  text-shadow: 
+    0 0 10px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 0, 0, 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  position: relative;
+  z-index: 1;
+  transition: font-size 0.15s ease;
 }
 
 /* Subtitle overlay in presentation mode */
@@ -1869,9 +1919,8 @@ body.present-mode #controls {
 .subtitle-text {
   display: inline-block;
   font-family: 'Montserrat', 'Segoe UI', -apple-system, sans-serif;
-  /* Base font size with CSS variable for scaling (default 100%) */
-  --subtitle-scale: 1;
-  font-size: clamp(calc(24px * var(--subtitle-scale)), calc(4vw * var(--subtitle-scale)), calc(56px * var(--subtitle-scale)));
+  /* Font size set via JavaScript based on settings */
+  font-size: 3vw;
   font-weight: 700;
   color: white;
   line-height: 1.3;
@@ -1985,14 +2034,13 @@ body.present-mode #controls {
   }
 }
 
-/* Responsive subtitle sizing */
+/* Responsive subtitle sizing - font-size is controlled by JS */
 @media (max-width: 768px) {
   .subtitle-overlay {
     padding: 30px 30px;
   }
   
   .subtitle-text {
-    font-size: clamp(calc(18px * var(--subtitle-scale, 1)), calc(5vw * var(--subtitle-scale, 1)), calc(36px * var(--subtitle-scale, 1)));
     padding: 12px 18px;
   }
   
@@ -2007,7 +2055,6 @@ body.present-mode #controls {
   }
   
   .subtitle-text {
-    font-size: clamp(calc(16px * var(--subtitle-scale, 1)), calc(6vw * var(--subtitle-scale, 1)), calc(28px * var(--subtitle-scale, 1)));
     padding: 10px 14px;
   }
 }

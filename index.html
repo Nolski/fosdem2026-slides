@@ -21,11 +21,6 @@
           <span class="toggle-slider"></span>
           <span class="toggle-label">Live Subtitles</span>
         </label>
-        <div class="subtitle-size-control">
-          <label for="subtitleSize" class="size-label">Size:</label>
-          <input type="range" id="subtitleSize" min="50" max="150" value="100" class="subtitle-size-slider">
-          <span id="subtitleSizeValue" class="size-value">100%</span>
-        </div>
         <label class="subtitle-toggle offline-toggle">
           <input type="checkbox" id="offlineModeEnabled">
           <span class="toggle-slider small"></span>
@@ -66,6 +61,9 @@
             <button id="navPrevBtn" class="toolbar-btn nav" title="Previous slide">◀</button>
             <button id="navNextBtn" class="toolbar-btn nav" title="Next slide">▶</button>
             <button id="navLastBtn" class="toolbar-btn nav" title="Last slide">⏭</button>
+          </div>
+          <div class="toolbar-group">
+            <button id="subtitleSettingsBtn" class="toolbar-btn subtitle-settings-btn" title="Subtitle Settings">💬 Subtitles</button>
           </div>
         </div>
       </div>
@@ -231,6 +229,36 @@
               <button type="button" id="deleteAudioBtn" class="delete-btn">Delete</button>
             </div>
           </form>
+        </div>
+        
+        <!-- Subtitle Settings -->
+        <div id="subtitle-settings-editor" style="display: none;">
+          <div id="editor-header">
+            <h2>Subtitle Settings</h2>
+          </div>
+          <div class="subtitle-settings-form">
+            <div class="form-group">
+              <label for="subtitleSizeSlider">Subtitle Size</label>
+              <div class="subtitle-size-row">
+                <input type="range" id="subtitleSizeSlider" min="50" max="150" value="100">
+                <span id="subtitleSizeDisplay">100%</span>
+              </div>
+            </div>
+            
+            <!-- Live Preview -->
+            <div class="subtitle-preview-container">
+              <div class="subtitle-preview-bg">
+                <div id="subtitlePreviewText" class="subtitle-preview-text">
+                  Sample subtitle text
+                </div>
+              </div>
+              <p class="form-help-text">Preview of how subtitles will appear during presentation</p>
+            </div>
+            
+            <div class="form-actions">
+              <button type="button" id="saveSubtitleSettings" class="save-btn">Save Settings</button>
+            </div>
+          </div>
         </div>
       </div>
       
