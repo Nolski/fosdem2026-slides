@@ -135,7 +135,8 @@
       "notes": "We have to travel to the 1700's when the question of book piracy between competing printing monopolies really started to blow up",
       "src": "media/video/14.m4v",
       "loop": false,
-      "volume": 100
+      "volume": 100,
+      "autoAdvance": true
     },
     {
       "type": "video",
@@ -433,7 +434,9 @@
       "type": "video",
       "notes": "",
       "src": "media/video/51.m4v",
-      "loop": false
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
     },
     {
       "type": "video",
@@ -446,8 +449,9 @@
       "type": "video",
       "src": "media/video/59.mp4",
       "notes": "If you ever decide to research cleanroom software engineering, you'll probably hear about one company, Phoenix Technologies.\n\nPhoenix Technologies was founded in the mid-1980s and was based in the United States, operating at a time when the PC market was exploding and IBM-compatible computers were becoming the industry standard. The company specialized in low-level system software—most notably firmware, including BIOS implementations that sat between hardware and operating systems.\n\nRather than selling consumer products, Phoenix worked behind the scenes. Its software was licensed by computer manufacturers around the world and shipped on millions of machines, making it a pretty influential company in the PC ecosystem despite having very little public visibility.\n\nAnd Pheonix... they knew full well users didn't care about the expression of source code.. they knew if the code functioned the same but the source code was totally different, they'd have just as compelling of a motherboard as IBM had.\n\nSo they hired a guy named Dave to write up the specification",
-      "loop": false,
-      "volume": 0
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "image",
@@ -479,14 +483,15 @@
       "src": "media/video/cleanroom-montage.mp4",
       "notes": "This was no easy task for Dave and his colleague. It took months of back and forth... and from what we heard, a little blurring of the lines of what could and couldn't be shared between the \"dirty\" engineer and the \"clean\" engineer. Still, at the end Phoenix was able to have a fully IBM compatible BIOS that it could sell to its customers and it did. It took months and months of engineering work but they got it working.\n\nThis work was more impactful than you might think. The only reason you can buy a motherboard and plug and play into any system these days, a big reason for that was the work Dave and Phoenix has done. (ask the robot)\n\nMention dave's recording",
       "loop": true,
-      "volume": 9
+      "volume": 2,
+      "autoAdvance": false
     },
     {
       "type": "placeholder",
       "notes": "",
       "title": "Coming Soon",
       "backgroundColor": "#333333",
-      "text": "put how it took work to cleanroom back in the day"
+      "text": "Dave's recording content"
     },
     {
       "type": "placeholder",
@@ -506,85 +511,97 @@
       "type": "video",
       "notes": "Okay first let's start with an example.\n\nPicture this, it's the holidays and you're a SWE at BoringCorp. You are the lead dev on the encabulation system that sits at the core of Boring's very important software solution. You're about to cut into your juicy christmas ham and BAM. Your pager starts going off.\n\nSome transient dependency for pretty much every software service Boring runs has released a massive CVE and there's already expoits out in the wild scanning the internet and ruining people's day. Your ham is getting cold buddy because you have a lot of work to do.\n\nIf you're lucky, maybe the maintainer of this dependency has already released a fix but even then, how easy is it to update? What if it's vendor code that's effected? And if it isn't? Do you email the maintainer? Either way you're going to spend the next few weeks in meeting getting talked down to by people who 24 hours prior, didn't even know you existed. This isn't an anomoly, this is a way of life for those relying on open source software.",
       "src": "media/video/ham.mp4",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/log4j.mp4",
       "notes": "And this is pretty much a real story. \n\nIn December 2021, the software world discovered a critical vulnerability in Apache Log4j, a Java logging library that sat quietly underneath an enormous portion of the global software stack.\n\nt was everywhere — embedded in enterprise applications, cloud platforms, vendor products, government systems, and internal services. If you were running Java at scale, you were almost certainly using it — often without knowing.\nThe vulnerability, later called Log4Shell, allowed remote code execution by getting a system to log a specially crafted string. No authentication. No exploit chain. Just logging user-controlled data could lead to full system compromise.\n\nEven after fixes were released, real-world systems remained vulnerable because patches had to flow through vendors, rebuild pipelines, and downstream consumers.\n\nLog4J wasn't just an issue of a terrible vulnerability that caused a lot of damage, it was an issue of the inherent structural risk that exists by interconnecting so much of our software in the way that open source does.",
-      "loop": false,
-      "volume": 0
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/wedding-ruined.mp4",
       "notes": "So... Imagine now you're a maintainer of a popular javascript package. You're at your best friends wedding, a historic and beautiful moment. As this lovely couple looks into each other's eyes, your phone starts going off. You have half the internet jumping on you because a worm has made its way into your package, not just infecting yours but many other open source maintainers works!\n\nYou don't make a cent off of this damn thing but still, you have engineers at companies around the planet angrily emailing you to fix this immediately. \n\nThe wedding would be absolutely ruined!",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/worm.mp4",
       "notes": "This isn't too far from what actually happened. The worm Shai Hulud 2.0 affected hundereds of NPM packages, beginning with compromising the accounts of just a few average javascript developers. From there, it allowed RCE on thousands of systems. Compromising the systems of new javascript developers and spreading onward.\n\nThese package maintainers didn't have support contracts, relationships, or even necessarily care about their down stream users. I don't envy those effected, do you Dylan?\n\nDylan: I sure don't!",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/slop-dump.mp4",
       "notes": "And here we are only talking about our down stream consumers, but of course we wouldn't forget to talk about the troubles faced by FOSS maintainers here at FOSDEM. \n\nImagine waking up to an AI dump of CVEs and panicked emails and calls from every single one of your users! You barely get paid to maintain this pillar of the world's digital infrastructure and suddenly the whole world is counting on you working overtime to fix their problems. How is that fair? Sharing hurts in both directions.\n\nThis is exactly what happened to FFMPEG, which had a great many of pointless CVEs opened that, even if they didn't effect anyone, meant maintainers being constantly harrassed by panicked corporations whose reputation are on the line as downstreamm users",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/agpl.mp4",
       "notes": "The logistical issues associated with open source aren't only relegated to code. Licensing regimes within officially open source packages (those licensed by OSI approved licenses) are not all the same. For instance, the copyleft provisions in the AGPL can have serious implications on SaaS providers creating proprietary solutions. AGPLs viral licensing techniques can be seriously dangerous depending on how it's utilised, leading to many companies banning this license.",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/cla.mp4",
       "notes": "And even then, when producing open source software, managing the actual copyright and enforcement is an absolute nightmare. The best tool organizations have is to have to physically and contractually sign over copyright from all the contributors to an organization. Without that, enforcement becomes significantly more difficult. This is used by foundations who hopefully, if they have the money, can represent the interests of those contributors, or more often, by corporations who can then use that copyright power to relicense the software at a later date. Tools such as CLAs create leverage for corporations to modify open source into something that works for them, that is a tool they can use to leverage workers and competition.",
       "loop": true,
-      "volume": 100
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/scanners.mp4",
       "notes": "And so how do companies deal with it? Well first they spend a load of money on software solutions like Snyk and Black Duck\n\nDylan: AND I HAVE opinions about them!",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "notes": "And then hey hire entire teams of people to manage these contracts and supposedly make the company \"benefit\" more from open source. But do they have any legitimate ways of showing ROI Dylan?\n\nDylan: Uh... well they're working on that I hear.\n\nOf course they are Dylan, of course they are.",
       "src": "media/video/ospo.mp4",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/sabotage.mp4",
       "notes": "If all of those costs and pains are bad enough, we also realize that this open source software is also created by people who aren’t always looking out for our best interests. For instance, look at node IPC. A JavaScript package where the maintainer introduce a file wiping payload targeting Russian and Bella Russian IP addresses the protests Ukraine invasion we’re lucky we aren’t in Russia officially! Imagine if one of our downstream maintainers suddenly disliked us we could be attacked. This is unacceptable risk.\n",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/commie-sabotage.mp4",
       "notes": "While Node IPC was just one example, back in 2022 a maintainer sabotaged his libraries colors.js and faker.js with these infinite loops to protest Fortune 500 firms using his code about financial contribution. This isn’t just protesting war but captialism itself! This terrorist Merrick he broke these huge high profile tools like the AWS cloud development kit. so I mean if Amazon like a great company would be targeted by open source developers who's to say that's not us or any of our customers?  that's a really scary thing and really made a think about how dangerous really is to rely on strangers like you wouldn't take candy from a stranger right\n",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
       "src": "media/video/greedy-fossers.mp4",
       "notes": "Dylan: wow mike, that's a lot of things for a company just to use open source. I mean, I get the benefits of it, it's better than hiring people to recreate that same software, even if that would give the company more control.\n\nMike: I mean is it? Look at all of this money being taken by the FOSS ecosystem. That's profits Dylan! If we don't get those profits, someone else will!",
-      "loop": false,
-      "volume": 100
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -646,8 +663,12 @@
       "src": "media/audio/1800sAmerica.mp3",
       "startSlide": 34,
       "endSlide": 42,
-      "loop": false,
-      "volume": 8
+      "loop": true,
+      "volume": 8,
+      "pauseSlides": [],
+      "fadeEnabled": false,
+      "fadeIn": 0.5,
+      "fadeOut": 0.5
     },
     {
       "src": "media/audio/1800sEurope.mp3",
