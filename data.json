@@ -488,6 +488,22 @@
       "autoAdvance": false
     },
     {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/Video_Generation_Time_Travel-edited-2026-01-25T02-04-06.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/20260124_1814_01kfsetdq0evkv4yv6ajrtvjqm.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": true
+    },
+    {
       "type": "placeholder",
       "notes": "",
       "title": "Coming Soon",
@@ -607,21 +623,22 @@
     {
       "type": "video",
       "src": "media/video/foss-slop.mp4",
-      "notes": "And it's so easy. We can use open source and avoid these issues!\n\nWith our special Evil Corp technology, we can convert entire open source SBOMs into 100% CVE free packages for a low recurring free.\n\nFurthermore, you'll have total AI mediated control over this software. It will be specially tailored to your work. \n\nYou're already encouraging your workers to utilize AI coding agents. This ineffective method of having millions of dependencies that you don't know about with varying levels of maintainership is just not sustainable. ",
+      "notes": "And it's so easy. We can use open source and avoid these issues!\n\nWith our special Evil Corp technology, we can convert entire open source SBOMs into 100% CVE free packages for a low recurring free.\n\nFurthermore, you'll have total AI mediated control over this software. It will be specially tailored to your work. \n\nYou're already encouraging your workers to utilize AI coding agents. This ineffective method of having millions of dependencies that you don't know about with varying levels of maintainership is just not sustainable. \n\nDylan: Uhh.. look that all sounds exciting but will this actually work? Like is the AI actually there? Capable of what you're saying?",
       "loop": false,
-      "volume": 100
+      "volume": 0,
+      "autoAdvance": false
     },
     {
-      "type": "video",
-      "src": "media/video/evilcorp-way.mp4",
-      "notes": "The EvilCorp Way! A one stop solution for using FOSS without the problems. No OSPOs, no employees, no communities, no fuss.\n\nThe math works out on the profits. It aligns with your new engineering philosophy. One small subscription fee versus tons of risk, additional costs.\n\nIt's a no brainer. Be smart, kill your open source, buy evilcorp.",
-      "loop": false,
-      "volume": 100
+      "type": "placeholder",
+      "notes": "yeah... with opus 4.5 blbablablalbla demo",
+      "title": "",
+      "text": "We need the demo here",
+      "backgroundColor": "#333333"
     },
     {
       "type": "video",
       "notes": "",
-      "src": "media/video/D_Logos_and_Copyright_Animation.mp4",
+      "src": "media/video/Correcting_Logo_Animation_Sequence.mp4",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -708,10 +725,21 @@
     },
     {
       "src": "media/audio/outro.mp3",
-      "startSlide": 90,
-      "endSlide": 90,
+      "startSlide": 92,
+      "endSlide": 92,
       "loop": false,
       "volume": 100,
+      "pauseSlides": [],
+      "fadeEnabled": false,
+      "fadeIn": 0.5,
+      "fadeOut": 0.5
+    },
+    {
+      "src": "media/audio/2020s.mp3",
+      "startSlide": 74,
+      "endSlide": 91,
+      "loop": false,
+      "volume": 12,
       "pauseSlides": [],
       "fadeEnabled": false,
       "fadeIn": 0.5,
