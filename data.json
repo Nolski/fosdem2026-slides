@@ -502,14 +502,23 @@
       "src": "media/video/20260124_1814_01kfsetdq0evkv4yv6ajrtvjqm.mp4",
       "loop": false,
       "volume": 0,
-      "autoAdvance": true
+      "autoAdvance": false
     },
     {
-      "type": "placeholder",
+      "type": "video",
       "notes": "",
-      "title": "Coming Soon",
-      "backgroundColor": "#333333",
-      "text": "Dave's recording content"
+      "src": "media/video/daveQuestion1.mp4",
+      "loop": false,
+      "volume": 101,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/daveQuestion2.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
     },
     {
       "type": "placeholder",
@@ -665,6 +674,22 @@
       "type": "video",
       "notes": "",
       "src": "media/video/20260125_1407_01kfvk2qx2eh4bgw7ftdh06kv9.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/theFinalDave.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/20260125_1407_01kfvk2qx2eh4bgw7ftdh06kv9.mp4",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -751,8 +776,8 @@
     },
     {
       "src": "media/audio/frenchEnd.mp3",
-      "startSlide": 95,
-      "endSlide": 95,
+      "startSlide": 96,
+      "endSlide": 98,
       "loop": false,
       "volume": 43,
       "pauseSlides": [],
@@ -774,7 +799,7 @@
     {
       "src": "media/audio/thePitch.mp3",
       "startSlide": 93,
-      "endSlide": 94,
+      "endSlide": 95,
       "loop": true,
       "volume": 10,
       "pauseSlides": [],
