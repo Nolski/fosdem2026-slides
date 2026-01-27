@@ -1,11 +1,12 @@
 {
   "slides": [
     {
-      "type": "placeholder",
-      "notes": "",
-      "title": "Need mike's face",
-      "backgroundColor": "#333333",
-      "text": "Mike give me your face"
+      "type": "video",
+      "notes": "Dylan -- CEO founder Truffle Security open source TruffleHog Defcon/Blackhat cyber community",
+      "src": "media/video/introwhoami.m4v",
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -97,7 +98,7 @@
     {
       "type": "video",
       "notes": "All the way back to the 1400's, before any copyright existed.\n\nWe have to know how copyright got to the place it's at now, to understand what our 2026 language models are about to do to the entire system",
-      "src": "media/video/rewind1400.mp4",
+      "src": "media/video/backward-edited-2026-01-27T01-45-05.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
@@ -133,7 +134,7 @@
     {
       "type": "video",
       "notes": "We have to travel to the 1700's when the question of book piracy between competing printing monopolies really started to blow up",
-      "src": "media/video/14.m4v",
+      "src": "media/video/forward-edited-2026-01-27T01-47-30.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
@@ -223,7 +224,7 @@
     {
       "type": "video",
       "notes": "Let's skip ahead a little bit to the 1800's when we finally got some resolution to some of these open questions",
-      "src": "media/video/23.m4v",
+      "src": "media/video/forward-edited-2026-01-27T01-50-21.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
@@ -329,7 +330,7 @@
     {
       "type": "video",
       "notes": "Okay so we have this idea of idea vs expression, copyright is international, we can skip ahead to when this crazy 200's of banananas cat and mouse law got extended to software..",
-      "src": "media/video/36.m4v",
+      "src": "media/video/forward-edited-2026-01-27T01-52-55.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
@@ -394,7 +395,7 @@
     {
       "type": "video",
       "notes": "Okay let's skip ahead to the 80's",
-      "src": "media/video/46.m4v",
+      "src": "media/video/forward-edited-2026-01-27T01-55-01.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
@@ -491,7 +492,7 @@
     {
       "type": "video",
       "notes": "",
-      "src": "media/video/Video_Generation_Time_Travel-edited-2026-01-25T02-04-06.mp4",
+      "src": "media/video/forward-edited-2026-01-27T01-57-05.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
@@ -510,6 +511,14 @@
       "src": "media/video/daveQuestion1.mp4",
       "loop": false,
       "volume": 101,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/DaveMostOfIt.mp4",
+      "loop": false,
+      "volume": 100,
       "autoAdvance": false
     },
     {
@@ -776,8 +785,8 @@
     },
     {
       "src": "media/audio/frenchEnd.mp3",
-      "startSlide": 96,
-      "endSlide": 98,
+      "startSlide": 97,
+      "endSlide": 99,
       "loop": false,
       "volume": 43,
       "pauseSlides": [],
@@ -788,7 +797,7 @@
     {
       "src": "media/audio/leftpad.mp3",
       "startSlide": 74,
-      "endSlide": 92,
+      "endSlide": 93,
       "loop": true,
       "volume": 12,
       "pauseSlides": [],
@@ -798,8 +807,8 @@
     },
     {
       "src": "media/audio/thePitch.mp3",
-      "startSlide": 93,
-      "endSlide": 95,
+      "startSlide": 94,
+      "endSlide": 96,
       "loop": true,
       "volume": 10,
       "pauseSlides": [],
@@ -807,8 +816,5 @@
       "fadeIn": 0.5,
       "fadeOut": 0.5
     }
-  ],
-  "settings": {
-    "subtitleSize": 100
-  }
+  ]
 }
