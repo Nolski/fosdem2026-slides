@@ -680,12 +680,11 @@
       "backgroundColor": "#333333"
     },
     {
-      "type": "video",
-      "notes": "",
-      "src": "media/video/20260125_1407_01kfvk2qx2eh4bgw7ftdh06kv9.mp4",
-      "loop": false,
-      "volume": 0,
-      "autoAdvance": true
+      "type": "placeholder",
+      "notes": "We just need a slide of silence for dramatic effect",
+      "title": "Fin.",
+      "text": "",
+      "backgroundColor": "#333333"
     },
     {
       "type": "video",
@@ -702,6 +701,14 @@
       "loop": true,
       "volume": 0,
       "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/20260125_1407_01kfvk2qx2eh4bgw7ftdh06kv9.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": true
     }
   ],
   "audio": [
@@ -784,15 +791,15 @@
       "fadeOut": 0.5
     },
     {
-      "src": "media/audio/frenchEnd.mp3",
-      "startSlide": 97,
+      "src": "media/audio/La_fin_open_source_cut9_quiet11.mp3",
+      "startSlide": 98,
       "endSlide": 99,
       "loop": false,
       "volume": 43,
       "pauseSlides": [],
-      "fadeEnabled": false,
-      "fadeIn": 0.5,
-      "fadeOut": 0.5
+      "fadeEnabled": true,
+      "fadeIn": 10,
+      "fadeOut": 0
     },
     {
       "src": "media/audio/leftpad.mp3",
@@ -815,6 +822,20 @@
       "fadeEnabled": false,
       "fadeIn": 0.5,
       "fadeOut": 0.5
+    },
+    {
+      "src": "media/audio/Lafin.mp3",
+      "startSlide": 100,
+      "endSlide": 100,
+      "loop": false,
+      "volume": 43,
+      "pauseSlides": [],
+      "fadeEnabled": false,
+      "fadeIn": 0.5,
+      "fadeOut": 0.5
     }
-  ]
+  ],
+  "settings": {
+    "subtitleSize": 100
+  }
 }
