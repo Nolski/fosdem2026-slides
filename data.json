@@ -681,11 +681,35 @@
     },
     {
       "type": "video",
+      "notes": "",
+      "src": "media/video/theFinalDave.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
       "notes": "We just need a slide of silence for dramatic effect",
       "src": "media/video/ElevenLabs_video_creatify-aurora_2026-01-27T04_55_27-edited-2026-01-27T05-18-05.mp4",
       "loop": false,
       "volume": 100,
       "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/black_text_16s_720p_with_cjk_font.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/20260125_1407_01kfvk2qx2eh4bgw7ftdh06kv9.mp4",
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -793,8 +817,8 @@
     },
     {
       "src": "media/audio/La_fin_open_source_cut9_quiet11.mp3",
-      "startSlide": 98,
-      "endSlide": 99,
+      "startSlide": 101,
+      "endSlide": 102,
       "loop": false,
       "volume": 43,
       "pauseSlides": [],
@@ -826,10 +850,21 @@
     },
     {
       "src": "media/audio/Lafin.mp3",
-      "startSlide": 100,
-      "endSlide": 100,
+      "startSlide": 103,
+      "endSlide": 103,
       "loop": false,
       "volume": 43,
+      "pauseSlides": [],
+      "fadeEnabled": false,
+      "fadeIn": 0.5,
+      "fadeOut": 0.5
+    },
+    {
+      "src": "media/audio/la_fin_of_the_world.mp3",
+      "startSlide": 99,
+      "endSlide": 100,
+      "loop": false,
+      "volume": 100,
       "pauseSlides": [],
       "fadeEnabled": false,
       "fadeIn": 0.5,
