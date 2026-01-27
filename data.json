@@ -41,9 +41,10 @@
     {
       "type": "video",
       "src": "media/video/7.m4v",
-      "notes": "but there's a small problem... the robot had access to the original code... what if it copied some of that code over? Well we don't want to argue over it line for line...",
+      "notes": "but there's a small problem... the robot had access to the original code... what if it copied one or two of the lines from the original code? Well we don't want to argue over it line for line...",
       "loop": true,
-      "volume": 100
+      "volume": 100,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -83,10 +84,11 @@
     },
     {
       "type": "video",
-      "notes": "This has got to have some companies wondering... can we use AI to extract all the things we like from open source, but leave behind all the parts that don't serve us?",
+      "notes": "This has got to have some companies wondering... can we use AI to extract all the IDEAS we like from open source, but leave behind all the parts that don't serve us?",
       "src": "media/video/takegoodbits.mp4",
       "loop": true,
-      "volume": 8
+      "volume": 8,
+      "autoAdvance": false
     },
     {
       "type": "video",
