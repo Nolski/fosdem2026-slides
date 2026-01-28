@@ -147,6 +147,48 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* Pagination Controls */
+.pagination-group {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+#page-indicator {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px 10px;
+  background: rgba(233, 69, 96, 0.15);
+  border-radius: 4px;
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: center;
+}
+
+.toolbar-btn.page-nav {
+  padding: 5px 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  background: rgba(233, 69, 96, 0.2);
+  border-color: rgba(233, 69, 96, 0.4);
+  min-width: 32px;
+}
+
+.toolbar-btn.page-nav:hover:not(:disabled) {
+  background: #e94560;
+  border-color: #e94560;
+}
+
+.toolbar-btn.page-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.page-nav:disabled:hover {
+  background: rgba(233, 69, 96, 0.2);
+  border-color: rgba(233, 69, 96, 0.4);
+}
+
 .toolbar-group {
   display: flex;
   align-items: center;
