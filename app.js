@@ -288,9 +288,9 @@ if (isPresenter) {
 
   // Slide layout: each slide block is 70px wide, with 6px gaps between all flex items
   // The slides timeline has drop indicators (0px effective width due to -2px margins) between slides
-  // So each slide "slot" is: 70px slide + 6px gap + 0px drop + 6px gap = 82px
+  // So each slide "slot" is: 100px slide + 6px gap + 0px drop + 6px gap = 112px
   // First slide starts at: 0px (initial drop) + 6px gap = 6px offset
-  var BLOCK_WIDTH = 82;
+  var BLOCK_WIDTH = 112;
   var TIMELINE_INITIAL_OFFSET = 6;
   
   // ============================================
@@ -305,6 +305,15 @@ if (isPresenter) {
   // Track scroll position for debounced updates
   var scrollUpdatePending = false;
   var lastScrollLeft = 0;
+  
+  // ============================================
+  // SLIDE PAGINATION CONFIGURATION
+  // ============================================
+  // Maximum number of slides to load in the editor at once
+  var SLIDE_WINDOW_SIZE = 10;
+  // Current pagination window tracking
+  var slideWindowStart = 0;  // First slide index in current window
+  var slideWindowEnd = 0;    // Last slide index in current window (exclusive)
 
   // DOM elements
   var editModeBtn = document.getElementById("editModeBtn");
@@ -331,6 +340,12 @@ if (isPresenter) {
   var navPrevBtn = document.getElementById("navPrevBtn");
   var navNextBtn = document.getElementById("navNextBtn");
   var navLastBtn = document.getElementById("navLastBtn");
+  
+  // Pagination controls
+  var paginationControls = document.getElementById("pagination-controls");
+  var pagePrevBtn = document.getElementById("pagePrevBtn");
+  var pageNextBtn = document.getElementById("pageNextBtn");
+  var pageIndicator = document.getElementById("page-indicator");
   
   var exportBtn = document.getElementById("exportBtn");
   var importBtn = document.getElementById("importBtn");
@@ -454,6 +469,9 @@ if (isPresenter) {
       slides = pendingServerData.slides || pendingServerData || [];
       audioTracks = pendingServerData.audio || [];
       presentationSettings = pendingServerData.settings || { subtitleSize: 100 };
+      // Reset pagination window to start
+      slideWindowStart = 0;
+      slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
       // Clear local storage so we start fresh from server
       clearLocalStorage();
       renderTimelines();
@@ -470,6 +488,9 @@ if (isPresenter) {
       slides = pendingLocalData.slides || [];
       audioTracks = pendingLocalData.audio || [];
       presentationSettings = pendingLocalData.settings || { subtitleSize: 100 };
+      // Reset pagination window to start
+      slideWindowStart = 0;
+      slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
       renderTimelines();
       applySubtitleSettings();
     }
@@ -592,22 +613,27 @@ if (isPresenter) {
   }
   
   // Calculate which slides should be rendered based on scroll position
+  // Works within the current pagination window
   function calculateVisibleSlideRange() {
     var scrollArea = document.getElementById("timeline-scroll-area");
     if (!scrollArea || slides.length === 0) {
-      return { start: 0, end: Math.min(SLIDE_BUFFER_SIZE * 2, slides.length - 1) };
+      return { start: slideWindowStart, end: Math.min(slideWindowEnd - 1, slides.length - 1) };
     }
     
     var scrollLeft = scrollArea.scrollLeft;
     var containerWidth = scrollArea.clientWidth;
     
-    // Calculate visible range based on scroll position
+    // Calculate visible range based on scroll position within the windowed view
     var firstVisible = Math.floor((scrollLeft - TIMELINE_INITIAL_OFFSET) / BLOCK_WIDTH);
     var lastVisible = Math.ceil((scrollLeft + containerWidth - TIMELINE_INITIAL_OFFSET) / BLOCK_WIDTH);
     
-    // Add buffer on both sides
-    var start = Math.max(0, firstVisible - SLIDE_BUFFER_SIZE);
-    var end = Math.min(slides.length - 1, lastVisible + SLIDE_BUFFER_SIZE);
+    // Map to actual slide indices (relative to window start)
+    var start = Math.max(slideWindowStart, slideWindowStart + firstVisible - SLIDE_BUFFER_SIZE);
+    var end = Math.min(slideWindowEnd - 1, slideWindowStart + lastVisible + SLIDE_BUFFER_SIZE);
+    
+    // Ensure within total bounds
+    start = Math.max(0, start);
+    end = Math.min(slides.length - 1, end);
     
     return { start: start, end: end };
   }
@@ -665,21 +691,113 @@ if (isPresenter) {
     return placeholder;
   }
   
+  // ============================================
+  // PAGINATION HELPER FUNCTIONS
+  // ============================================
+  
+  // Calculate and update the slide window based on current state
+  function updateSlideWindow(targetIndex) {
+    if (slides.length === 0) {
+      slideWindowStart = 0;
+      slideWindowEnd = 0;
+      return;
+    }
+    
+    // If a target index is provided, ensure it's in the window
+    if (typeof targetIndex === 'number') {
+      // If target is outside current window, shift window to include it
+      if (targetIndex < slideWindowStart || targetIndex >= slideWindowEnd) {
+        // Center the window around the target if possible
+        var halfWindow = Math.floor(SLIDE_WINDOW_SIZE / 2);
+        slideWindowStart = Math.max(0, targetIndex - halfWindow);
+        slideWindowEnd = Math.min(slides.length, slideWindowStart + SLIDE_WINDOW_SIZE);
+        // Adjust start if we hit the end
+        if (slideWindowEnd === slides.length) {
+          slideWindowStart = Math.max(0, slideWindowEnd - SLIDE_WINDOW_SIZE);
+        }
+      }
+    } else {
+      // No target, just ensure window is valid
+      slideWindowStart = Math.max(0, Math.min(slideWindowStart, slides.length - 1));
+      slideWindowEnd = Math.min(slides.length, slideWindowStart + SLIDE_WINDOW_SIZE);
+    }
+    
+    // Ensure we always have valid bounds
+    if (slideWindowEnd <= slideWindowStart && slides.length > 0) {
+      slideWindowStart = 0;
+      slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
+    }
+  }
+  
+  // Navigate to the previous page of slides
+  function goToPreviousPage() {
+    if (slideWindowStart <= 0) return;
+    slideWindowStart = Math.max(0, slideWindowStart - SLIDE_WINDOW_SIZE);
+    slideWindowEnd = Math.min(slides.length, slideWindowStart + SLIDE_WINDOW_SIZE);
+    renderTimelines();
+    // Select first slide in new window
+    if (slides.length > 0) {
+      selectSlide(slideWindowStart);
+    }
+  }
+  
+  // Navigate to the next page of slides
+  function goToNextPage() {
+    if (slideWindowEnd >= slides.length) return;
+    slideWindowStart = slideWindowEnd;
+    slideWindowEnd = Math.min(slides.length, slideWindowStart + SLIDE_WINDOW_SIZE);
+    renderTimelines();
+    // Select first slide in new window
+    if (slides.length > 0) {
+      selectSlide(slideWindowStart);
+    }
+  }
+  
+  // Update pagination indicator display
+  function updatePaginationIndicator() {
+    if (!pageIndicator || !paginationControls) return;
+    
+    if (slides.length === 0) {
+      paginationControls.style.display = 'none';
+      return;
+    }
+    
+    // Only show pagination if there are more slides than window size
+    if (slides.length <= SLIDE_WINDOW_SIZE) {
+      paginationControls.style.display = 'none';
+      return;
+    }
+    
+    paginationControls.style.display = 'flex';
+    
+    var displayStart = slideWindowStart + 1;
+    var displayEnd = Math.min(slideWindowEnd, slides.length);
+    pageIndicator.textContent = displayStart + '-' + displayEnd + ' of ' + slides.length;
+    
+    // Update button states
+    if (pagePrevBtn) pagePrevBtn.disabled = slideWindowStart <= 0;
+    if (pageNextBtn) pageNextBtn.disabled = slideWindowEnd >= slides.length;
+  }
+  
   function renderSlidesTimeline() {
     slidesTimeline.innerHTML = "";
     
-    // Calculate total width needed for all slides
-    var totalWidth = TIMELINE_INITIAL_OFFSET + (slides.length * BLOCK_WIDTH);
-    slidesTimeline.style.minWidth = totalWidth + "px";
+    // Update slide window bounds
+    updateSlideWindow();
     
-    // Calculate which slides to fully render
+    // Clear any fixed width - let CSS handle the layout
+    slidesTimeline.style.minWidth = "";
+    
+    // Calculate which slides to fully render within the window
     var visibleRange = calculateVisibleSlideRange();
     renderedSlideRange = visibleRange;
     
     // Add initial drop indicator
-    slidesTimeline.appendChild(createDropIndicator(0));
+    slidesTimeline.appendChild(createDropIndicator(slideWindowStart));
     
-    slides.forEach(function(slide, i) {
+    // Only render slides within the pagination window
+    for (var i = slideWindowStart; i < slideWindowEnd && i < slides.length; i++) {
+      var slide = slides[i];
       var isInBuffer = i >= visibleRange.start && i <= visibleRange.end;
       var block;
       
@@ -695,7 +813,10 @@ if (isPresenter) {
       
       // Add drop indicator after each slide
       slidesTimeline.appendChild(createDropIndicator(i + 1));
-    });
+    }
+    
+    // Update pagination indicator
+    updatePaginationIndicator();
   }
   
   // Update only the slides that need to change when scrolling
@@ -760,11 +881,11 @@ if (isPresenter) {
     video.addEventListener("seeked", function() {
       try {
         var canvas = document.createElement("canvas");
-        canvas.width = 70;
-        canvas.height = 55;
+        canvas.width = 100;
+        canvas.height = 75;
         var ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        callback(canvas.toDataURL("image/jpeg", 0.5));
+        callback(canvas.toDataURL("image/jpeg", 0.6));
       } catch (e) {
         callback(null);
       }
@@ -823,28 +944,51 @@ if (isPresenter) {
     audioTimeline.innerHTML = "";
     if (!slides.length) return;
     
+    // Calculate windowed slide count for width
+    var windowedSlideCount = slideWindowEnd - slideWindowStart;
+    // Width matches slides: each slide block is 100px + 6px gap, plus drop indicators
+    var timelineWidth = windowedSlideCount * BLOCK_WIDTH;
+    
+    // Set explicit width so absolute positioning works correctly
+    audioTimeline.style.width = timelineWidth + "px";
+    
     audioTracks.forEach(function(track, i) {
+      var trackStart = Math.max(0, track.startSlide);
+      var trackEnd = Math.min(slides.length - 1, track.endSlide);
+      
+      // Check if this audio track overlaps with the current window
+      if (trackEnd < slideWindowStart || trackStart >= slideWindowEnd) {
+        // Track is entirely outside the current window - don't render
+        return;
+      }
+      
+      // Clip track to window bounds for positioning
+      var visibleStart = Math.max(trackStart, slideWindowStart);
+      var visibleEnd = Math.min(trackEnd, slideWindowEnd - 1);
+      
+      // Calculate position relative to window start
+      var relativeStart = visibleStart - slideWindowStart;
+      var relativeEnd = visibleEnd - slideWindowStart;
+      
       var el = document.createElement("div");
       el.className = "audio-track" + (i === selectedAudioIndex ? " selected" : "");
       el.dataset.index = i;
       
-      var start = Math.max(0, track.startSlide);
-      var end = Math.min(slides.length - 1, track.endSlide);
-      // Position: initial offset + (start slide * block width) + 4px padding
-      el.style.left = (TIMELINE_INITIAL_OFFSET + start * BLOCK_WIDTH + 4) + "px";
-      // Width: spans from start slide to end slide (inclusive), minus padding on both sides
-      // Each slide is 82px apart, but we want to end at the right edge of the last slide (70px wide)
-      // So: (count * 82) - 12 (extra gap+drop at end) - 8 (4px padding each side) = count * 82 - 20
-      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 20) + "px";
+      // Position relative to the windowed view (match slide block positions)
+      el.style.left = (relativeStart * BLOCK_WIDTH + 4) + "px";
+      el.style.width = Math.max(50, (relativeEnd - relativeStart + 1) * BLOCK_WIDTH - 20) + "px";
+      
+      // Add visual indicator if track extends beyond visible window
+      var extendsLeft = trackStart < slideWindowStart;
+      var extendsRight = trackEnd >= slideWindowEnd;
       
       var filename = track.src.split('/').pop();
-      el.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>';
+      var leftArrow = extendsLeft ? '<span class="audio-extends">&#171;</span>' : '';
+      var rightArrow = extendsRight ? '<span class="audio-extends">&#187;</span>' : '';
+      el.innerHTML = leftArrow + '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>' + rightArrow;
       el.addEventListener("click", function() { selectAudioTrack(i); });
       audioTimeline.appendChild(el);
     });
-    
-    var wrapper = document.getElementById("audio-timeline-wrapper");
-    if (wrapper) wrapper.style.minWidth = (TIMELINE_INITIAL_OFFSET + slides.length * BLOCK_WIDTH) + "px";
   }
   
   // Navigation controls
@@ -860,6 +1004,8 @@ if (isPresenter) {
     var slide = slides.splice(from, 1)[0];
     slides.splice(to, 0, slide);
     selectedSlideIndex = to;
+    // Ensure window includes the target position
+    updateSlideWindow(to);
     renderTimelines();
     scrollToSlide(to);
     saveToLocalStorage();
@@ -870,6 +1016,10 @@ if (isPresenter) {
   navNextBtn.addEventListener("click", function() { if (selectedSlideIndex < slides.length - 1) selectSlide(selectedSlideIndex + 1); });
   navLastBtn.addEventListener("click", function() { if (slides.length) selectSlide(slides.length - 1); });
   
+  // Pagination button event listeners
+  if (pagePrevBtn) pagePrevBtn.addEventListener("click", goToPreviousPage);
+  if (pageNextBtn) pageNextBtn.addEventListener("click", goToNextPage);
+  
   function scrollToSlide(index) {
     var block = slidesTimeline.querySelector('[data-index="' + index + '"]');
     if (block) block.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
@@ -879,6 +1029,14 @@ if (isPresenter) {
   function selectSlide(index) {
     selectedSlideIndex = index;
     selectedAudioIndex = -1;
+    
+    // Check if selected slide is outside current pagination window
+    var needsWindowShift = index < slideWindowStart || index >= slideWindowEnd;
+    if (needsWindowShift && slides.length > 0) {
+      // Shift window to include the selected slide
+      updateSlideWindow(index);
+      renderTimelines();
+    }
     
     // Update selection using data-index (works correctly with virtualized rendering)
     document.querySelectorAll(".slide-block").forEach(function(b) {
@@ -1098,6 +1256,10 @@ if (isPresenter) {
     
     var idx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
     slides.splice(idx, 0, slide);
+    
+    // Shift window to include the new slide
+    updateSlideWindow(idx);
+    
     renderTimelines();
     selectSlide(idx);
     saveToLocalStorage();
@@ -1132,12 +1294,16 @@ if (isPresenter) {
     slides.splice(selectedSlideIndex, 1);
     if (!slides.length) {
       selectedSlideIndex = -1;
+      slideWindowStart = 0;
+      slideWindowEnd = 0;
       editorPlaceholder.style.display = "block";
       slideForm.style.display = "none";
       slidePositionBadge.style.display = "none";
       previewContainer.innerHTML = '<p class="preview-placeholder">Select a slide to preview</p>';
     } else {
       selectedSlideIndex = Math.min(selectedSlideIndex, slides.length - 1);
+      // Ensure window bounds are valid after deletion
+      updateSlideWindow(selectedSlideIndex);
       selectSlide(selectedSlideIndex);
     }
     renderTimelines();
@@ -1179,6 +1345,9 @@ if (isPresenter) {
         presentationSettings = data.settings || { subtitleSize: 100 };
         selectedSlideIndex = -1;
         selectedAudioIndex = -1;
+        // Reset pagination window to start
+        slideWindowStart = 0;
+        slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
         editorPlaceholder.style.display = "block";
         slideForm.style.display = "none";
         audioEditor.style.display = "none";
@@ -1802,6 +1971,9 @@ if (isPresenter) {
       targetIdx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
       slides.splice(targetIdx, 0, newSlide);
     }
+    
+    // Ensure pagination window includes the new/updated slide
+    updateSlideWindow(targetIdx);
     
     // Close modal and show instructions
     hideVideoGenModal();

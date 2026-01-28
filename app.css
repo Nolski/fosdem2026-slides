@@ -147,6 +147,48 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* Pagination Controls */
+.pagination-group {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+#page-indicator {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px 10px;
+  background: rgba(233, 69, 96, 0.15);
+  border-radius: 4px;
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: center;
+}
+
+.toolbar-btn.page-nav {
+  padding: 5px 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  background: rgba(233, 69, 96, 0.2);
+  border-color: rgba(233, 69, 96, 0.4);
+  min-width: 32px;
+}
+
+.toolbar-btn.page-nav:hover:not(:disabled) {
+  background: #e94560;
+  border-color: #e94560;
+}
+
+.toolbar-btn.page-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.toolbar-btn.page-nav:disabled:hover {
+  background: rgba(233, 69, 96, 0.2);
+  border-color: rgba(233, 69, 96, 0.4);
+}
+
 .toolbar-group {
   display: flex;
   align-items: center;
@@ -234,14 +276,17 @@ body {
 #slides-timeline {
   display: flex;
   gap: 6px;
+  flex: 1;
+  justify-content: center;
+  padding: 0 20px;
 }
 
 .slide-block {
-  width: 70px;
-  height: 55px;
+  width: 100px;
+  height: 75px;
   background: linear-gradient(135deg, #0f3460 0%, #1a4a7a 100%);
   border: 2px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -301,7 +346,7 @@ body {
 /* Drop zone indicators between slides */
 .drop-indicator {
   width: 4px;
-  height: 55px;
+  height: 75px;
   background: #4caf50;
   border-radius: 2px;
   flex-shrink: 0;
@@ -318,7 +363,7 @@ body {
 }
 
 .slide-block .block-number {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: bold;
   line-height: 1;
   text-shadow: 0 1px 3px rgba(0,0,0,0.5);
@@ -327,8 +372,8 @@ body {
 }
 
 .slide-block .block-icon {
-  font-size: 0.65rem;
-  margin-top: 2px;
+  font-size: 0.85rem;
+  margin-top: 4px;
   position: relative;
   z-index: 1;
 }
@@ -351,28 +396,32 @@ body {
 /* Audio Timeline */
 #audio-timeline-wrapper {
   flex: 1;
-  position: relative;
+  display: flex;
+  justify-content: center;
   min-height: 30px;
   background: rgba(0, 0, 0, 0.15);
   border-radius: 6px;
+  padding: 0 20px;
 }
 
 #audio-timeline {
   position: relative;
-  height: 30px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .audio-track {
-  height: 26px;
+  height: 32px;
   background: linear-gradient(90deg, #1e8449, #27ae60);
-  border-radius: 4px;
+  border-radius: 6px;
   position: absolute;
   top: 2px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 0 10px;
-  font-size: 0.75rem;
+  padding: 0 12px;
+  font-size: 0.8rem;
   color: white;
   transition: all 0.15s ease;
   border: 2px solid transparent;
@@ -391,11 +440,21 @@ body {
 
 .audio-track .audio-icon {
   margin-right: 5px;
+  flex-shrink: 0;
 }
 
 .audio-track .audio-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Audio extends indicators - show when track continues beyond visible window */
+.audio-track .audio-extends {
+  font-weight: bold;
+  opacity: 0.7;
+  flex-shrink: 0;
+  margin: 0 4px;
 }
 
 /* ============================================
