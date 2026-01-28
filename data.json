@@ -675,10 +675,34 @@
     },
     {
       "type": "video",
-      "notes": "Yes, it is. But I got it working.. Fully automated cleanrooming of entire SBOMs. Upload your package.json to my website at malus.sh and for a little fee, you have all of your dependencies cleanroomed. 100% CVE free. No more fuss with community. No more OSPOs. No more supply chain attacks. No more open source.\n\nDylan: Is this real?\n\nMike: Yes\n\nDylan: Like... did you actually wire all this up? Can they actually go to malus.sh and pay you to cleanroom their entire sbom?\n\nMike: Dude. Yes. How many times do I have to say it\n\nDylan: But we just had a proof of concept, you wired it up to stripe? Who's bank account does this go to?\n\nMike: Dylan, why did you think we were doing all this?\n\nDylan: I... I guess I'm in disbelief.. Wait, but Mike, the one thing I still don't get is you've spent your whole life as an advocate for open source. You gave up good jobs in the tech sector to work on this stuff, getting paid crumbs to do research and work in humanitarian orgs. Now you're just going to kill it?\n\nMike: Well Dylan, I just think open source lost. I'm tired of being on the losing side. I'm ready to make my bag, and walk away, and I don't think I can do that from advocating for open source. So I figure... why not try the opposite, why not try embracing the inevitable, and at least make a little money as the whole world watches AI burn it all to the ground?\n\nDylan: Mike... I... listen about what we built... I don't know if I can do this... I know we'll make a lot of money but what about all these people?\n\nMike: Dylan, if you're not going to help me end open source, then don't let the door hit you on the way out\n\nDylan: No... that's not enough. I have to stop you.\n\nMike: Stop me? How are you going to stop me? What system could you possibly use to stop all this?\n\nDylan: I.... I don't know. He's coming for your ideas. \n\n(Dylan turns to monologue the audience)\nHe's coming for your copyrights and copylefts, and i don't think we're powerful enough to stop him.",
-      "src": "media/video/malus-demo.mp4",
+      "notes": "Yes, it is. But I got it working.. Fully automated cleanrooming of entire SBOMs. Upload your package.json to our website at malus.sh and for a little fee, you have all of your dependencies cleanroomed. 100% CVE free. No more fuss with community. No more OSPOs. No more supply chain attacks. No more open source.\n\nDylan: Is this real?\n\nMike: Yes\n\nDylan: Like... did you actually wire all this up? Can they actually go to malus.sh and pay you to cleanroom their entire sbom?\n",
+      "src": "media/video/malus-demo1.webm",
       "loop": false,
-      "volume": 0,
+      "volume": 100,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "\nMike: Dude. Yes. How many times do I have to say it\n\nDylan: But we just had a proof of concept, you wired it up to stripe? Who's bank account does this go to?",
+      "src": "media/video/malus-demo2.webm",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "Dylan: But we just had a proof of concept, you wired it up to stripe? Who's bank account does this go to?\n\nMike: Dylan, why did you think we were doing all this?\n\nDylan: I... I guess I'm in disbelief.. Wait, but Mike, the one thing I still don't get is you've spent your whole life as an advocate for open source. You gave up good jobs in the tech sector to work on this stuff, getting paid crumbs to do research and work in humanitarian orgs. Now you're just going to kill it?\n",
+      "src": "media/video/malus-demo3.webm",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": false
+    },
+    {
+      "type": "video",
+      "notes": "\nMike: Well Dylan, I just think open source lost. I'm tired of being on the losing side. I'm ready to make my bag, and walk away, and I don't think I can do that from advocating for open source. So I figure... why not try the opposite, why not try embracing the inevitable, and at least make a little money as the whole world watches AI burn it all to the ground?\n\nDylan: Mike... I... listen about what we built... I don't know if I can do this... I know we'll make a lot of money but what about all these people?\n\nMike: Dylan, if you're not going to help me end open source, then don't let the door hit you on the way out\n\nDylan: No... that's not enough. I have to stop you.\n\nMike: Stop me? How are you going to stop me? What system could you possibly use to stop all this?\n\nDylan: I.... I don't know. He's coming for your ideas. \n\n(Dylan turns to monologue the audience)\nHe's coming for your copyrights and copylefts, and i don't think we're powerful enough to stop him.",
+      "src": "media/video/malus-demo4.webm",
+      "loop": false,
+      "volume": 100,
       "autoAdvance": false
     },
     {
