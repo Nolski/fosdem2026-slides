@@ -288,9 +288,9 @@ if (isPresenter) {
 
   // Slide layout: each slide block is 70px wide, with 6px gaps between all flex items
   // The slides timeline has drop indicators (0px effective width due to -2px margins) between slides
-  // So each slide "slot" is: 70px slide + 6px gap + 0px drop + 6px gap = 82px
+  // So each slide "slot" is: 100px slide + 6px gap + 0px drop + 6px gap = 112px
   // First slide starts at: 0px (initial drop) + 6px gap = 6px offset
-  var BLOCK_WIDTH = 82;
+  var BLOCK_WIDTH = 112;
   var TIMELINE_INITIAL_OFFSET = 6;
   
   // ============================================
@@ -785,10 +785,8 @@ if (isPresenter) {
     // Update slide window bounds
     updateSlideWindow();
     
-    // Calculate total width for just the windowed slides
-    var windowedSlideCount = slideWindowEnd - slideWindowStart;
-    var totalWidth = TIMELINE_INITIAL_OFFSET + (windowedSlideCount * BLOCK_WIDTH);
-    slidesTimeline.style.minWidth = totalWidth + "px";
+    // Clear any fixed width - let CSS handle the layout
+    slidesTimeline.style.minWidth = "";
     
     // Calculate which slides to fully render within the window
     var visibleRange = calculateVisibleSlideRange();
@@ -883,11 +881,11 @@ if (isPresenter) {
     video.addEventListener("seeked", function() {
       try {
         var canvas = document.createElement("canvas");
-        canvas.width = 70;
-        canvas.height = 55;
+        canvas.width = 100;
+        canvas.height = 75;
         var ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        callback(canvas.toDataURL("image/jpeg", 0.5));
+        callback(canvas.toDataURL("image/jpeg", 0.6));
       } catch (e) {
         callback(null);
       }
@@ -946,28 +944,51 @@ if (isPresenter) {
     audioTimeline.innerHTML = "";
     if (!slides.length) return;
     
+    // Calculate windowed slide count for width
+    var windowedSlideCount = slideWindowEnd - slideWindowStart;
+    // Width matches slides: each slide block is 100px + 6px gap, plus drop indicators
+    var timelineWidth = windowedSlideCount * BLOCK_WIDTH;
+    
+    // Set explicit width so absolute positioning works correctly
+    audioTimeline.style.width = timelineWidth + "px";
+    
     audioTracks.forEach(function(track, i) {
+      var trackStart = Math.max(0, track.startSlide);
+      var trackEnd = Math.min(slides.length - 1, track.endSlide);
+      
+      // Check if this audio track overlaps with the current window
+      if (trackEnd < slideWindowStart || trackStart >= slideWindowEnd) {
+        // Track is entirely outside the current window - don't render
+        return;
+      }
+      
+      // Clip track to window bounds for positioning
+      var visibleStart = Math.max(trackStart, slideWindowStart);
+      var visibleEnd = Math.min(trackEnd, slideWindowEnd - 1);
+      
+      // Calculate position relative to window start
+      var relativeStart = visibleStart - slideWindowStart;
+      var relativeEnd = visibleEnd - slideWindowStart;
+      
       var el = document.createElement("div");
       el.className = "audio-track" + (i === selectedAudioIndex ? " selected" : "");
       el.dataset.index = i;
       
-      var start = Math.max(0, track.startSlide);
-      var end = Math.min(slides.length - 1, track.endSlide);
-      // Position: initial offset + (start slide * block width) + 4px padding
-      el.style.left = (TIMELINE_INITIAL_OFFSET + start * BLOCK_WIDTH + 4) + "px";
-      // Width: spans from start slide to end slide (inclusive), minus padding on both sides
-      // Each slide is 82px apart, but we want to end at the right edge of the last slide (70px wide)
-      // So: (count * 82) - 12 (extra gap+drop at end) - 8 (4px padding each side) = count * 82 - 20
-      el.style.width = Math.max(50, (end - start + 1) * BLOCK_WIDTH - 20) + "px";
+      // Position relative to the windowed view (match slide block positions)
+      el.style.left = (relativeStart * BLOCK_WIDTH + 4) + "px";
+      el.style.width = Math.max(50, (relativeEnd - relativeStart + 1) * BLOCK_WIDTH - 20) + "px";
+      
+      // Add visual indicator if track extends beyond visible window
+      var extendsLeft = trackStart < slideWindowStart;
+      var extendsRight = trackEnd >= slideWindowEnd;
       
       var filename = track.src.split('/').pop();
-      el.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>';
+      var leftArrow = extendsLeft ? '<span class="audio-extends">&#171;</span>' : '';
+      var rightArrow = extendsRight ? '<span class="audio-extends">&#187;</span>' : '';
+      el.innerHTML = leftArrow + '<span class="audio-icon">🔊</span><span class="audio-label">' + filename + '</span>' + rightArrow;
       el.addEventListener("click", function() { selectAudioTrack(i); });
       audioTimeline.appendChild(el);
     });
-    
-    var wrapper = document.getElementById("audio-timeline-wrapper");
-    if (wrapper) wrapper.style.minWidth = (TIMELINE_INITIAL_OFFSET + slides.length * BLOCK_WIDTH) + "px";
   }
   
   // Navigation controls
