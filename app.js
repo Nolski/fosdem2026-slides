@@ -469,6 +469,9 @@ if (isPresenter) {
       slides = pendingServerData.slides || pendingServerData || [];
       audioTracks = pendingServerData.audio || [];
       presentationSettings = pendingServerData.settings || { subtitleSize: 100 };
+      // Reset pagination window to start
+      slideWindowStart = 0;
+      slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
       // Clear local storage so we start fresh from server
       clearLocalStorage();
       renderTimelines();
@@ -485,6 +488,9 @@ if (isPresenter) {
       slides = pendingLocalData.slides || [];
       audioTracks = pendingLocalData.audio || [];
       presentationSettings = pendingLocalData.settings || { subtitleSize: 100 };
+      // Reset pagination window to start
+      slideWindowStart = 0;
+      slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
       renderTimelines();
       applySubtitleSettings();
     }
@@ -1318,6 +1324,9 @@ if (isPresenter) {
         presentationSettings = data.settings || { subtitleSize: 100 };
         selectedSlideIndex = -1;
         selectedAudioIndex = -1;
+        // Reset pagination window to start
+        slideWindowStart = 0;
+        slideWindowEnd = Math.min(slides.length, SLIDE_WINDOW_SIZE);
         editorPlaceholder.style.display = "block";
         slideForm.style.display = "none";
         audioEditor.style.display = "none";
@@ -1941,6 +1950,9 @@ if (isPresenter) {
       targetIdx = selectedSlideIndex >= 0 ? selectedSlideIndex + 1 : slides.length;
       slides.splice(targetIdx, 0, newSlide);
     }
+    
+    // Ensure pagination window includes the new/updated slide
+    updateSlideWindow(targetIdx);
     
     // Close modal and show instructions
     hideVideoGenModal();
