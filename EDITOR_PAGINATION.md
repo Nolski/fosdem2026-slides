@@ -13,7 +13,12 @@ Large presentations with many slides can cause browser crashes due to:
 
 ## Solution
 
-The editor now limits the number of slides loaded at any given time to a maximum of **10 slides**. This creates a "sliding window" that moves as you navigate through the presentation.
+The editor now limits the number of slides **rendered in the timeline** at any given time to a maximum of **10 slides**. This creates a "sliding window" that moves as you navigate through the presentation.
+
+**Note**: The slide data (metadata, notes, paths) remains fully loaded in memory - only the DOM rendering is paginated. This ensures:
+- Fast navigation to any slide
+- Full export/import functionality
+- No data loss when switching pages
 
 ### Key Features
 

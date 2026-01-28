@@ -977,6 +977,8 @@ if (isPresenter) {
     var slide = slides.splice(from, 1)[0];
     slides.splice(to, 0, slide);
     selectedSlideIndex = to;
+    // Ensure window includes the target position
+    updateSlideWindow(to);
     renderTimelines();
     scrollToSlide(to);
     saveToLocalStorage();
