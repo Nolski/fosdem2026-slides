@@ -532,13 +532,6 @@
       "autoAdvance": true
     },
     {
-      "type": "placeholder",
-      "notes": "Unfortunately for dave, not even his work that he and his colleagues put a lot of time into was safe from our cleanrooming machine. And here it is, reimplemented in full glory. ",
-      "title": "IBM BIOS Example",
-      "backgroundColor": "#333333",
-      "text": ""
-    },
-    {
       "type": "video",
       "src": "media/video/killos.mp4",
       "notes": "Dylan: Did we just spend the last 30 minutes talking about the origin of copyright?\n\nMike: Yes, centuries of law designed for books... retroactively applied to software... the entire system now circumvented through labor instant cleanroom processes with purpose built AI tools designed to do this.\n\nDylan: Okay... so a company can take the ideas from open source, and now instantly recreate them without worrying about copyright, without crediting the author, without any restrictions what so ever... I buy that it's legal but is it ethical?\n\nMike: You're asking the wrong question Dylan, the question you should be asking is, can we get rich off of this?\n\nDylan: Get rich? What do you mean?\n\nMike: Imagine if we could just cleanroom all of the OS software we use today and not ever have to deal with the annoying community problems ever again! \n\nDylan: Wait, but open source software is already free, and it brings together so many people in this great way. Look all around us at these amazing people coming together to share their work. Why would a company want to kill all of that?\n\nMike: Well, first let's talk about why large corporations depend so heavily on open source yet have so many problems with it",
