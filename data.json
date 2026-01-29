@@ -772,6 +772,14 @@
     {
       "type": "video",
       "notes": "",
+      "src": "media/video/Historical_Dancers_in_Hell_scape.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
       "src": "media/video/20260128_2000_01kg3yfsjcf779s7bdv6c9ngdj.mp4",
       "loop": true,
       "volume": 0,
@@ -893,7 +901,7 @@
     {
       "src": "media/audio/theEndasweknowit.mp3",
       "startSlide": 106,
-      "endSlide": 108,
+      "endSlide": 109,
       "loop": false,
       "volume": 100,
       "pauseSlides": [],
