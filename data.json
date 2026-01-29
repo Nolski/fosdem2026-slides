@@ -757,7 +757,17 @@
       "notes": "",
       "title": "La Fin.",
       "text": "Thanks for attending.",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#000000",
+      "timedAdvance": true,
+      "advanceDuration": 14300
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/20260128_1923_01kg3wad0sfpvtca47rj8xbk2m.mp4",
+      "loop": true,
+      "volume": 0,
+      "autoAdvance": false
     }
   ],
   "audio": [
@@ -875,7 +885,7 @@
     {
       "src": "media/audio/theEndasweknowit.mp3",
       "startSlide": 106,
-      "endSlide": 106,
+      "endSlide": 107,
       "loop": false,
       "volume": 100,
       "pauseSlides": [],
