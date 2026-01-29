@@ -8,6 +8,7 @@ if (isPresenter) {
        <button id="startPresBtn">Start Presentation</button>
        <button id="pauseBtn" style="display:none;">Pause</button>
        <span id="timerDisplay" style="display:none;">00:00:00</span>
+       <button id="fullscreenBtn" title="Toggle fullscreen on presentation window">⛶ Full Screen</button>
        <button id="bleepBtn">🔇 Bleep</button>
        <span class="presenter-divider">|</span>
        <label class="presenter-toggle">
@@ -222,6 +223,41 @@ if (isPresenter) {
   }
   bleepBtn.addEventListener("mouseup", stopBleep);
   bleepBtn.addEventListener("mouseleave", stopBleep);
+
+  // Fullscreen button - toggles fullscreen on the main presentation window
+  var fullscreenBtn = document.getElementById("fullscreenBtn");
+  var isFullscreen = false;
+  
+  function updateFullscreenButton() {
+    if (isFullscreen) {
+      fullscreenBtn.textContent = "⛶ Exit Full Screen";
+      fullscreenBtn.classList.add("active");
+    } else {
+      fullscreenBtn.textContent = "⛶ Full Screen";
+      fullscreenBtn.classList.remove("active");
+    }
+  }
+  
+  fullscreenBtn.addEventListener("click", function() {
+    if (window.opener && !window.opener.closed && window.opener.togglePresentationFullscreen) {
+      window.opener.togglePresentationFullscreen();
+      // Optimistically update button (actual state will be confirmed via message)
+    }
+  });
+  
+  // Listen for fullscreen state changes from main window
+  window.addEventListener("message", function(event) {
+    if (event.data.type === "fullscreenChange") {
+      isFullscreen = event.data.isFullscreen;
+      updateFullscreenButton();
+    }
+  });
+  
+  // Sync initial fullscreen state from main window
+  if (window.opener && !window.opener.closed && window.opener.isPresentationFullscreen) {
+    isFullscreen = window.opener.isPresentationFullscreen();
+    updateFullscreenButton();
+  }
 
   // Subtitle controls in presenter view
   var presenterSubtitlesToggle = document.getElementById("presenterSubtitles");
@@ -1534,6 +1570,39 @@ if (isPresenter) {
     setTimeout(function() { canChangeSlide = true; }, 500);
   }
   window.previousSlide = previousSlide;
+
+  // Fullscreen toggle for the presentation window (can be called from presenter view)
+  function togglePresentationFullscreen() {
+    var presentationEl = document.getElementById("presentation");
+    if (!presentationEl) return false;
+    
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(function() {});
+      return false;
+    } else {
+      presentationEl.requestFullscreen().catch(function(err) {
+        console.warn("Fullscreen request failed:", err);
+      });
+      return true;
+    }
+  }
+  window.togglePresentationFullscreen = togglePresentationFullscreen;
+  
+  // Check if presentation is currently fullscreen
+  function isPresentationFullscreen() {
+    return !!document.fullscreenElement;
+  }
+  window.isPresentationFullscreen = isPresentationFullscreen;
+  
+  // Notify presenter view when fullscreen state changes
+  document.addEventListener("fullscreenchange", function() {
+    if (presenterWindow && !presenterWindow.closed) {
+      presenterWindow.postMessage({
+        type: "fullscreenChange",
+        isFullscreen: !!document.fullscreenElement
+      }, "*");
+    }
+  });
 
   function updatePresenterView() {
     if (presenterWindow && !presenterWindow.closed) {
