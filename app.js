@@ -1489,12 +1489,19 @@ if (isPresenter) {
       // Auto-advance after timeout (if enabled)
       if (slide.timedAdvance) {
         var duration = slide.advanceDuration || 5000;
-        placeholderAdvanceTimer = setTimeout(function() {
+        var attemptAdvance = function() {
           // Only advance if we're still on this slide and presentation is running
           if (window.presentationStarted && !paused && currentSlideIndex === index) {
+            // If canChangeSlide is false (e.g., cooldown from previous slide change),
+            // reschedule the advance attempt instead of silently failing
+            if (!canChangeSlide) {
+              placeholderAdvanceTimer = setTimeout(attemptAdvance, 100);
+              return;
+            }
             advanceSlide();
           }
-        }, duration);
+        };
+        placeholderAdvanceTimer = setTimeout(attemptAdvance, duration);
       }
     }
     updatePresenterView();
