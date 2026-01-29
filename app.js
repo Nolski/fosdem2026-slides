@@ -3,37 +3,409 @@ var isPresenter = (window.location.search.indexOf("presenter") !== -1);
 if (isPresenter) {
   // ---------- PRESENTER VIEW CODE ----------
   
+  // Add presenter-specific styles
+  var presenterStyles = document.createElement('style');
+  presenterStyles.textContent = `
+    body {
+      margin: 0;
+      padding: 0;
+      background: #1a1a2e;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+    }
+    
+    #presenter-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    #presenter-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    
+    #presenter-header button {
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    #startPresBtn {
+      background: #e94560;
+      color: white;
+    }
+    
+    #startPresBtn:hover {
+      background: #d63d56;
+    }
+    
+    #pauseBtn {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+    
+    #pauseBtn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    #timerDisplay {
+      font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.15);
+      padding: 6px 16px;
+      border-radius: 8px;
+      letter-spacing: 0.05em;
+    }
+    
+    #bleepBtn {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    }
+    
+    #bleepBtn:hover, #bleepBtn:active {
+      background: #ef4444;
+      color: white;
+    }
+    
+    #fullscreenBtn {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    }
+    
+    #fullscreenBtn:hover {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    #fullscreenBtn.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+    
+    #fullscreenBtn.active:hover {
+      background: #10b981;
+      color: white;
+    }
+    
+    .presenter-divider {
+      color: rgba(255,255,255,0.2);
+      margin: 0 4px;
+    }
+    
+    .presenter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      transition: background 0.15s;
+    }
+    
+    .presenter-toggle:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .presenter-toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #10b981;
+    }
+    
+    .presenter-toggle-label {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.8);
+    }
+    
+    .presenter-toggle.offline-indicator {
+      background: rgba(251, 191, 36, 0.15);
+    }
+    
+    .presenter-status {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .presenter-status.loading {
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.2);
+    }
+    
+    .presenter-status.active {
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.2);
+    }
+    
+    #presenter-main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 16px;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+    
+    .slide-panel {
+      display: flex;
+      flex-direction: column;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: 0;
+    }
+    
+    .slide-panel.current {
+      border: 2px solid #e94560;
+    }
+    
+    .slide-panel.next {
+      border: 2px solid rgba(255,255,255,0.1);
+      opacity: 0.85;
+    }
+    
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    
+    .panel-header h3 {
+      margin: 0;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.6);
+    }
+    
+    .slide-panel.current .panel-header h3 {
+      color: #e94560;
+    }
+    
+    .slide-number {
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.1);
+      padding: 3px 10px;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.7);
+    }
+    
+    .slide-panel.current .slide-number {
+      background: rgba(233, 69, 96, 0.2);
+      color: #e94560;
+    }
+    
+    /* Notes section - prominent, at the top, takes more space */
+    .notes-section {
+      flex: 1;
+      padding: 16px 18px;
+      background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      overflow-y: auto;
+      min-height: 0;
+    }
+    
+    .notes-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 8px;
+    }
+    
+    .notes-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.95);
+    }
+    
+    .notes-text:empty::after {
+      content: 'No speaker notes';
+      color: rgba(255,255,255,0.3);
+      font-style: italic;
+    }
+    
+    /* Preview container - smaller, at the bottom */
+    .preview-container {
+      flex-shrink: 0;
+      height: 35%;
+      min-height: 120px;
+      max-height: 250px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      background: #000;
+      overflow: hidden;
+    }
+    
+    .preview-container img,
+    .preview-container video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+    
+    .preview-container .placeholder-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 15px;
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+    }
+    
+    .preview-container .placeholder-preview h3 {
+      margin: 0 0 6px 0;
+      font-size: 1rem;
+    }
+    
+    .preview-container .placeholder-preview p {
+      margin: 0;
+      opacity: 0.7;
+      font-size: 0.85rem;
+    }
+    
+    #video-seek-container {
+      display: none;
+      padding: 6px 14px 10px;
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
+    }
+    
+    .seek-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .seek-label span {
+      color: rgba(255,255,255,0.6);
+    }
+    
+    #seekSlider {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    
+    #seekSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #e94560;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .end-message {
+      color: rgba(255,255,255,0.4);
+      font-style: italic;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    
+    /* Responsive for smaller windows */
+    @media (max-width: 700px) {
+      #presenter-main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+    }
+  `;
+  document.head.appendChild(presenterStyles);
+  
   document.body.innerHTML = `
-    <div id="presenter-controls" style="margin-bottom: 20px;">
-       <button id="startPresBtn">Start Presentation</button>
-       <button id="pauseBtn" style="display:none;">Pause</button>
-       <span id="timerDisplay" style="display:none;">00:00:00</span>
-       <button id="fullscreenBtn" title="Toggle fullscreen on presentation window">⛶ Full Screen</button>
-       <button id="bleepBtn">🔇 Bleep</button>
-       <span class="presenter-divider">|</span>
-       <label class="presenter-toggle">
-         <input type="checkbox" id="presenterSubtitles">
-         <span class="presenter-toggle-label">Subtitles</span>
-       </label>
-       <label class="presenter-toggle offline-indicator">
-         <input type="checkbox" id="presenterOfflineMode">
-         <span class="presenter-toggle-label">Offline</span>
-       </label>
-       <span id="presenterSubtitleStatus" class="presenter-status"></span>
-    </div>
-    <div id="presenter-info">
-      <h2>Current Slide</h2>
-      <div id="current-preview" class="preview"></div>
-      <h3>Speaker Notes</h3>
-      <div id="current-notes"></div>
-      <hr>
-      <h2>Next Slide</h2>
-      <div id="next-preview" class="preview"></div>
-      <h3>Speaker Notes</h3>
-      <div id="next-notes"></div>
-    </div>
-    <div id="video-controls" style="display:none; margin:10px;">
-      <input type="range" id="seekSlider" min="0" max="100" value="0">
+    <div id="presenter-container">
+      <div id="presenter-header">
+        <button id="startPresBtn">▶ Start Presentation</button>
+        <button id="pauseBtn" style="display:none;">⏸ Pause</button>
+        <span id="timerDisplay" style="display:none;">00:00:00</span>
+        <button id="fullscreenBtn" title="Toggle fullscreen on presentation window">⛶ Full Screen</button>
+        <button id="bleepBtn">🔇 Bleep</button>
+        <span class="presenter-divider">|</span>
+        <label class="presenter-toggle">
+          <input type="checkbox" id="presenterSubtitles">
+          <span class="presenter-toggle-label">Subtitles</span>
+        </label>
+        <label class="presenter-toggle offline-indicator">
+          <input type="checkbox" id="presenterOfflineMode">
+          <span class="presenter-toggle-label">Offline</span>
+        </label>
+        <span id="presenterSubtitleStatus" class="presenter-status"></span>
+      </div>
+      
+      <div id="presenter-main">
+        <div class="slide-panel current">
+          <div class="panel-header">
+            <h3>Current Slide</h3>
+            <span class="slide-number" id="current-slide-number">--</span>
+          </div>
+          <div class="notes-section">
+            <div class="notes-label">Speaker Notes</div>
+            <div class="notes-text" id="current-notes"></div>
+          </div>
+          <div class="preview-container" id="current-preview"></div>
+          <div id="video-seek-container">
+            <div class="seek-label">🎬 Video Seek <span id="video-time"></span></div>
+            <input type="range" id="seekSlider" min="0" max="100" value="0">
+          </div>
+        </div>
+        
+        <div class="slide-panel next">
+          <div class="panel-header">
+            <h3>Next Slide</h3>
+            <span class="slide-number" id="next-slide-number">--</span>
+          </div>
+          <div class="notes-section">
+            <div class="notes-label">Speaker Notes</div>
+            <div class="notes-text" id="next-notes"></div>
+          </div>
+          <div class="preview-container" id="next-preview"></div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -81,15 +453,24 @@ if (isPresenter) {
     if (!isPausedLocal) {
       pausedStartTime = Date.now();
       isPausedLocal = true;
-      this.innerText = "Resume";
+      this.innerText = "▶ Resume";
     } else {
       pausedOffset += Date.now() - pausedStartTime;
       isPausedLocal = false;
-      this.innerText = "Pause";
+      this.innerText = "⏸ Pause";
     }
   });
 
   var seekSlider = document.getElementById("seekSlider");
+  var videoSeekContainer = document.getElementById("video-seek-container");
+  var videoTimeDisplay = document.getElementById("video-time");
+  
+  function formatVideoTime(seconds) {
+    var mins = Math.floor(seconds / 60);
+    var secs = Math.floor(seconds % 60);
+    return mins + ":" + (secs < 10 ? "0" : "") + secs;
+  }
+  
   if (seekSlider) {
     seekSlider.addEventListener("input", function(e) {
       if (presenterVideo && presenterVideo.duration) {
@@ -104,16 +485,14 @@ if (isPresenter) {
     if (slide.type === "image") {
       var img = document.createElement("img");
       img.src = slide.src;
-      img.style.maxWidth = "100%";
       container.appendChild(img);
       if (isCurrentSlide) {
-        document.getElementById("video-controls").style.display = "none";
+        videoSeekContainer.style.display = "none";
         presenterVideo = null;
       }
     } else if (slide.type === "video") {
       var video = document.createElement("video");
       video.src = slide.src;
-      video.style.maxWidth = "100%";
       video.controls = true;
       if (isCurrentSlide) {
         video.muted = true;
@@ -121,22 +500,27 @@ if (isPresenter) {
         video.playsInline = true;
         video.loop = true;
         presenterVideo = video;
-        document.getElementById("video-controls").style.display = "block";
+        videoSeekContainer.style.display = "block";
         video.addEventListener("timeupdate", function() {
           if (video.duration) {
             seekSlider.value = (video.currentTime / video.duration) * 100;
+            videoTimeDisplay.textContent = formatVideoTime(video.currentTime) + " / " + formatVideoTime(video.duration);
           }
+        });
+        video.addEventListener("loadedmetadata", function() {
+          videoTimeDisplay.textContent = "0:00 / " + formatVideoTime(video.duration);
         });
       }
       container.appendChild(video);
     } else if (slide.type === "placeholder") {
       var placeholderDiv = document.createElement("div");
-      placeholderDiv.style.cssText = "background:" + (slide.backgroundColor || '#333') + ";padding:20px;text-align:center;color:white;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;";
-      var bodyText = slide.text ? '<p style="margin:10px 0 0 0;opacity:0.8;">' + slide.text + '</p>' : '';
-      placeholderDiv.innerHTML = '<h3 style="margin:0;">' + (slide.title || 'Placeholder') + '</h3>' + bodyText;
+      placeholderDiv.className = "placeholder-preview";
+      placeholderDiv.style.background = slide.backgroundColor || '#333';
+      var bodyText = slide.text ? '<p>' + slide.text + '</p>' : '';
+      placeholderDiv.innerHTML = '<h3>' + (slide.title || 'Placeholder') + '</h3>' + bodyText;
       container.appendChild(placeholderDiv);
       if (isCurrentSlide) {
-        document.getElementById("video-controls").style.display = "none";
+        videoSeekContainer.style.display = "none";
         presenterVideo = null;
       }
     }
@@ -158,34 +542,41 @@ if (isPresenter) {
         return;
       }
       
+      // Update current slide number
+      document.getElementById("current-slide-number").textContent = (currentIndex + 1) + " / " + totalSlides;
+      
       renderSlidePreview(curSlide, document.getElementById("current-preview"), true);
       
       var notes = (curSlide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
-      document.getElementById("current-notes").innerText = "[Slide " + (currentIndex + 1) + "] " + notes;
+      document.getElementById("current-notes").innerText = notes;
 
       var nextPreview = document.getElementById("next-preview");
       var nextBufferedIndex = bufferedIndex + 1;
+      var nextSlideNumber = document.getElementById("next-slide-number");
       
       if (currentIndex + 1 < totalSlides && nextBufferedIndex < slides.length) {
         var nextSlide = slides[nextBufferedIndex];
+        nextSlideNumber.textContent = (currentIndex + 2) + " / " + totalSlides;
         renderSlidePreview(nextSlide, nextPreview, false);
         var nextNotes = (nextSlide.notes || "").replace(/^Slide\s*\d+\s*:\s*/i, "");
-        document.getElementById("next-notes").innerText = "[Slide " + (currentIndex + 2) + "] " + nextNotes;
+        document.getElementById("next-notes").innerText = nextNotes;
       } else if (currentIndex + 1 >= totalSlides) {
-        nextPreview.innerHTML = "<em>End of presentation</em>";
+        nextSlideNumber.textContent = "End";
+        nextPreview.innerHTML = "<div class='end-message'>🎉 End of presentation</div>";
         document.getElementById("next-notes").innerText = "";
       } else {
-        nextPreview.innerHTML = "<em>Loading next slide...</em>";
+        nextSlideNumber.textContent = (currentIndex + 2) + " / " + totalSlides;
+        nextPreview.innerHTML = "<div class='end-message'>Loading...</div>";
         document.getElementById("next-notes").innerText = "";
       }
 
       if (typeof event.data.paused !== "undefined") {
         if (event.data.paused && !isPausedLocal) {
           isPausedLocal = true;
-          document.getElementById("pauseBtn").innerText = "Resume";
+          document.getElementById("pauseBtn").innerText = "▶ Resume";
         } else if (!event.data.paused && isPausedLocal) {
           isPausedLocal = false;
-          document.getElementById("pauseBtn").innerText = "Pause";
+          document.getElementById("pauseBtn").innerText = "⏸ Pause";
         }
       }
     }
@@ -1703,7 +2094,16 @@ if (isPresenter) {
   
   document.getElementById("presenterBtn").addEventListener("click", function() {
     if (!presenterWindow || presenterWindow.closed) {
-      presenterWindow = window.open(window.location.href + "?presenter", "PresenterView", "width=800,height=600");
+      // Open presenter window as large as possible
+      var width = Math.min(screen.availWidth - 50, 1600);
+      var height = Math.min(screen.availHeight - 50, 1000);
+      var left = Math.round((screen.availWidth - width) / 2);
+      var top = Math.round((screen.availHeight - height) / 2);
+      presenterWindow = window.open(
+        window.location.href + "?presenter",
+        "PresenterView",
+        "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top
+      );
     } else {
       presenterWindow.focus();
     }
