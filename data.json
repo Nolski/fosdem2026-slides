@@ -241,8 +241,9 @@
       "type": "video",
       "notes": "A few years later, a man named Baker, ripped him off. He made a book that used the talked about the same accounting system, and also contained ledgers. But the text was different, and the fonts and tables were all different",
       "src": "media/video/baker_book.mp4",
-      "loop": false,
-      "volume": 39
+      "loop": true,
+      "volume": 39,
+      "autoAdvance": false
     },
     {
       "type": "video",
@@ -509,7 +510,7 @@
     },
     {
       "type": "video",
-      "notes": "",
+      "notes": "now, we thought that this sounds pretty similar to what dave did a Phoenix... But here's what he said in his defense.",
       "src": "media/video/daveQuestion1.mp4",
       "loop": false,
       "volume": 101,
@@ -517,7 +518,7 @@
     },
     {
       "type": "video",
-      "notes": "",
+      "notes": "And when we brought up our machine that can do his work in seconds, and whether we should just allow the robots to copy everyone? Well this is all he had to say.",
       "src": "media/video/DaveMostOfIt.mp4",
       "loop": false,
       "volume": 100,
