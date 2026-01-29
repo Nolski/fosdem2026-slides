@@ -224,14 +224,47 @@ if (isPresenter) {
       color: #e94560;
     }
     
-    .preview-container {
+    /* Notes section - prominent, at the top, takes more space */
+    .notes-section {
       flex: 1;
+      padding: 16px 18px;
+      background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      overflow-y: auto;
+      min-height: 0;
+    }
+    
+    .notes-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 8px;
+    }
+    
+    .notes-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.95);
+    }
+    
+    .notes-text:empty::after {
+      content: 'No speaker notes';
+      color: rgba(255,255,255,0.3);
+      font-style: italic;
+    }
+    
+    /* Preview container - smaller, at the bottom */
+    .preview-container {
+      flex-shrink: 0;
+      height: 35%;
+      min-height: 120px;
+      max-height: 250px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 12px;
+      padding: 10px;
       background: #000;
-      min-height: 0;
       overflow: hidden;
     }
     
@@ -249,57 +282,29 @@ if (isPresenter) {
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 20px;
+      padding: 15px;
       width: 100%;
       height: 100%;
       border-radius: 8px;
     }
     
     .preview-container .placeholder-preview h3 {
-      margin: 0 0 8px 0;
-      font-size: 1.1rem;
+      margin: 0 0 6px 0;
+      font-size: 1rem;
     }
     
     .preview-container .placeholder-preview p {
       margin: 0;
       opacity: 0.7;
-      font-size: 0.9rem;
-    }
-    
-    .notes-section {
-      padding: 12px 14px;
-      background: rgba(0,0,0,0.2);
-      border-top: 1px solid rgba(255,255,255,0.05);
-      max-height: 120px;
-      overflow-y: auto;
-      flex-shrink: 0;
-    }
-    
-    .notes-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: rgba(255,255,255,0.4);
-      margin-bottom: 6px;
-    }
-    
-    .notes-text {
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: rgba(255,255,255,0.9);
-    }
-    
-    .notes-text:empty::after {
-      content: 'No speaker notes';
-      color: rgba(255,255,255,0.3);
-      font-style: italic;
+      font-size: 0.85rem;
     }
     
     #video-seek-container {
       display: none;
-      padding: 8px 16px 12px;
+      padding: 6px 14px 10px;
       background: rgba(0,0,0,0.2);
       border-top: 1px solid rgba(255,255,255,0.05);
+      flex-shrink: 0;
     }
     
     .seek-label {
@@ -339,7 +344,7 @@ if (isPresenter) {
       color: rgba(255,255,255,0.4);
       font-style: italic;
       text-align: center;
-      padding: 40px 20px;
+      padding: 30px 20px;
     }
     
     /* Responsive for smaller windows */
@@ -347,19 +352,6 @@ if (isPresenter) {
       #presenter-main {
         grid-template-columns: 1fr;
         grid-template-rows: 1fr 1fr;
-      }
-    }
-    
-    @media (max-height: 500px) {
-      .notes-section {
-        max-height: 60px;
-      }
-      #presenter-header {
-        padding: 8px 12px;
-      }
-      #timerDisplay {
-        font-size: 1.1rem;
-        padding: 4px 12px;
       }
     }
   `;
@@ -391,14 +383,14 @@ if (isPresenter) {
             <h3>Current Slide</h3>
             <span class="slide-number" id="current-slide-number">--</span>
           </div>
+          <div class="notes-section">
+            <div class="notes-label">Speaker Notes</div>
+            <div class="notes-text" id="current-notes"></div>
+          </div>
           <div class="preview-container" id="current-preview"></div>
           <div id="video-seek-container">
             <div class="seek-label">🎬 Video Seek <span id="video-time"></span></div>
             <input type="range" id="seekSlider" min="0" max="100" value="0">
-          </div>
-          <div class="notes-section">
-            <div class="notes-label">Speaker Notes</div>
-            <div class="notes-text" id="current-notes"></div>
           </div>
         </div>
         
@@ -407,11 +399,11 @@ if (isPresenter) {
             <h3>Next Slide</h3>
             <span class="slide-number" id="next-slide-number">--</span>
           </div>
-          <div class="preview-container" id="next-preview"></div>
           <div class="notes-section">
             <div class="notes-label">Speaker Notes</div>
             <div class="notes-text" id="next-notes"></div>
           </div>
+          <div class="preview-container" id="next-preview"></div>
         </div>
       </div>
     </div>
@@ -2102,7 +2094,16 @@ if (isPresenter) {
   
   document.getElementById("presenterBtn").addEventListener("click", function() {
     if (!presenterWindow || presenterWindow.closed) {
-      presenterWindow = window.open(window.location.href + "?presenter", "PresenterView", "width=800,height=600");
+      // Open presenter window as large as possible
+      var width = Math.min(screen.availWidth - 50, 1600);
+      var height = Math.min(screen.availHeight - 50, 1000);
+      var left = Math.round((screen.availWidth - width) / 2);
+      var top = Math.round((screen.availHeight - height) / 2);
+      presenterWindow = window.open(
+        window.location.href + "?presenter",
+        "PresenterView",
+        "width=" + width + ",height=" + height + ",left=" + left + ",top=" + top
+      );
     } else {
       presenterWindow.focus();
     }
