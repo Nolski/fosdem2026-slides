@@ -285,6 +285,7 @@ if (isPresenter) {
   window.currentMedia = null;
   var activeAudioElements = {};
   var canChangeSlide = true;
+  var placeholderAdvanceTimer = null; // Timer for placeholder timed auto-advance
 
   // Slide layout: each slide block is 70px wide, with 6px gaps between all flex items
   // The slides timeline has drop indicators (0px effective width due to -2px margins) between slides
@@ -367,6 +368,9 @@ if (isPresenter) {
   var placeholderTitleInput = document.getElementById("placeholder-title");
   var placeholderTextInput = document.getElementById("placeholder-text");
   var placeholderColorInput = document.getElementById("placeholder-color");
+  var placeholderTimedAdvanceInput = document.getElementById("placeholder-timed-advance");
+  var placeholderDurationInput = document.getElementById("placeholder-duration");
+  var placeholderDurationGroup = document.getElementById("placeholder-duration-group");
   var srcGroup = document.getElementById("src-group");
   var placeholderGroup = document.getElementById("placeholder-group");
   var loopGroup = document.getElementById("loop-group");
@@ -1087,6 +1091,19 @@ if (isPresenter) {
       }
     }
     
+    // Load placeholder-specific settings
+    if (slide.type === "placeholder") {
+      if (placeholderTimedAdvanceInput) {
+        placeholderTimedAdvanceInput.checked = !!slide.timedAdvance;
+      }
+      if (placeholderDurationInput) {
+        placeholderDurationInput.value = slide.advanceDuration || 5000;
+      }
+      if (placeholderDurationGroup) {
+        placeholderDurationGroup.style.display = slide.timedAdvance ? "block" : "none";
+      }
+    }
+    
     updateFormVisibility(slide.type);
     updatePreview(slide);
     updateNavButtons();
@@ -1159,6 +1176,13 @@ if (isPresenter) {
     });
   }
   
+  // Placeholder timed advance checkbox listener
+  if (placeholderTimedAdvanceInput && placeholderDurationGroup) {
+    placeholderTimedAdvanceInput.addEventListener("change", function() {
+      placeholderDurationGroup.style.display = this.checked ? "block" : "none";
+    });
+  }
+  
   function updatePreview(slide) {
     previewContainer.innerHTML = "";
     if (slide.type === "video") {
@@ -1194,11 +1218,18 @@ if (isPresenter) {
       slide.title = placeholderTitleInput.value;
       slide.text = placeholderTextInput.value;
       slide.backgroundColor = placeholderColorInput.value;
+      // Save timed auto-advance settings
+      if (placeholderTimedAdvanceInput) {
+        slide.timedAdvance = placeholderTimedAdvanceInput.checked;
+      }
+      if (placeholderDurationInput) {
+        slide.advanceDuration = parseInt(placeholderDurationInput.value) || 5000;
+      }
       delete slide.src; delete slide.loop; delete slide.zoompan; delete slide.volume; delete slide.autoAdvance;
     } else if (slide.type === "image") {
       slide.src = slideSrcInput.value;
       slide.zoompan = slideZoompanInput.checked;
-      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume; delete slide.autoAdvance;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.loop; delete slide.volume; delete slide.autoAdvance; delete slide.timedAdvance; delete slide.advanceDuration;
     } else {
       // Video slide
       slide.src = slideSrcInput.value;
@@ -1211,7 +1242,7 @@ if (isPresenter) {
       if (slideAutoAdvanceInput) {
         slide.autoAdvance = slideAutoAdvanceInput.checked;
       }
-      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.zoompan;
+      delete slide.title; delete slide.text; delete slide.backgroundColor; delete slide.zoompan; delete slide.timedAdvance; delete slide.advanceDuration;
     }
     slide.notes = slideNotesInput.value;
     
@@ -1379,6 +1410,11 @@ if (isPresenter) {
     for (var k in activeAudioElements) {
       paused ? activeAudioElements[k].pause() : activeAudioElements[k].play().catch(function(){});
     }
+    // Clear placeholder advance timer when pausing (user will need to manually advance or navigate)
+    if (paused && placeholderAdvanceTimer) {
+      clearTimeout(placeholderAdvanceTimer);
+      placeholderAdvanceTimer = null;
+    }
     updatePresenterView();
   }
 
@@ -1396,6 +1432,12 @@ if (isPresenter) {
   window.startPresentation = startPresentation;
 
   function loadSlide(index) {
+    // Clear any existing placeholder advance timer
+    if (placeholderAdvanceTimer) {
+      clearTimeout(placeholderAdvanceTimer);
+      placeholderAdvanceTimer = null;
+    }
+    
     var container = document.getElementById("slide-content");
     if (!container) {
       // Fallback to presentation container if slide-content doesn't exist
@@ -1443,6 +1485,17 @@ if (isPresenter) {
       div.innerHTML = '<h1>' + (slide.title || 'Placeholder') + '</h1>' + bodyText;
       container.appendChild(div);
       window.currentMedia = null;
+      
+      // Auto-advance after timeout (if enabled)
+      if (slide.timedAdvance) {
+        var duration = slide.advanceDuration || 5000;
+        placeholderAdvanceTimer = setTimeout(function() {
+          // Only advance if we're still on this slide and presentation is running
+          if (window.presentationStarted && !paused && currentSlideIndex === index) {
+            advanceSlide();
+          }
+        }, duration);
+      }
     }
     updatePresenterView();
     updateAudio();

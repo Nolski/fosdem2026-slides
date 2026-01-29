@@ -123,6 +123,16 @@
               <textarea id="placeholder-text" rows="3" placeholder="Additional text for the slide..."></textarea>
               <label for="placeholder-color" style="margin-top: 8px;">Background Color</label>
               <input type="color" id="placeholder-color" value="#333333">
+              <div class="placeholder-auto-advance" style="margin-top: 12px;">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="placeholder-timed-advance"> Auto-advance after timeout
+                </label>
+                <div id="placeholder-duration-group" style="display: none; margin-top: 8px;">
+                  <label for="placeholder-duration">Duration (milliseconds)</label>
+                  <input type="number" id="placeholder-duration" min="100" step="100" value="5000" placeholder="5000">
+                  <p class="form-help-text">Automatically advance to next slide after this duration</p>
+                </div>
+              </div>
               <button type="button" id="convertToVideoBtn" class="convert-video-btn">
                 <span class="btn-icon">✨</span> Generate AI Video for this Slide
               </button>
