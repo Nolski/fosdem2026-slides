@@ -765,6 +765,14 @@
       "type": "video",
       "notes": "",
       "src": "media/video/20260128_1923_01kg3wad0sfpvtca47rj8xbk2m.mp4",
+      "loop": false,
+      "volume": 0,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/20260128_2000_01kg3yfsjcf779s7bdv6c9ngdj.mp4",
       "loop": true,
       "volume": 0,
       "autoAdvance": false
@@ -885,7 +893,7 @@
     {
       "src": "media/audio/theEndasweknowit.mp3",
       "startSlide": 106,
-      "endSlide": 107,
+      "endSlide": 108,
       "loop": false,
       "volume": 100,
       "pauseSlides": [],
