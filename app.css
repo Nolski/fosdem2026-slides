@@ -2152,6 +2152,101 @@ body:not(.present-mode) .subtitle-overlay {
   border-radius: 8px;
 }
 
+#presenter-controls button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s, transform 0.1s;
+}
+
+#presenter-controls button:active {
+  transform: scale(0.98);
+}
+
+#fullscreenBtn {
+  background: #3b82f6;
+  color: white;
+}
+
+#fullscreenBtn:hover {
+  background: #2563eb;
+}
+
+#fullscreenBtn.active {
+  background: #10b981;
+}
+
+#fullscreenBtn.active:hover {
+  background: #059669;
+}
+
+/* Fullscreen prompt overlay (shown in main window when presenter requests fullscreen) */
+#fullscreen-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  cursor: pointer;
+}
+
+.fullscreen-prompt-content {
+  text-align: center;
+  color: white;
+  pointer-events: none;
+}
+
+.fullscreen-prompt-content h2,
+.fullscreen-prompt-content p {
+  pointer-events: none;
+}
+
+.fullscreen-prompt-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: pulse-fullscreen 2s ease-in-out infinite;
+}
+
+@keyframes pulse-fullscreen {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.fullscreen-prompt-content h2 {
+  font-size: 32px;
+  margin: 0 0 10px 0;
+}
+
+.fullscreen-prompt-content p {
+  font-size: 18px;
+  opacity: 0.7;
+  margin: 0 0 30px 0;
+}
+
+.fullscreen-prompt-cancel {
+  pointer-events: auto;
+  padding: 10px 24px;
+  font-size: 16px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fullscreen-prompt-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+}
+
 .presenter-divider {
   color: #ccc;
   margin: 0 5px;

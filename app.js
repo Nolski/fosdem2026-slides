@@ -8,6 +8,7 @@ if (isPresenter) {
        <button id="startPresBtn">Start Presentation</button>
        <button id="pauseBtn" style="display:none;">Pause</button>
        <span id="timerDisplay" style="display:none;">00:00:00</span>
+       <button id="fullscreenBtn" title="Toggle fullscreen on presentation window">⛶ Full Screen</button>
        <button id="bleepBtn">🔇 Bleep</button>
        <span class="presenter-divider">|</span>
        <label class="presenter-toggle">
@@ -222,6 +223,50 @@ if (isPresenter) {
   }
   bleepBtn.addEventListener("mouseup", stopBleep);
   bleepBtn.addEventListener("mouseleave", stopBleep);
+
+  // Fullscreen button - toggles fullscreen on the main presentation window
+  var fullscreenBtn = document.getElementById("fullscreenBtn");
+  var isFullscreen = false;
+  
+  function updateFullscreenButton() {
+    if (isFullscreen) {
+      fullscreenBtn.textContent = "⛶ Exit Full Screen";
+      fullscreenBtn.classList.add("active");
+    } else {
+      fullscreenBtn.textContent = "⛶ Full Screen";
+      fullscreenBtn.classList.remove("active");
+    }
+  }
+  
+  fullscreenBtn.addEventListener("click", function() {
+    if (window.opener && !window.opener.closed) {
+      if (isFullscreen) {
+        // Exit fullscreen
+        if (window.opener.exitPresentationFullscreen) {
+          window.opener.exitPresentationFullscreen();
+        }
+      } else {
+        // Show fullscreen prompt in the main window (user must click there)
+        if (window.opener.showFullscreenPrompt) {
+          window.opener.showFullscreenPrompt();
+        }
+      }
+    }
+  });
+  
+  // Listen for fullscreen state changes from main window
+  window.addEventListener("message", function(event) {
+    if (event.data.type === "fullscreenChange") {
+      isFullscreen = event.data.isFullscreen;
+      updateFullscreenButton();
+    }
+  });
+  
+  // Sync initial fullscreen state from main window
+  if (window.opener && !window.opener.closed && window.opener.isPresentationFullscreen) {
+    isFullscreen = window.opener.isPresentationFullscreen();
+    updateFullscreenButton();
+  }
 
   // Subtitle controls in presenter view
   var presenterSubtitlesToggle = document.getElementById("presenterSubtitles");
@@ -1541,6 +1586,100 @@ if (isPresenter) {
     setTimeout(function() { canChangeSlide = true; }, 500);
   }
   window.previousSlide = previousSlide;
+
+  // Fullscreen support (with webkit prefix for Safari)
+  function requestFullscreenCompat(el) {
+    if (el.requestFullscreen) {
+      return el.requestFullscreen();
+    } else if (el.webkitRequestFullscreen) {
+      return el.webkitRequestFullscreen();
+    } else if (el.msRequestFullscreen) {
+      return el.msRequestFullscreen();
+    }
+    return Promise.reject(new Error("Fullscreen not supported"));
+  }
+  
+  function exitFullscreenCompat() {
+    if (document.exitFullscreen) {
+      return document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      return document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      return document.msExitFullscreen();
+    }
+    return Promise.reject(new Error("Exit fullscreen not supported"));
+  }
+  
+  function getFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+  }
+  
+  // Create fullscreen prompt overlay (shown when presenter requests fullscreen)
+  var fullscreenOverlay = document.createElement("div");
+  fullscreenOverlay.id = "fullscreen-prompt-overlay";
+  fullscreenOverlay.innerHTML = '<div class="fullscreen-prompt-content">' +
+    '<div class="fullscreen-prompt-icon">⛶</div>' +
+    '<h2>Click here to enter Full Screen</h2>' +
+    '<p>Click anywhere on this window to go fullscreen</p>' +
+    '<button class="fullscreen-prompt-cancel">Cancel</button>' +
+    '</div>';
+  fullscreenOverlay.style.display = "none";
+  document.body.appendChild(fullscreenOverlay);
+  
+  // Handle click on overlay to enter fullscreen
+  fullscreenOverlay.addEventListener("click", function(e) {
+    if (e.target.classList.contains("fullscreen-prompt-cancel")) {
+      hideFullscreenPrompt();
+      return;
+    }
+    var presentationEl = document.getElementById("presentation");
+    if (presentationEl) {
+      requestFullscreenCompat(presentationEl).then(function() {
+        hideFullscreenPrompt();
+      }).catch(function(err) {
+        console.warn("Fullscreen request failed:", err);
+        hideFullscreenPrompt();
+      });
+    }
+  });
+  
+  function showFullscreenPrompt() {
+    fullscreenOverlay.style.display = "flex";
+    window.focus(); // Bring the presentation window to front
+  }
+  window.showFullscreenPrompt = showFullscreenPrompt;
+  
+  function hideFullscreenPrompt() {
+    fullscreenOverlay.style.display = "none";
+  }
+  window.hideFullscreenPrompt = hideFullscreenPrompt;
+  
+  // Exit fullscreen (can be called directly)
+  function exitPresentationFullscreen() {
+    if (getFullscreenElement()) {
+      exitFullscreenCompat().catch(function() {});
+    }
+  }
+  window.exitPresentationFullscreen = exitPresentationFullscreen;
+  
+  // Check if presentation is currently fullscreen
+  function isPresentationFullscreen() {
+    return !!getFullscreenElement();
+  }
+  window.isPresentationFullscreen = isPresentationFullscreen;
+  
+  // Notify presenter view when fullscreen state changes
+  function onFullscreenChange() {
+    if (presenterWindow && !presenterWindow.closed) {
+      presenterWindow.postMessage({
+        type: "fullscreenChange",
+        isFullscreen: !!getFullscreenElement()
+      }, "*");
+    }
+  }
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+  document.addEventListener("msfullscreenchange", onFullscreenChange);
 
   function updatePresenterView() {
     if (presenterWindow && !presenterWindow.closed) {
