@@ -699,6 +699,14 @@
     {
       "type": "video",
       "notes": "",
+      "src": "media/video/black_3s_720p.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
+      "notes": "",
       "src": "media/video/20260125_1407_01kfvk2qx2eh4bgw7ftdh06kv9.mp4",
       "loop": false,
       "volume": 0,
@@ -729,11 +737,19 @@
       "autoAdvance": true
     },
     {
+      "type": "video",
+      "notes": "",
+      "src": "media/video/black_3s_720p.mp4",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
       "type": "placeholder",
       "notes": "",
       "title": "La Fin.",
-      "text": "",
-      "backgroundColor": "#333333"
+      "text": "Thanks for attending.",
+      "backgroundColor": "#000000"
     }
   ],
   "audio": [
@@ -817,8 +833,8 @@
     },
     {
       "src": "media/audio/frenchEnd.mp3",
-      "startSlide": 99,
-      "endSlide": 102,
+      "startSlide": 100,
+      "endSlide": 104,
       "loop": false,
       "volume": 43,
       "pauseSlides": [],
@@ -850,8 +866,8 @@
     },
     {
       "src": "media/audio/theEndasweknowit.mp3",
-      "startSlide": 103,
-      "endSlide": 103,
+      "startSlide": 105,
+      "endSlide": 105,
       "loop": false,
       "volume": 100,
       "pauseSlides": [],
