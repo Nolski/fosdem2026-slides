@@ -690,6 +690,14 @@
     },
     {
       "type": "video",
+      "notes": "",
+      "src": "media/video/forward.m4v",
+      "loop": false,
+      "volume": 100,
+      "autoAdvance": true
+    },
+    {
+      "type": "video",
       "notes": "We just need a slide of silence for dramatic effect",
       "src": "media/video/girlWithBackground-edited-2026-01-28T04-35-36.mp4",
       "loop": false,
@@ -833,8 +841,8 @@
     },
     {
       "src": "media/audio/frenchEnd.mp3",
-      "startSlide": 100,
-      "endSlide": 104,
+      "startSlide": 101,
+      "endSlide": 105,
       "loop": false,
       "volume": 43,
       "pauseSlides": [],
@@ -866,8 +874,8 @@
     },
     {
       "src": "media/audio/theEndasweknowit.mp3",
-      "startSlide": 105,
-      "endSlide": 105,
+      "startSlide": 106,
+      "endSlide": 106,
       "loop": false,
       "volume": 100,
       "pauseSlides": [],
